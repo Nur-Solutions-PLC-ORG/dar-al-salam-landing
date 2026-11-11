@@ -2,11 +2,13 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
+**Changelog.** 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+
 **Design assets this spec relies on (all in the repo):**
 
 | File | What it is |
 |---|---|
-| `brand-source/logo/mark.svg` | The gold mark (dome, keyhole, dove, ring) as a vector. I auto-traced it with potrace from `logo-full-original.png`, so it is faithful to the raster. It is one filled path, 415×319 viewBox. Use `fill="currentColor"` in the app to recolour it. 38 KB raw, about 12 KB gzipped. Run it through SVGO once (precision 1). |
+| `brand-source/logo/mark.svg` | The gold mark (dome, keyhole, dove, ring) as a vector. I auto-traced it with potrace from `logo-full-original.png`, so it is faithful to the raster. It is one filled path, 415×319 viewBox. 38 KB raw. In the app: run it through SVGO once (precision 1), set `fill="currentColor"`, **inline it once per page as a `<symbol id="mark">`** in a hidden sprite at the top of `<body>`, and reference it everywhere (intro, footer, watermark, dividers) with `<svg><use href="#mark"/></svg>`. Never inline the full path more than once. |
 | `brand-source/plans/keyplan-duotone.png` | The typical-floor key plan recoloured to ink-on-ivory, with the baked-in legend removed and each unit's tone normalised. This is the base image for the floor view; our own SVG hotspots supply the colour. 1549×1940, the same pixel grid as the original. |
 | `docs/design/keyplan-hotspots.json` | Polygons and centroids for BL01–BL09 in key-plan pixels, the floor-plate outline (for the 3D massing), the scale (35.7 px/m), and the legend colours. |
 | `docs/design/keyplan-hotspots-check.jpg` | The traced polygons drawn over the original plan, for visual verification. |
@@ -73,7 +75,8 @@ Put them in `src/styles/tokens.css`. Contrast ratios below are measured (WCAG 2.
   --text-muted: var(--stone-500);/* 5.7:1 on ivory, 5.2:1 on sand */
   --accent: var(--gold-500);    /* decorative only: lines, icons ≥ 3:1 not needed */
   --accent-text: var(--gold-700);/* gold text on ivory 5.8:1 (gold-500 is 2.7:1: never for text on light) */
-  --line: var(--sand-200);      --line-strong: color-mix(in srgb, var(--navy-800) 18%, transparent);
+  --line: var(--sand-200);      --line-strong: color-mix(in srgb, var(--navy-800) 18%, transparent); /* decorative only */
+  --input-border: color-mix(in srgb, var(--navy-800) 55%, transparent); /* ≥ 3:1 non-text contrast on ivory/sand */
   --focus: var(--gold-600);     /* 4.6:1 on ivory */
   --btn-bg: var(--navy-800);    --btn-text: var(--ivory-50);
   --btn2-border: var(--navy-800);
@@ -89,18 +92,30 @@ Put them in `src/styles/tokens.css`. Contrast ratios below are measured (WCAG 2.
   --focus: var(--gold-300);
   --btn-bg: var(--gold-500);    --btn-text: var(--navy-900); /* 5.2:1+ */
   --btn2-border: var(--gold-400);
+  --input-border: color-mix(in srgb, var(--ivory-50) 55%, transparent);
+}
+/* light "paper" panel nested inside a dusk section (explorer panel, cards on navy) */
+.theme-paper {
+  --bg: var(--ivory-50);        --bg-alt: var(--sand-100);
+  --text: var(--navy-800);      --text-muted: var(--stone-500);
+  --accent: var(--gold-500);    --accent-text: var(--gold-700);
+  --line: var(--sand-200);      --line-strong: color-mix(in srgb, var(--navy-800) 18%, transparent);
+  --input-border: color-mix(in srgb, var(--navy-800) 55%, transparent);
+  --focus: var(--gold-600);
+  --btn-bg: var(--navy-800);    --btn-text: var(--ivory-50);  --btn2-border: var(--navy-800);
+  background: var(--bg); color: var(--text);
 }
 ```
 
-Rules: gold-500 for text only on navy. Body text is never gold. Primary button: navy on light, gold with navy text on dark. Hotspot fill on the key plan is gold-500 at 0.28 when hovered and 0.45 when selected, with a 2 px gold-600 stroke.
+Rules: `--line-strong` is decorative only (rules, map roads). Anything interactive whose boundary identifies it (inputs, hotspot outlines, secondary buttons) uses `--input-border` or stronger. Gold-500 for text only on navy. Body text is never gold. Primary button: navy on light, gold with navy text on dark. Hotspot fill on the key plan is gold-500 at 0.28 when hovered and 0.45 when selected, with a 2 px gold-600 stroke.
 
 ### 3.2 Typography
 
 | Role | Family | Notes |
 |---|---|---|
-| Display / headings | **Cormorant Garamond** (variable wght 300–700, latin subset; italic 400/500 for one emphasis word per heading) | A classic roman that fits the wordmark. Its italic replaces the brochure's script headings ("Apartment", "Easy to Live") without loading a script font. Self-host from Fontsource (`@fontsource-variable/cormorant-garamond`) or the Google woff2, subset to Latin. Never below 24 px (thin hairlines). |
+| Display / headings | **Cormorant Garamond** (variable wght 300–700, latin subset) plus **one static italic file: weight 500, latin subset** for the one emphasis word per heading | A classic roman that fits the wordmark. Its italic replaces the brochure's script headings ("Apartment", "Easy to Live") without loading a script font. Self-host from Fontsource (`@fontsource-variable/cormorant-garamond`) or the Google woff2, subset to Latin. Never below 24 px (thin hairlines). |
 | Body / UI / numerals in UI | **Manrope** variable (files in `brand-source/fonts/`) | Its uppercase with wide tracking matches "REAL ESTATE" in the logo. Use `font-variant-numeric: tabular-nums` for all m² values. |
-| Amharic (all roles) | **Noto Sans Ethiopic** variable (`brand-source/fonts/`) | Headings at 600, body at 400. Load **only** when `lang="am"` (via `unicode-range` plus the /am route), with no faux italic (Ethiopic has no italic). Line-height +0.1 relative to Latin. Letter-spacing 0 (no tracking on eyebrows). |
+| Amharic (all roles) | **Noto Sans Ethiopic** variable (`brand-source/fonts/`) | Headings at 600, body at 400. **Subset to the glyphs used in the `am` dictionary** (plus punctuation and digits) at build time, e.g. `pyftsubset --text-file` or `glyphhanger` over the dictionary strings; re-run when the dictionary changes. Load **only** when `lang="am"` (the /am route), with no faux italic (Ethiopic has no italic). Line-height +0.1 relative to Latin. Letter-spacing 0 (no tracking on eyebrows). |
 
 Fluid scale (360 → 1440 px viewport). `font-display: swap`; preload only the Cormorant and Manrope latin files.
 
@@ -208,7 +223,7 @@ Copy below is draft English. Keep every string in the i18n dictionary. Amharic d
 - Left: horizontal logo (`logo.png`, or later an SVG lockup of the mark plus a live-text wordmark; height 40 px desktop, 32 px mobile).
 - Centre (≥1024 px): The tower · Explore · Homes · Location · Payment.
 - Right: language toggle `EN | አማ`, then a primary pill "Book a visit".
-- Behaviour: transparent over the hero. After 80 px of scroll it becomes `--bg` at 0.86 with `backdrop-filter: blur(12px)` and a hairline bottom border. It hides on scroll down (yPercent −100, 0.35 s `power2.out`) and shows on scroll up. Its theme follows the section under it (`data-header-theme` swap via ScrollTrigger `onToggle`).
+- Behaviour: transparent over the hero. After 80 px of scroll it becomes `--bg` at 0.86 with `backdrop-filter: blur(12px)` and a hairline bottom border. It hides on scroll down (yPercent −100, 0.35 s `power2.out`) and shows on scroll up. Its theme follows the section under it (`data-header-theme` swap via ScrollTrigger `onToggle`). The header has two stacked background layers (light and dusk) that cross-fade on **opacity** (0.3 s); logo and text colours swap instantly at the same moment. No colour transitions.
 - Under 1024 px, a 44×44 menu button opens a full-screen navy overlay revealed with `clip-path: circle(0 at <button centre>) → circle(150%)` (0.7 s `power3.inOut`). Links stagger in (y 24 → 0, opacity, 0.06 s apart). The overlay also holds the language toggle, the CTA, and contact links where configured. Focus is trapped while it is open, and Esc closes it.
 
 ### 5.1 Hero (`#top`)
@@ -256,8 +271,8 @@ Mobile                       Desktop
 
 ### 5.3 The tower / House of Peace (`#story`, sand)
 
-- Large statement (H2, max 18ch per line): "*Dar Al Salam* means House of Peace. We built it to feel that way." That claim is brand voice, not a fact, so keep it modest.
-- Two short paragraphs drawn only from the facts: Garment location, two-block layout, nine homes per floor, balconies, lift lobbies with lifts and stairs in each block, basement parking.
+- Large statement (H2, max 18ch per line): "*Dar Al Salam* means House of Peace. We designed it to feel that way." That claim is brand voice, not a fact, so keep it modest.
+- Two short paragraphs drawn only from the facts: Garment location, two-block layout, nine homes per floor, balconies, a lift lobby with 2+ lifts and stairs per block (BRIEF wording), basement parking.
 - Media: a second crop of the tower render in a tall arch (detail of the balconies: `left 560, top 900, width 900, height 1125`), plus a small framed **key-plan duotone** thumbnail captioned "Typical floor: nine homes, two blocks".
 - Desktop: the statement spans cols 1–7. The arch spans cols 8–12 and is offset 120 px down (staggered editorial layout). Mobile stacks statement, then arch, then paragraphs.
 
@@ -332,8 +347,8 @@ Desktop
 
 Part A, four pillars, only what the plans and brief support:
 1. **Generous homes**: 158–171 m² gross, 2 & 3 bedrooms, separate shower room per bath.
-2. **Balconies**: every layout opens to a balcony.
-3. **Lifts and stairs in each block**: lift lobbies with two or more lifts.
+2. **Homes with balconies**: the plans show balconies.
+3. **Lift lobbies**: lift lobby with 2+ lifts and stairs per block (the BRIEF's wording; no other counts).
 4. **Basement parking**: plus offices below and commercial space at ground level.
 
 Each pillar has a 32 px line icon (gold-500, 1.25 px stroke), an h3, and one line of text.
@@ -341,7 +356,7 @@ Each pillar has a 32 px line icon (gold-500, 1.25 px stroke), an h3, and one lin
 Part B, H2 "Flexible payment, at your *pace*." Three steps on a horizontal hairline timeline (vertical on mobile):
 
 1. **Reserve**: secure your home with an initial payment.
-2. **Pay over time**: any amount, whenever suits you.
+2. **Pay any amount over time**: until your home is fully paid.
 3. **Fully paid**: the home is yours.
 
 CTA "Request pricing" (gold primary). Small print: "Prices on request." **No numbers and no percentages.**
@@ -365,14 +380,14 @@ Desktop                                              Mobile
 ```
 
 - Fields: name (required, `autocomplete="name"`); phone (required, `type="tel"`, `inputmode="tel"`, `autocomplete="tel"`, placeholder `+251 9…`, lenient validation of ≥ 9 digits); preferred home (`select`: Any, BL01 – 2 bedroom, BL02 – 3 bedroom, …); floor (`select`: Any, 1–14); reply via (radio, showing **only channels configured** in `site.ts`); message (optional textarea, 4 rows).
-- Labels sit above inputs and are always visible. Inputs are 52 px tall with 16 px text, a 1 px `--line-strong` border, and `--radius-xs`. Focus shows a 2 px `--focus` outline at 2 px offset. Errors appear inline under the field in `--danger-600` with an icon, `aria-describedby`, and one summary sentence in an `aria-live="polite"` region.
+- Labels sit above inputs and are always visible. Inputs are 52 px tall with 16 px text, a 1 px `--input-border` border, and `--radius-xs`. Focus shows a 2 px `--focus` outline at 2 px offset. Errors appear inline under the field in `--danger-600` with an icon, `aria-describedby`, and one summary sentence in an `aria-live="polite"` region.
 - Submit builds the text `"Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}"` and opens WhatsApp (`https://wa.me/{number}?text=`), Telegram (`https://t.me/{username}`, with the text copied to the clipboard and a toast "Message copied, paste it in Telegram"), or `mailto:`. **If no channel is configured** (all `TODO(client)`), hide the radio and show: "Our contact lines are being set up. Please check back soon." with the submit button disabled. Never post the form anywhere.
-- Success: a dove (from `mark.svg`, the dove subpath) lifts 24 px and fades. Status text reads "Opening WhatsApp…".
+- Success: the mark (`<use href="#mark">`, cropped by viewBox to the dove) lifts 24 px and fades. Status text reads "Opening WhatsApp…".
 - Explorer, gallery and viewer CTAs deep-link here with `?unit=BL05&floor=7` (hash-safe), which prefills the selects and focuses Name.
 
 ### 5.9 Footer (navy-950)
 
-- Top: a large closing line (Cormorant, `--fs-h2`): "Come and see the *view*." with a "Book a visit" button.
+- Top: a large closing line (Cormorant, `--fs-h2`): "Come and see it for *yourself*." with a "Book a visit" button.
 - Middle grid: the mark (96 px, gold) plus the wordmark; nav links; contact (phone, WhatsApp, Telegram, email, office address, rendered only when set); language toggle.
 - Bottom: "© 2026 Dar Al Salam Real Estate" · "Renders and plans are illustrative and may change." · "Back to top ↑".
 - Motion: the closing line reveals by lines (§7.3). The mark ring rotates 0 → 18° with a scroll scrub (subtle).
@@ -385,7 +400,7 @@ Under 768 px, after the hero has left the viewport: a bottom bar, 64 px plus `en
 
 ## 6. Interaction details
 
-- **Buttons**: pill, 52 px tall on desktop and 48 px on mobile (both ≥ 44), padding 0 28 px, Manrope 600 15 px, tracking 0.02em. On hover, the label slides up and a duplicate label slides in from below (y 100% → 0, 0.45 s, `power3.out`, `overflow:hidden`). The background darkens 6% (navy-700, or gold-400 on dark). Active state: scale 0.98. Focus: the `--focus` ring.
+- **Buttons**: pill, 52 px tall on desktop and 48 px on mobile (both ≥ 44), padding 0 28 px, Manrope 600 15 px, tracking 0.02em. On hover, the label slides up and a duplicate label slides in from below (y 100% → 0, 0.45 s, `power3.out`, `overflow:hidden`). A `::before` overlay (navy-700 on light, gold-400 on dark, sitting under the label) animates **opacity** 0 → 1 (0.3 s). The background colour itself never transitions. Active state: scale 0.98. Focus: the `--focus` ring.
 - **Magnetic** (fine pointers only, primary CTAs and the floor stepper): within the button bounds plus 24 px, translate toward the pointer by `dx*0.25, dy*0.35`, clamped to 8 px, via `gsap.quickTo(…, {duration:.5, ease:"power3.out"})`. On leave, return with `elastic.out(1, .45)` over 0.8 s.
 - **Cursor** (`(hover:hover) and (pointer:fine)` only; the native cursor stays visible): a 10 px gold-500 dot plus a 36 px gold ring (1 px) following with `quickTo` (dot 0.15 s, ring 0.45 s). Over links and buttons the ring scales to 1.6 and the dot to 0. Over plan cards the ring becomes a 72 px navy disc with the label "View". Over the 3D canvas the label is "Drag". Hidden while a dialog is open. Never used on touch devices.
 - **Links**: an underline drawn with a `scaleX` pseudo-element (origin right to left on leave and left to right on hover, 0.4 s).
@@ -408,12 +423,14 @@ Under 768 px, after the hero has left the viewport: a bottom bar, 64 px plus `en
   - `none`: scrubbed scenes.
   - CSS equivalents: `cubic-bezier(.215,.61,.355,1)` and `cubic-bezier(.455,.03,.515,.955)`.
 - Durations: micro 0.2–0.3 s · UI 0.45–0.6 s · reveals 0.9–1.2 s · hero 1.4–1.8 s. Stagger 0.06–0.1 s.
-- Animate only `transform`, `opacity` and `clip-path`. No `filter` or `background-color` tweens.
+- Animate only `transform`, `opacity` and `clip-path`. No `filter`, `color`, `background-color` or `border-color` tweens or CSS transitions; state colour changes are instant or done by cross-fading stacked layers.
 - **No-JS / failure safety**: the default CSS is the final state. An inline `<head>` script sets `html.js`. Hidden initial states apply only under `html.js [data-reveal]`. `motion.ts` adds `html.motion-ready` after init, and a 2.5 s timeout removes `html.js` if init never finished, so content is never stuck invisible.
 
 ### 7.2 Intro and hero (first load)
 
-The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 96 px. **It is CSS-driven and starts on first paint, so it never waits for JS.** It shows only when `sessionStorage.introSeen` is unset; the inline head script adds `html.intro`. It never runs when `prefers-reduced-motion` is set. The hero image paints underneath at full opacity, so LCP is not delayed. Confirm this in Lighthouse; if the curtain hurts LCP, remove it and keep step 4 onward.
+The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 96 px. **It is CSS-driven and starts on first paint, so it never waits for JS.** It shows only when `sessionStorage.introSeen` is unset; the inline head script adds `html.intro`. It never runs when `prefers-reduced-motion` is set. The hero image paints underneath at full opacity, so LCP is not delayed.
+
+**The whole intro and hero reveal is CSS `@keyframes` on one shared clock (the curtain's), with no JS dependency.** The H1 is pre-split into lines at build time (each line wrapped in `<span class="line"><span>` in the markup, with `overflow: clip`), so no SplitText is needed above the fold. On repeat visits (`html.intro` absent) the same keyframes run with `animation-delay` shifted by −0.85 s. With reduced motion or no JS, keyframes are not applied and everything is visible. GSAP takes over only for scroll-linked behaviour after the reveal (S1). The table gives keyframe timings; the eases map to CSS `cubic-bezier` equivalents (power3.out = `cubic-bezier(.215,.61,.355,1)`, expo.out = `cubic-bezier(.16,1,.3,1)`, power2.inOut = `cubic-bezier(.455,.03,.515,.955)`). Confirm this in Lighthouse; if the curtain hurts LCP, remove it and keep step 4 onward.
 
 | t (s) | Element | From → To | Dur | Ease |
 |---|---|---|---|---|
@@ -422,13 +439,13 @@ The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 
 | 0.85 | curtain | yPercent 0 → −100 (lifts like a door) | 0.9 | expo.inOut (`cubic-bezier(.87,0,.13,1)`) |
 | 0.85 | hero image (inside arch) | scale 1.18 → 1 | 1.8 | expo.out |
 | 1.05 | eyebrow | opacity 0, y 12 → 1, 0 | 0.6 | power3.out |
-| 1.10 | H1 lines (SplitText `type:"lines", mask:"lines"`) | yPercent 110 → 0, stagger 0.08 | 1.1 | expo.out |
+| 1.10 | H1 lines (pre-split in markup, CSS keyframes) | translateY 110% → 0, `animation-delay` +0.08 s per line | 1.1 | expo.out |
 | 1.40 | lead, CTAs | opacity 0, y 16 → 1, 0, stagger 0.08 | 0.7 | power3.out |
 | 1.50 | arch outline | `clip-path: inset(100% 0 0 0)` → `inset(0)` (draws upward) | 1.0 | power2.inOut |
 | 1.70 | header | opacity 0, y −12 → 1, 0 | 0.5 | power3.out |
 | 1.90 | scroll cue line | scaleY 0 → 1 loop (origin top, then bottom) | 1.6 | power2.inOut, repeat −1 |
 
-Without the curtain (repeat visit), the same timeline starts at t = 0.85 with everything shifted earlier. Total time to interactive content is about 1 s.
+Without the curtain (repeat visit), the same keyframes start at t = 0.85 with everything shifted earlier. Total time to interactive content is about 1 s.
 
 ### 7.3 Scroll scenes and per-element specs
 
@@ -441,7 +458,7 @@ Without the curtain (repeat visit), the same timeline starts at t = 0.85 with ev
 | S2 | Facts numerals | count-up from 0 (14, 126; "158–171" counts both ends; "2 & 3" fades only). The text is pre-rendered as the final value and JS tweens from 0, so widths are fixed by tabular-nums and a `min-width` per cell. | `#facts` · `top 80%` | once | 1.4 / power2.out, stagger 0.12 |
 | S3 | Facts hairlines | scaleX 0 → 1 (origin left) | `#facts` · `top 85%` | once | 1.0 / power3.inOut |
 | S4 | All section eyebrows | rule scaleX 0 → 1, label opacity and x −8 → 0 | each eyebrow · `top 85%` | once | 0.7 / power3.out |
-| S5 | All H2 (`[data-split]`) | SplitText lines, mask lines, yPercent 110 → 0, stagger 0.08 | heading · `top 82%` | once | 1.0 / expo.out |
+| S5 | H2s below the fold (`[data-split]`; the only SplitText use) | SplitText lines, mask lines, yPercent 110 → 0, stagger 0.08 | heading · `top 82%` | once | 1.0 / expo.out |
 | S6 | Body paragraphs and lists (`[data-reveal]`) | opacity 0, y 24 → 1, 0, children stagger 0.08 | block · `top 85%` | once | 0.8 / power3.out |
 | S7 | Story arch | wrapper `clip-path: inset(18% 0 0 0)` → `inset(0)`; media scale 1.2 → 1 | arch · `top 85%` → `top 35%` | `0.6` | none |
 | S8 | Story arch parallax | media yPercent −6 → 6 | arch · `top bottom` → `bottom top` | `true` | none |
@@ -457,7 +474,7 @@ Without the curtain (repeat visit), the same timeline starts at t = 0.85 with ev
 | S17 | Enquire arch image | as S7 | — | `0.6` | — |
 | S18 | Form fields | opacity, y 16 → 0, stagger 0.05 | form · `top 85%` | once | 0.6 / power3.out |
 | S19 | Footer closing line | as S5; the mark ring rotates 0 → 18° | footer · `top bottom` → `bottom bottom` | ring: `true` | — |
-| S20 | Header theme swap | toggle `data-theme` when a dark section crosses `top var(--header-h)` | each section · `top 72px` → `bottom 72px` | — | 0.3 s CSS transition on colour only (not a GSAP tween) |
+| S20 | Header theme swap | toggle `data-theme` when a dark section crosses `top var(--header-h)` | each section · `top 72px` → `bottom 72px` | — | two stacked header background layers cross-fade on opacity (0.3 s); text and logo colours swap instantly. No colour transitions |
 
 Refresh ScrollTrigger after fonts load (`document.fonts.ready.then(() => ScrollTrigger.refresh())`) and after the 3D chunk mounts. Use `ScrollTrigger.matchMedia()` (or `gsap.matchMedia`) for the desktop/mobile splits and the reduced-motion split. All of these go in one `mm.add({...})`.
 
@@ -489,16 +506,16 @@ interface UnitType { code: UnitCode; bedrooms: 2|3; gross: number; net: number;
   rooms: string[];            // i18n keys from the brief table
   plan: ImageMetadata;        // brand-source/plans/blXX.jpg
   hotspot: { points: [number,number][]; centroid: [number,number] };  // key-plan px
-  block: 'north'|'south'; }
+  block: 'north'|'south'; }   // internal only (layout logic); never rendered in the UI
 const RESIDENTIAL_FLOORS = 14;   // floors 1–14, each uses the typical key plan (9 units)
 // Availability is unknown: no status field. If the client later supplies it, add
 // `status?: Record<number, Partial<Record<UnitCode,'available'|'reserved'>>>` in site.ts.
 ```
 
-Blocks, from the plan:
+Blocks, from the plan (internal grouping only; **never shown in the UI**, and the UI never states per-block lift counts):
 
-- **North** block: BL01, BL02, BL03, BL04, around core A (stair plus lift, upper centre).
-- **South** block: BL05, BL06, BL07, BL08, BL09, around core B (two lifts plus stair, centre).
+- **North** block: BL01, BL02, BL03, BL04, around core A (upper centre).
+- **South** block: BL05, BL06, BL07, BL08, BL09, around core B (centre).
 
 Assumption, flagged: every residential floor uses the same typical layout. This follows from "9 apartments per floor" and the "typical floor" key plan. Unit naming in the UI: "Floor 7 · BL05". Never "Apartment 705": we don't know the client's numbering, so it is `TODO(client)`.
 
@@ -530,7 +547,7 @@ IDLE (tower)  --hover slab / focus floor button-->  PREVIEW(floor n)  [tooltip]
 <svg viewBox="100 60 1200 1840" role="group" aria-label="Floor 7 key plan: 9 homes">
   <image href="{keyplan-duotone.webp}" x="0" y="0" width="1549" height="1940" />
   <!-- one per unit, points straight from keyplan-hotspots.json -->
-  <a href="#explore/f7/bl05" class="hotspot" data-unit="BL05"
+  <a href="#unit-bl05" class="hotspot" data-unit="BL05"
      aria-label="BL05, 3 bedroom, 169.23 m² gross">
     <polygon points="497,1430 497,1796 550,1794 557,1815 673,1815 677,1840 879,1833 877,1511 853,1509 850,1432"/>
     <text x="689" y="1629" class="hotspot__label">BL05</text>
@@ -544,7 +561,7 @@ Hotspot styles:
 
 | State | Fill | Stroke | Label |
 |---|---|---|---|
-| Rest | transparent | `--line-strong` 1.5 px (`vector-effect: non-scaling-stroke`) | Manrope 600, 34 px in SVG units, navy |
+| Rest | transparent | `--input-border` 1.5 px (`vector-effect: non-scaling-stroke`) | Manrope 600, 34 px in SVG units, navy |
 | Hover/focus | gold-500 at 0.28 | gold-600, 2 px | navy pill showing `BL05 · 3 bed · 169.23 m²` |
 | Selected | gold-500 at 0.45 | gold-600, 2 px | gold pill |
 | Dimmed (another unit selected) | ivory at 0.35 | — | 50% opacity |
@@ -553,7 +570,7 @@ Hotspot styles:
 - Focus ring: `outline` isn't reliable on SVG `<a>`, so use a `:focus-visible` stroke of 3 px in gold-600.
 - Hit areas are the polygons themselves. The smallest unit is about 360×400 SVG px, which is about 75×80 CSS px at mobile width, so tapping works.
 - At 34 SVG units, the in-plan labels render at about 9 px on a 360 px phone. Below a rendered plan width of 520 px, hide the `<text>` labels and rely on the unit chips, which are always visible, plus the selected-unit pill.
-- Hotspot links handle clicks in JS (`preventDefault`, update state, `history.replaceState`). The hash must never trigger a native or Lenis scroll jump. Without JS, the links fall back to the static unit list, which uses `id="unit-bl05"` anchors in the homes section.
+- Hotspots are server-rendered with `href="#unit-blXX"`, which points at the matching card in the homes section (`id="unit-bl05"`), so they work without JS. JS intercepts the click (`preventDefault`), updates the explorer state and writes `#explore/f7/bl05` with `history.replaceState`. The hash must never trigger a native or Lenis scroll jump.
 - On "Find on a floor" from the gallery, the target hotspot pulses twice (scale 1 → 1.03 → 1, `transform-origin` at its centroid, 0.4 s ×2).
 
 **Where the polygons come from:**
@@ -621,7 +638,7 @@ Floor outline (union of the units and cores, for the 3D slab):
 
 ### 9.5 Explorer layout specifics
 
-- Desktop: the model is in cols 1–5 at a height of `min(80svh, 820px)`; the panel is cols 6–12, an ivory "paper" card (`--radius-s`, `--shadow-2`) on navy. The breadcrumb sits at the top right of the section: `Tower › Floor 7 › BL05`, with each segment a button.
+- Desktop: the model is in cols 1–5 at a height of `min(80svh, 820px)`; the panel is cols 6–12, an ivory "paper" card (`.theme-paper`, `--radius-s`, `--shadow-2`) on navy. The breadcrumb sits at the top right of the section: `Tower › Floor 7 › BL05`, with each segment a button.
 - Tablet: the model sits on top at 60svh, with the panel below at full width.
 - Mobile: the model is 52svh (tier 2) or the SVG maquette at the same aspect. Below it, the stepper row ("−  Floor 7  +", buttons 48 px) and the primary "View floor 7" button. The panel stacks under that. When a floor or unit is selected, smooth-scroll the panel top into view (offset header).
 - Hint chip over the model (fades after the first interaction): "Tap a floor" on touch, "Hover a floor · drag to turn" on pointer devices.
@@ -637,7 +654,7 @@ Floor outline (union of the units and cores, for the 3D slab):
 | JS, initial (deferred module) | **≤ 70 KB** | gsap core + ScrollTrigger (about 45 KB), Lenis (about 4 KB), SplitText + Flip (about 12 KB; may be imported on idle), app (about 10 KB). Nothing blocks render. |
 | JS, explorer tier 2 | **≤ 170 KB** | `three` imported via named ESM imports (tree-shaken) plus the scene code. Loaded only near `#explore` and only for tier 2. |
 | JS, plan viewer | ≤ 4 KB | Dynamic import on first "View plan" (or idle prefetch). |
-| Fonts (initial) | ≤ 110 KB | Cormorant (latin, variable) plus Manrope (latin). Ethiopic loads **only** on /am (it is large: subset by `unicode-range`, preload there only). |
+| Fonts (initial) | ≤ 110 KB | Cormorant (latin, variable) plus Manrope (latin). Ethiopic loads **only** on /am, subset to the `am` dictionary glyphs (target ≤ 60 KB), preloaded there only. Cormorant italic is a static 500-weight latin file (≈ 20 KB), not preloaded. |
 | Hero image (LCP) | ≤ 70 KB at 390w AVIF, ≤ 160 KB at 1440w | Preloaded; `fetchpriority="high"`. |
 | Other images | lazy; plan thumbs ≤ 45 KB each (AVIF 600w); viewer images ≤ 250 KB each, loaded on open | `astro:assets` `<Picture formats={['avif','webp']}>` with `widths` and `sizes` on every image. |
 | Key-plan duotone | ≤ 120 KB at 1100w WebP | Lazy; loads with the explorer section. |
