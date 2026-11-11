@@ -1,0 +1,26 @@
+---
+/** Explore (DESIGN §5.4). M1 stub: heading only; built in M2. */
+import Eyebrow from '../ui/Eyebrow.astro';
+import { sections } from '../../data/sections';
+import { emph, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+---
+
+<section id="explore" class:list={['section', 'theme-dusk']} aria-labelledby="explore-title" data-header-theme="dark">
+  <div class="container">
+    <Eyebrow n={sections.explore.n} label={t.explore.eyebrow} />
+    <h2 id="explore-title" class="h2 stub__title" data-split set:html={emph(t.explore.title)} />
+  </div>
+</section>
+
+<style>
+  .stub__title {
+    margin-top: var(--space-5);
+    max-width: 18ch;
+  }
+</style>

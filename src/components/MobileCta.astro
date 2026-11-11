@@ -1,0 +1,110 @@
+---
+/**
+ * Mobile sticky CTA (DESIGN §5.10), < 768 px only. Slides in after the hero leaves the viewport;
+ * hides while #enquire or the footer is in view. Without JS it never shows (content stays reachable).
+ */
+import Button from './ui/Button.astro';
+import { site, whatsappHref } from '../data/site';
+import { getDict, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+const wa = site.contact.whatsapp ? whatsappHref() : '';
+---
+
+<div class="mobile-cta" data-mobile-cta data-visible="false">
+  <Button href="#enquire" class="mobile-cta__primary">{t.cta.bookVisit}</Button>
+  {
+    wa && (
+      <a class="mobile-cta__wa" href={wa} target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+          <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Z" />
+        </svg>
+        <span class="visually-hidden">
+          {t.cta.whatsapp} {t.a11y.newTab}
+        </span>
+      </a>
+    )
+  }
+</div>
+
+<style>
+  .mobile-cta {
+    display: none;
+  }
+
+  @media (max-width: 767.98px) {
+    :global(html.js) .mobile-cta {
+      position: fixed;
+      inset: auto 0 0;
+      z-index: var(--z-cta);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      min-height: calc(64px + env(safe-area-inset-bottom));
+      padding: 8px var(--margin) calc(8px + env(safe-area-inset-bottom));
+      background: var(--ivory-50);
+      border-top: 1px solid var(--sand-200);
+      color: var(--navy-800);
+      transform: translateY(100%);
+      transition: transform 0.4s var(--ease-out);
+    }
+
+    :global(html.js) .mobile-cta[data-visible='true'] {
+      transform: none;
+    }
+
+    /* the bar never covers the last element */
+    :global(html.js body) {
+      padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    }
+  }
+
+  .mobile-cta__primary {
+    flex: 1;
+  }
+
+  .mobile-cta__wa {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--navy-800);
+  }
+
+  .mobile-cta__wa svg {
+    width: 22px;
+    height: 22px;
+  }
+</style>
+
+<script>
+  const bar = document.querySelector<HTMLElement>('[data-mobile-cta]');
+  const hero = document.querySelector('#top');
+  const blockers = [document.querySelector('#enquire'), document.querySelector('.site-footer')].filter(
+    (x): x is Element => Boolean(x),
+  );
+  if (bar && hero && 'IntersectionObserver' in window) {
+    let heroVisible = true;
+    const blocking = new Set<Element>();
+    const render = () => {
+      const show = !heroVisible && blocking.size === 0;
+      bar.dataset.visible = String(show);
+      bar.inert = !show;
+    };
+    new IntersectionObserver(([e]) => {
+      heroVisible = Boolean(e?.isIntersecting);
+      render();
+    }).observe(hero);
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) e.isIntersecting ? blocking.add(e.target) : blocking.delete(e.target);
+      render();
+    });
+    blockers.forEach((b) => io.observe(b));
+    render();
+  }
+</script>

@@ -1,0 +1,26 @@
+---
+/** Payment (DESIGN §5.7). M1 stub: heading only; built in M3. */
+import Eyebrow from '../ui/Eyebrow.astro';
+import { sections } from '../../data/sections';
+import { emph, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+---
+
+<section id="payment" class:list={['section', 'theme-dusk']} aria-labelledby="payment-title" data-header-theme="dark">
+  <div class="container">
+    <Eyebrow n={sections.payment.n} label={t.payment.eyebrow} />
+    <h2 id="payment-title" class="h2 stub__title" data-split set:html={emph(t.payment.title)} />
+  </div>
+</section>
+
+<style>
+  .stub__title {
+    margin-top: var(--space-5);
+    max-width: 18ch;
+  }
+</style>

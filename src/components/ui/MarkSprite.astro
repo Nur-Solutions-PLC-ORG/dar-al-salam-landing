@@ -1,0 +1,9 @@
+---
+/** The mark, inlined ONCE as <symbol>s (body = dome + ring, dove), referenced with <use> everywhere. */
+import { markBody, markDove, markViewBox } from '../../data/mark.generated';
+---
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mark-body" viewBox={markViewBox}><path fill-rule="evenodd" d={markBody}></path></symbol>
+  <symbol id="mark-dove" viewBox={markViewBox}><path fill-rule="evenodd" d={markDove}></path></symbol>
+</svg>

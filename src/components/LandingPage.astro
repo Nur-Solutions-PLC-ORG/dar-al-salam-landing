@@ -1,74 +1,55 @@
 ---
 /**
  * The whole landing page, shared by every language route (src/pages/index.astro, src/pages/am/index.astro).
- * Phase 1: scaffold sections. Phase 2 builds each section to docs/DESIGN.md.
+ * Section order and themes: DESIGN §4.
  */
 import Base from '../layouts/Base.astro';
+import Intro from './Intro.astro';
 import Header from './Header.astro';
-import Hero from './Hero.astro';
-import Facts from './Facts.astro';
-import UnitsPreview from './UnitsPreview.astro';
+import Hero from './sections/Hero.astro';
+import Facts from './sections/Facts.astro';
+import Story from './sections/Story.astro';
+import Explore from './sections/Explore.astro';
+import Homes from './sections/Homes.astro';
+import Location from './sections/Location.astro';
+import Payment from './sections/Payment.astro';
+import Enquire from './sections/Enquire.astro';
 import Footer from './Footer.astro';
-import towerRender from '../assets/tower-render.jpg';
+import MobileCta from './MobileCta.astro';
+import heroTower from '../assets/generated/hero-tower.jpg';
 import { responsiveSet } from '../lib/images';
-import { mapsHref, site } from '../data/site';
-import { getDict, type Lang } from '../i18n';
+import type { Lang } from '../i18n';
 
 interface Props {
   lang: Lang;
 }
 
 const { lang } = Astro.props;
-const t = getDict(lang);
 
+// DESIGN §5.1: widths 360…1560. Mobile arch = min(content width, 58svh × 0.8); desktop = cols 7–12.
 const heroImage = await responsiveSet(
-  towerRender,
-  [400, 640, 860, 1100, 1400, 1800],
-  '(min-width: 100rem) 52rem, (min-width: 60rem) 52vw, calc(100vw - 2rem)',
+  heroTower,
+  [360, 540, 720, 960, 1280, 1560],
+  '(min-width: 1024px) min(46vw, 640px), min(calc(100vw - 2rem), 47svh)',
 );
 ---
 
 <Base lang={lang} preloadImage={{ srcset: heroImage.avif, sizes: heroImage.sizes, type: 'image/avif' }}>
+  <Intro />
   <Header lang={lang} />
   <main id="main" tabindex="-1">
     <Hero lang={lang} image={heroImage} />
     <Facts lang={lang} />
-
-    <section id="tower" class="section" aria-labelledby="story-title">
-      <div class="container container--narrow" data-reveal>
-        <p class="eyebrow">{t.story.eyebrow}</p>
-        <h2 id="story-title">{t.story.title}</h2>
-        <p>{t.story.body}</p>
-      </div>
-    </section>
-
-    <UnitsPreview lang={lang} />
-
-    <section id="location" class="section" aria-labelledby="location-title">
-      <div class="container container--narrow" data-reveal>
-        <p class="eyebrow">{t.location.eyebrow}</p>
-        <h2 id="location-title">{t.location.title}</h2>
-        <p>{t.location.body}</p>
-        <ul>
-          {site.location.landmarks.map((k) => <li>{t.location.landmarks[k]}</li>)}
-        </ul>
-        <p>
-          <a class="btn btn--ghost" href={mapsHref()} target="_blank" rel="noopener">
-            {t.location.openMaps}<span class="visually-hidden"> {t.a11y.newTab}</span>
-          </a>
-        </p>
-      </div>
-    </section>
-
-    <section id="enquire" class="section" aria-labelledby="enquire-title">
-      <div class="container container--narrow">
-        <p class="eyebrow">{t.enquiry.eyebrow}</p>
-        <h2 id="enquire-title">{t.enquiry.title}</h2>
-        <p>{t.why.flexible}. {t.why.body}</p>
-      </div>
-    </section>
+    <Story lang={lang} />
+    <div class="dusk-veil" aria-hidden="true" data-dusk-veil></div>
+    <Explore lang={lang} />
+    <Homes lang={lang} />
+    <Location lang={lang} />
+    <Payment lang={lang} />
+    <Enquire lang={lang} />
   </main>
   <Footer lang={lang} />
+  <MobileCta lang={lang} />
 </Base>
 
 <style>
@@ -76,13 +57,14 @@ const heroImage = await responsiveSet(
     outline: none;
   }
 
-  .section h2 {
-    font-size: var(--step-4);
-    margin-block: var(--space-2xs) var(--space-m);
-  }
-
-  .section ul:not([role]) {
-    margin-block: var(--space-m);
-    padding-inline-start: 1.2em;
+  /* S9: fixed navy veil scrubbed in before the explorer (opacity only; inert without JS) */
+  .dusk-veil {
+    position: fixed;
+    inset: 0;
+    background: var(--navy-900);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    visibility: hidden;
   }
 </style>

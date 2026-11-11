@@ -1,0 +1,74 @@
+---
+/**
+ * First-visit curtain (DESIGN §7.2). CSS-only: starts on first paint, never waits for JS.
+ * Shown only when the inline head script set html.intro (first visit this session, motion allowed).
+ * The hero paints underneath at full opacity, so LCP isn't delayed.
+ */
+import Mark from './ui/Mark.astro';
+---
+
+<div id="intro" class="intro" aria-hidden="true">
+  <Mark class="intro__mark" split />
+</div>
+
+<style>
+  .intro {
+    display: none;
+  }
+
+  :global(html.intro) .intro {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-intro);
+    display: grid;
+    place-items: center;
+    background: var(--ivory-50);
+    pointer-events: none;
+    animation: curtain-lift 0.9s var(--ease-door) 0.85s both;
+  }
+
+  .intro__mark {
+    width: 96px;
+    height: auto;
+    aspect-ratio: 415 / 319;
+    color: var(--gold-500);
+    overflow: visible;
+  }
+
+  :global(html.intro) .intro :global(.mark__body) {
+    animation: mark-draw 0.7s var(--ease-out) both;
+  }
+
+  :global(html.intro) .intro :global(.mark__dove) {
+    animation: dove-in 0.6s var(--ease-out) 0.25s both;
+  }
+
+  @keyframes curtain-lift {
+    to {
+      transform: translateY(-100%);
+      visibility: hidden;
+    }
+  }
+
+  @keyframes mark-draw {
+    from {
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+
+  @keyframes dove-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.intro) .intro {
+      display: none;
+    }
+  }
+</style>

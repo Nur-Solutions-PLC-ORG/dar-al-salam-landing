@@ -1,0 +1,164 @@
+---
+/**
+ * Key facts (DESIGN §5.2). Values are pre-rendered final (no-JS safe); motion.ts counts up from 0 (S2)
+ * and draws the hairlines (S3). Fixed widths via tabular numerals + min-width per cell.
+ */
+import { site } from '../../data/site';
+import { grossRange } from '../../data/units';
+import { getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+
+const facts = [
+  { value: String(site.project.residentialFloors), count: String(site.project.residentialFloors), label: t.facts.floors },
+  { value: String(site.project.totalApartments), count: String(site.project.totalApartments), label: t.facts.apartments },
+  { value: t.facts.typesValue, label: t.facts.types },
+  { value: `${grossRange.min}–${grossRange.max}`, count: `${grossRange.min},${grossRange.max}`, unit: 'm²', label: t.facts.areaLabel },
+];
+---
+
+<section id="facts" class="facts" aria-labelledby="facts-title" data-header-theme="light">
+  <h2 id="facts-title" class="visually-hidden">{t.facts.title}</h2>
+  <div class="container">
+    <span class="facts__rule" aria-hidden="true" data-facts-rule></span>
+    <dl class="facts__list">
+      {
+        facts.map((f) => (
+          <div class="facts__item">
+            <dt class="facts__label">{f.label}</dt>
+            <dd class="facts__value tabular">
+              <span data-count={f.count}>{f.value}</span>
+              {f.unit && <span class="facts__unit">{f.unit}</span>}
+            </dd>
+          </div>
+        ))
+      }
+    </dl>
+    <span class="facts__rule" aria-hidden="true" data-facts-rule></span>
+    <p class="facts__note small muted">{t.facts.note}</p>
+  </div>
+</section>
+
+<style>
+  .facts {
+    padding-block: var(--space-6) var(--space-8);
+    background: var(--bg);
+  }
+
+  .facts__rule {
+    display: block;
+    height: 1px;
+    background: var(--line);
+    transform-origin: left center;
+  }
+
+  .facts__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .facts__item {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-4);
+    min-width: 0;
+    position: relative;
+  }
+
+  /* gold hairline separators */
+  .facts__item::before {
+    content: '';
+    position: absolute;
+    inset-block: var(--space-4);
+    inset-inline-start: 0;
+    width: 1px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  .facts__item:nth-child(odd)::before {
+    display: none;
+  }
+
+  .facts__item:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .facts__item:nth-child(odd) {
+    padding-inline-start: 0;
+  }
+
+  .facts__value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.2em;
+    font-family: var(--font-display);
+    font-size: var(--fs-number);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  :global(:lang(am)) .facts__value {
+    font-family: var(--font-display);
+  }
+
+  .facts__unit {
+    font-size: 0.4em;
+    font-family: var(--font-body);
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .facts__label {
+    font-size: var(--fs-eyebrow);
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  :global(:lang(am)) .facts__label {
+    letter-spacing: 0;
+    font-size: 0.8125rem;
+  }
+
+  .facts__note {
+    margin-top: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .facts__list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .facts__item:nth-child(n + 3) {
+      border-top: 0;
+    }
+
+    .facts__item:nth-child(odd)::before {
+      display: block;
+    }
+
+    .facts__item:first-child::before {
+      display: none;
+    }
+
+    .facts__item:nth-child(odd) {
+      padding-inline-start: var(--space-4);
+    }
+
+    .facts__item:first-child {
+      padding-inline-start: 0;
+    }
+  }
+</style>

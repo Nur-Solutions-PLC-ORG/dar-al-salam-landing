@@ -1,9 +1,11 @@
 ---
-/** Provisional footer. Contact rows render only for configured values (src/data/site.ts). */
-import { Image } from 'astro:assets';
-import logoDark from '../assets/logo/logo-dark.png';
-import { mailtoHref, site, telHref, telegramHref, whatsappHref, hasAnyContact } from '../data/site';
-import { getDict, type Lang } from '../i18n';
+/** Footer (DESIGN §5.9). navy-950. Contact rows render only for configured values (src/data/site.ts). */
+import Button from './ui/Button.astro';
+import Mark from './ui/Mark.astro';
+import LangToggle from './ui/LangToggle.astro';
+import { navItems } from '../data/sections';
+import { mailtoHref, site, telHref, telegramHref, whatsappHref } from '../data/site';
+import { emph, getDict, type Lang } from '../i18n';
 
 interface Props {
   lang: Lang;
@@ -16,28 +18,52 @@ const year = new Date().getFullYear();
 
 const rows = [
   c.phone && { label: c.phone, href: telHref() },
-  c.whatsapp && { label: 'WhatsApp', href: whatsappHref(), external: true },
-  c.telegram && { label: 'Telegram', href: telegramHref(), external: true },
+  c.whatsapp && { label: t.enquiry.whatsapp, href: whatsappHref(), external: true },
+  c.telegram && { label: t.enquiry.telegram, href: telegramHref(), external: true },
   c.email && { label: c.email, href: mailtoHref() },
 ].filter((r): r is { label: string; href: string; external?: boolean } => Boolean(r));
+const hasContact = rows.length > 0 || c.address.length > 0;
 ---
 
-<footer class="site-footer on-dark">
-  <div class="container container--wide site-footer__grid">
-    <div class="site-footer__brand">
-      <Image src={logoDark} alt={site.company.name} width={140} densities={[1, 2]} loading="lazy" />
+<footer class="site-footer theme-dusk" data-header-theme="dark">
+  <div class="container">
+    <div class="site-footer__closing">
+      <p class="site-footer__line display" data-split set:html={emph(t.footer.closing)} />
+      <Button href="#enquire" magnetic>{t.cta.bookVisit}</Button>
     </div>
 
-    <div class="site-footer__contact">
-      <h2 class="site-footer__heading">{t.footer.contact}</h2>
+    <div class="site-footer__grid">
+      <div class="site-footer__brand">
+        <Mark class="site-footer__mark" />
+        <p class="site-footer__wordmark" lang="en">
+          <span>Dar Al Salam</span>
+          <span>Real Estate</span>
+        </p>
+      </div>
+
+      <nav aria-label={t.a11y.footerNav}>
+        <ul role="list" class="site-footer__list">
+          {
+            navItems.map((s) => (
+              <li>
+                <a class="link" href={`#${s.id}`}>
+                  {t.nav[s.nav]}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
       {
-        hasAnyContact() ? (
-          <>
+        hasContact && (
+          <div>
+            <h2 class="site-footer__heading">{t.footer.contact}</h2>
             {rows.length > 0 && (
-              <ul role="list">
+              <ul role="list" class="site-footer__list">
                 {rows.map((r) => (
                   <li>
-                    <a href={r.href} {...(r.external ? { target: '_blank', rel: 'noopener' } : {})}>
+                    <a class="link" href={r.href} {...(r.external ? { target: '_blank', rel: 'noopener' } : {})}>
                       {r.label}
                       {r.external && <span class="visually-hidden"> {t.a11y.newTab}</span>}
                     </a>
@@ -46,92 +72,162 @@ const rows = [
               </ul>
             )}
             {c.address.length > 0 && (
-              <address>
+              <address class="site-footer__address">
                 {c.address.map((line) => (
-                  <>
-                    {line}
-                    <br />
-                  </>
+                  <span>{line}</span>
                 ))}
               </address>
             )}
-          </>
-        ) : (
-          <p>{t.enquiry.comingSoon}</p>
+          </div>
         )
       }
+
+      {
+        site.social.length > 0 && (
+          <div>
+            <h2 class="site-footer__heading">{t.footer.follow}</h2>
+            <ul role="list" class="site-footer__list">
+              {site.social.map((s) => (
+                <li>
+                  <a class="link" href={s.url} target="_blank" rel="noopener">
+                    {s.network}
+                    <span class="visually-hidden"> {t.a11y.newTab}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+
+      <div class="site-footer__lang">
+        <LangToggle lang={lang} />
+      </div>
     </div>
 
-    {
-      site.social.length > 0 && (
-        <div>
-          <h2 class="site-footer__heading">{t.footer.follow}</h2>
-          <ul role="list">
-            {site.social.map((s) => (
-              <li>
-                <a href={s.url} target="_blank" rel="noopener">
-                  {s.network}
-                  <span class="visually-hidden"> {t.a11y.newTab}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )
-    }
-  </div>
-
-  <div class="container container--wide site-footer__legal">
-    <p>© {year} {site.company.name}. {t.footer.rights}</p>
-    <p>{t.footer.disclaimer}</p>
+    <div class="site-footer__legal small">
+      <p>© {year} {t.footer.rights}</p>
+      <p>{t.footer.disclaimer}</p>
+      <a class="link" href="#top">{t.footer.backToTop} <span aria-hidden="true">↑</span></a>
+    </div>
   </div>
 </footer>
 
 <style>
   .site-footer {
-    padding-block: var(--space-2xl) var(--space-l);
-    font-size: var(--step--1);
+    --bg: var(--navy-950);
+    background: var(--navy-950);
+    padding-block: var(--section-y) max(var(--space-6), env(safe-area-inset-bottom));
+  }
+
+  .site-footer__closing {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-6);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .site-footer__line {
+    font-family: var(--font-display);
+    font-size: var(--fs-h2);
+    font-weight: 500;
+    line-height: 1;
+    max-width: 16ch;
+    text-wrap: balance;
+  }
+
+  :global(:lang(am)) .site-footer__line {
+    font-family: var(--font-body);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .site-footer__line :global(em) {
+    font-style: italic;
+  }
+
+  :global(:lang(am)) .site-footer__line :global(em) {
+    font-style: normal;
+    color: var(--accent-text);
   }
 
   .site-footer__grid {
     display: grid;
-    gap: var(--space-xl);
+    gap: var(--space-7);
+    padding-block: var(--space-8);
   }
 
-  @media (min-width: 52rem) {
+  @media (min-width: 768px) {
     .site-footer__grid {
-      grid-template-columns: 1.5fr 1fr 1fr;
+      grid-template-columns: 1.4fr 1fr 1fr auto;
+      align-items: start;
     }
+  }
+
+  .site-footer__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .site-footer__mark {
+    width: 96px;
+    height: auto;
+    aspect-ratio: 415 / 319;
+  }
+
+  .site-footer__wordmark {
+    display: grid;
+    gap: var(--space-2);
+    line-height: 1;
+  }
+
+  .site-footer__wordmark span:first-child {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .site-footer__wordmark span:last-child {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent-text);
   }
 
   .site-footer__heading {
     font-family: var(--font-body);
-    font-size: var(--step--1);
+    font-size: var(--fs-eyebrow);
     font-weight: 600;
-    letter-spacing: var(--tracking-caps);
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--color-accent-text);
-    margin-block-end: var(--space-s);
+    color: var(--accent-text);
+    margin-bottom: var(--space-3);
   }
 
-  .site-footer a {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tap-min);
+  .site-footer__list {
+    display: grid;
   }
 
-  address {
+  .site-footer__address {
+    display: grid;
     font-style: normal;
+    color: var(--text-muted);
+    margin-top: var(--space-3);
   }
 
   .site-footer__legal {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
-    gap: var(--space-s);
-    margin-block-start: var(--space-xl);
-    padding-block-start: var(--space-m);
-    border-block-start: 1px solid rgb(251 247 242 / 0.15);
-    color: var(--color-text-muted);
+    gap: var(--space-2) var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+    color: var(--text-muted);
   }
 </style>

@@ -1,0 +1,295 @@
+---
+/**
+ * Hero (DESIGN §5.1, §7.2; amendment 5). Entrance is CSS keyframes on the intro clock (--t0),
+ * so the headline never depends on JS. motion.ts adds only the S1 scroll scrub.
+ * Layers: .arch (S1 scale) > .arch__media (mask, static) > .hero__parallax (S1 yPercent) > img (CSS intro scale).
+ */
+import type { ResponsiveSet } from '../../lib/images';
+import Arch from '../ui/Arch.astro';
+import Button from '../ui/Button.astro';
+import Mark from '../ui/Mark.astro';
+import { emph, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+  image: ResponsiveSet;
+}
+
+const { lang, image } = Astro.props;
+const t = getDict(lang);
+---
+
+<section id="top" class="hero" aria-labelledby="hero-title" data-header-theme="light">
+  <div class="container grid hero__grid">
+    <div class="hero__copy" data-hero-copy>
+      <Mark class="hero__watermark" />
+      <p class="eyebrow hero__eyebrow">{t.hero.eyebrow}</p>
+      <h1 id="hero-title" class="hero__title">
+        <span class="hero__title-inner" set:html={emph(t.hero.title)} />
+      </h1>
+      <p class="lead hero__lead">{t.hero.lead}</p>
+      <div class="hero__ctas">
+        <Button href="#enquire" magnetic>{t.cta.bookVisit}</Button>
+        <Button href="#explore" variant="secondary" icon="down">{t.cta.explore}</Button>
+      </div>
+      <div class="hero__cue" aria-hidden="true">
+        <span class="hero__cue-line"></span>
+        <span>{t.hero.scroll}</span>
+      </div>
+    </div>
+
+    <Arch class="hero__arch" outline data-hero-arch>
+      <div class="hero__parallax" data-hero-media>
+        <picture>
+          <source type="image/avif" srcset={image.avif} sizes={image.sizes} />
+          <source type="image/webp" srcset={image.webp} sizes={image.sizes} />
+          <img
+            class="hero__img"
+            src={image.src}
+            width={image.width}
+            height={image.height}
+            alt={t.hero.imageAlt}
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </picture>
+      </div>
+    </Arch>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    padding-block: calc(var(--header-h) + var(--space-3)) var(--space-8);
+    background: var(--bg);
+    overflow: clip;
+  }
+
+  .hero__grid {
+    row-gap: var(--space-5);
+    align-items: center;
+  }
+
+  .hero__copy {
+    grid-column: 1 / -1;
+    position: relative;
+    display: grid;
+    justify-items: start;
+    gap: var(--space-4);
+    order: 2;
+  }
+
+  .hero__arch {
+    grid-column: 1 / -1;
+    order: 1;
+    justify-self: center;
+    width: min(100%, calc(var(--arch-h) * 0.8));
+    aspect-ratio: 4 / 5;
+    --arch-h: 58svh;
+    margin-top: 10px; /* room for the outline */
+  }
+
+  @media (max-height: 720px) and (max-width: 1023px) {
+    .hero__arch {
+      --arch-h: 46svh;
+    }
+  }
+
+  .hero__parallax {
+    height: 100%;
+  }
+
+  .hero__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 40%;
+  }
+
+  .hero__title {
+    font-size: var(--fs-display);
+    line-height: 0.95;
+    letter-spacing: -0.015em;
+    max-width: 14ch;
+  }
+
+  :global(:lang(am)) .hero__title {
+    line-height: 1.15;
+    max-width: 16ch;
+  }
+
+  .hero__title-inner {
+    display: block;
+  }
+
+  .hero__lead {
+    color: var(--text-muted);
+    max-width: 34ch;
+  }
+
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .hero__cue {
+    display: none;
+  }
+
+  .hero__watermark {
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .hero {
+      min-height: 100svh;
+      padding-block: calc(var(--header-h) + 24px) var(--space-6);
+    }
+
+    .hero__copy {
+      grid-column: 1 / 7;
+      order: 1;
+      align-self: center;
+      gap: var(--space-5);
+    }
+
+    .hero__arch {
+      grid-column: 7 / 13;
+      order: 2;
+      justify-self: end;
+      align-self: start;
+      --arch-h: calc(100svh - var(--header-h) - 48px);
+      max-height: 980px;
+    }
+
+    .hero__img {
+      object-position: 45% 35%;
+    }
+
+    .hero__cue {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-7);
+      font-size: var(--fs-eyebrow);
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .hero__cue-line {
+      display: block;
+      width: 1px;
+      height: 48px;
+      background: var(--accent);
+      transform-origin: top;
+    }
+
+    .hero__watermark {
+      display: block;
+      position: absolute;
+      left: -6%;
+      bottom: -22%;
+      width: 520px;
+      max-width: none;
+      height: auto;
+      aspect-ratio: 415 / 319;
+      opacity: 0.06;
+      z-index: -1;
+      pointer-events: none;
+    }
+  }
+
+  /* ---------- Entrance (CSS, DESIGN §7.2 timeline; t0 = 0.85 s with the curtain, 0 without) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__img {
+      animation: hero-img 1.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      animation-delay: var(--t0, 0s);
+    }
+
+    .hero__eyebrow {
+      animation: rise 0.6s var(--ease-out) backwards;
+      animation-delay: calc(var(--t0, 0s) + 0.2s);
+    }
+
+    .hero__title-inner {
+      animation: title-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      animation-delay: calc(var(--t0, 0s) + 0.25s);
+    }
+
+    .hero__lead {
+      animation: rise 0.7s var(--ease-out) backwards;
+      animation-delay: calc(var(--t0, 0s) + 0.55s);
+    }
+
+    .hero__ctas {
+      animation: rise 0.7s var(--ease-out) backwards;
+      animation-delay: calc(var(--t0, 0s) + 0.63s);
+    }
+
+    .hero__arch :global(.arch__outline) {
+      animation: draw-up 1s var(--ease-inout) backwards;
+      animation-delay: calc(var(--t0, 0s) + 0.65s);
+    }
+
+    .hero__cue-line {
+      animation: cue 1.6s var(--ease-inout) infinite;
+      animation-delay: calc(var(--t0, 0s) + 1.05s);
+    }
+  }
+
+  @keyframes hero-img {
+    from {
+      transform: scale(1.18);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  @keyframes title-in {
+    from {
+      clip-path: inset(0 0 100% 0);
+      transform: translateY(0.45em);
+    }
+    to {
+      clip-path: inset(0 0 -0.2em 0);
+    }
+  }
+
+  @keyframes draw-up {
+    from {
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+
+  @keyframes cue {
+    0% {
+      transform: scaleY(0);
+      transform-origin: top;
+    }
+    50% {
+      transform: scaleY(1);
+      transform-origin: top;
+    }
+    50.1% {
+      transform-origin: bottom;
+    }
+    100% {
+      transform: scaleY(0);
+      transform-origin: bottom;
+    }
+  }
+</style>

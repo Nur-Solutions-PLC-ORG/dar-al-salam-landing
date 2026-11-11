@@ -1,0 +1,26 @@
+---
+/** Location (DESIGN §5.6). M1 stub: heading only; built in M3. */
+import Eyebrow from '../ui/Eyebrow.astro';
+import { sections } from '../../data/sections';
+import { emph, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+---
+
+<section id="location" class:list={['section', 'section--alt']} aria-labelledby="location-title" data-header-theme="light">
+  <div class="container">
+    <Eyebrow n={sections.location.n} label={t.location.eyebrow} />
+    <h2 id="location-title" class="h2 stub__title" data-split set:html={emph(t.location.title)} />
+  </div>
+</section>
+
+<style>
+  .stub__title {
+    margin-top: var(--space-5);
+    max-width: 18ch;
+  }
+</style>

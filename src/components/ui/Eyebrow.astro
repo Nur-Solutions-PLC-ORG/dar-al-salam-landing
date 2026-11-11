@@ -1,0 +1,15 @@
+---
+/** Numbered eyebrow: "01 — The tower" (DESIGN §3.2). Animated by motion.ts (S4) via [data-eyebrow]. */
+interface Props {
+  n?: string;
+  label: string;
+  class?: string;
+}
+const { n, label, class: cls } = Astro.props;
+---
+
+<p class:list={['eyebrow', cls]} data-eyebrow>
+  {n && <span class="eyebrow__n" aria-hidden="true">{n}</span>}
+  {n && <span class="eyebrow__rule" aria-hidden="true"></span>}
+  <span class:list={[{ eyebrow__label: Boolean(n) }]}>{label}</span>
+</p>

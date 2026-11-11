@@ -1,0 +1,178 @@
+---
+/** The tower / House of Peace (DESIGN §5.3). Sand. Statement cols 1–7, arch cols 8–12 offset down. */
+import { Picture } from 'astro:assets';
+import Arch from '../ui/Arch.astro';
+import Eyebrow from '../ui/Eyebrow.astro';
+import balconies from '../../assets/generated/story-balconies.jpg';
+import keyplan from '../../assets/plans/keyplan-duotone.png';
+import { sections } from '../../data/sections';
+import { emph, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+---
+
+<section id="story" class="section section--alt story" aria-labelledby="story-title" data-header-theme="light">
+  <div class="container grid story__grid">
+    <div class="story__head">
+      <Eyebrow n={sections.story.n} label={t.story.eyebrow} />
+      <h2 id="story-title" class="h2 story__title" data-split set:html={emph(t.story.title)} />
+    </div>
+
+    <Arch class="story__arch" outline aspect="4 / 5" data-story-arch>
+      <div class="story__parallax" data-parallax-media>
+        <Picture
+          src={balconies}
+          formats={['avif', 'webp']}
+          widths={[320, 480, 640, 900]}
+          sizes="(min-width: 1024px) 34vw, (min-width: 768px) 50vw, 88vw"
+          alt={t.story.imageAlt}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    </Arch>
+
+    <div class="story__body prose" data-reveal>
+      <p class="lead">{t.story.p1}</p>
+      <p>{t.story.p2}</p>
+    </div>
+
+    <figure class="story__keyplan" data-reveal>
+      <div class="story__keyplan-frame">
+        <Picture
+          src={keyplan}
+          formats={['avif', 'webp']}
+          widths={[240, 360, 480]}
+          sizes="(min-width: 1024px) 220px, 180px"
+          alt={t.story.keyplanAlt}
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <figcaption class="small muted">{t.story.keyplanCaption}</figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .story__grid {
+    row-gap: var(--space-7);
+    align-items: start;
+  }
+
+  .story__head,
+  .story__arch,
+  .story__body,
+  .story__keyplan {
+    grid-column: 1 / -1;
+  }
+
+  .story__head {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .story__title {
+    max-width: 18ch;
+  }
+
+  :global(:lang(am)) .story__title {
+    max-width: 22ch;
+  }
+
+  .story__arch {
+    width: min(100%, 420px);
+    justify-self: center;
+    margin-top: 10px;
+  }
+
+  .story__parallax {
+    height: 100%;
+  }
+
+  .story__parallax :global(img) {
+    width: 100%;
+    height: 112%;
+    margin-top: -6%;
+    object-fit: cover;
+  }
+
+  .story__body {
+    color: var(--text);
+  }
+
+  .story__body p:not(.lead) {
+    color: var(--text-muted);
+  }
+
+  .story__keyplan {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .story__keyplan-frame {
+    flex: none;
+    width: 140px;
+    padding: var(--space-3);
+    background: var(--ivory-50);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 4px var(--ivory-50), inset 0 0 0 5px var(--line);
+    border-radius: var(--radius-xs);
+  }
+
+  .story__keyplan-frame :global(img) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1549 / 1940;
+  }
+
+  @media (min-width: 768px) {
+    .story__head {
+      grid-column: 1 / 6;
+    }
+
+    .story__arch {
+      grid-column: 6 / 9;
+      grid-row: 1 / span 2;
+      width: 100%;
+      margin-top: 120px;
+    }
+
+    .story__body {
+      grid-column: 1 / 6;
+    }
+
+    .story__keyplan {
+      grid-column: 1 / 6;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .story__head {
+      grid-column: 1 / 8;
+    }
+
+    .story__arch {
+      grid-column: 8 / 13;
+      margin-top: 120px;
+    }
+
+    .story__body {
+      grid-column: 1 / 7;
+    }
+
+    .story__keyplan {
+      grid-column: 1 / 7;
+    }
+
+    .story__keyplan-frame {
+      width: 180px;
+    }
+  }
+</style>

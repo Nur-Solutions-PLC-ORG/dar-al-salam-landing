@@ -1,0 +1,39 @@
+---
+/** The gold mark via the sprite (see MarkSprite). Decorative unless `label` is given. */
+import { markViewBox } from '../../data/mark.generated';
+
+interface Props {
+  class?: string;
+  label?: string;
+  /** Render body and dove as separately animatable groups. */
+  split?: boolean;
+}
+const { class: cls, label, split = false } = Astro.props;
+---
+
+<svg
+  class:list={['mark', cls]}
+  viewBox={markViewBox}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+>
+  {
+    split ? (
+      <>
+        <g class="mark__body">
+          <use href="#mark-body" />
+        </g>
+        <g class="mark__dove">
+          <use href="#mark-dove" />
+        </g>
+      </>
+    ) : (
+      <>
+        <use href="#mark-body" />
+        <use href="#mark-dove" />
+      </>
+    )
+  }
+</svg>

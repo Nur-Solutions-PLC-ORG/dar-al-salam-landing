@@ -1,8 +1,17 @@
 ---
-/** Provisional header (phase 1). Final layout and mobile menu follow docs/DESIGN.md. */
-import { Image } from 'astro:assets';
-import logo from '../assets/logo/logo.png';
-import { getDict, homePath, otherLang, htmlLang, type Lang } from '../i18n';
+/**
+ * Sticky header + mobile menu (DESIGN §5.0, amendment 3: no colour transitions).
+ * - Transparent over the hero; after 80 px a background layer fades in (opacity only).
+ * - Light/dark backgrounds are two stacked layers cross-faded by opacity; text colour swaps instantly.
+ * - Hides on scroll down, shows on scroll up (transform). Always visible with reduced motion.
+ * - < 1024 px: 44 px menu button opens a full-screen navy <dialog> revealed with clip-path circle.
+ */
+import Logo from './ui/Logo.astro';
+import LangToggle from './ui/LangToggle.astro';
+import Button from './ui/Button.astro';
+import { navItems } from '../data/sections';
+import { site, telHref, whatsappHref, telegramHref, mailtoHref } from '../data/site';
+import { getDict, homePath, type Lang } from '../i18n';
 
 interface Props {
   lang: Lang;
@@ -10,110 +19,482 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = getDict(lang);
-const other = otherLang(lang);
+const c = site.contact;
+const contactLinks = [
+  c.phone && { label: c.phone, href: telHref() },
+  c.whatsapp && { label: t.enquiry.whatsapp, href: whatsappHref(), external: true },
+  c.telegram && { label: t.enquiry.telegram, href: telegramHref(), external: true },
+  c.email && { label: c.email, href: mailtoHref() },
+].filter((x): x is { label: string; href: string; external?: boolean } => Boolean(x));
 ---
 
-<header class="site-header">
-  <div class="container container--wide site-header__inner">
-    <a class="site-header__brand" href={homePath(lang)} aria-label={t.a11y.home}>
-      <Image src={logo} alt="" width={96} densities={[1, 2]} loading="eager" decoding="async" class="site-header__logo" />
+<header class="site-header" data-theme="light" data-scrolled="false" data-hidden="false">
+  <div class="site-header__bg site-header__bg--light" aria-hidden="true"></div>
+  <div class="site-header__bg site-header__bg--dark" aria-hidden="true"></div>
+  <div class="container site-header__inner">
+    <a class="site-header__brand" href={`${homePath(lang)}#top`} aria-label={t.a11y.home}>
+      <Logo />
     </a>
 
     <nav class="site-header__nav" aria-label={t.a11y.mainNav}>
       <ul role="list">
-        <li><a href="#tower">{t.nav.tower}</a></li>
-        <li><a href="#apartments">{t.nav.apartments}</a></li>
-        <li><a href="#location">{t.nav.location}</a></li>
+        {
+          navItems.map((s) => (
+            <li>
+              <a class="link" href={`#${s.id}`}>
+                {t.nav[s.nav]}
+              </a>
+            </li>
+          ))
+        }
       </ul>
     </nav>
 
     <div class="site-header__actions">
-      <a class="site-header__lang" href={homePath(other)} hreflang={htmlLang[other]}>
-        <span class="visually-hidden">{t.lang.switchToLabel}: </span>
-        <span class:list={{ 'native-script': other === 'am' }} lang={htmlLang[other]}>{t.lang.switchTo}</span>
-      </a>
-      <a class="btn btn--primary site-header__cta" href="#enquire">{t.cta.bookVisit}</a>
+      <LangToggle lang={lang} />
+      <Button href="#enquire" class="site-header__cta" magnetic>{t.cta.bookVisit}</Button>
+      <button
+        class="site-header__menu-btn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="site-menu"
+        aria-expanded="false"
+        data-menu-open
+      >
+        <span class="visually-hidden">{t.a11y.menu}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 8h18M3 16h18"></path>
+        </svg>
+      </button>
     </div>
   </div>
 </header>
 
+<dialog id="site-menu" class="menu theme-dusk" aria-label={t.a11y.menu}>
+  <div class="menu__inner container">
+    <div class="menu__top">
+      <span class="menu__brand"><Logo /></span>
+      <button class="menu__close" type="button" data-menu-close>
+        <span class="visually-hidden">{t.a11y.closeMenu}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M5 5l14 14M19 5L5 19"></path>
+        </svg>
+      </button>
+    </div>
+    <nav aria-label={t.a11y.mainNav}>
+      <ol role="list" class="menu__links">
+        {
+          navItems.map((s) => (
+            <li class="menu__item">
+              <a href={`#${s.id}`} data-menu-link>
+                <span class="menu__n" aria-hidden="true">
+                  {s.n}
+                </span>
+                {t.nav[s.nav]}
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+    <div class="menu__foot menu__item">
+      <Button href="#enquire" data-menu-link>{t.cta.bookVisit}</Button>
+      <LangToggle lang={lang} />
+      {
+        contactLinks.length > 0 && (
+          <ul role="list" class="menu__contact">
+            {contactLinks.map((l) => (
+              <li>
+                <a class="link" href={l.href} {...(l.external ? { target: '_blank', rel: 'noopener' } : {})}>
+                  {l.label}
+                  {l.external && <span class="visually-hidden"> {t.a11y.newTab}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+  </div>
+</dialog>
+
 <style>
   .site-header {
-    position: sticky;
-    top: 0;
+    position: fixed;
+    inset: 0 0 auto;
     z-index: var(--z-header);
-    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--color-line);
+    color: var(--navy-800);
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  .site-header[data-hidden='true'] {
+    transform: translateY(-100%);
+  }
+
+  /* theme: text swaps instantly (no colour tween) */
+  .site-header[data-theme='dark'] {
+    color: var(--ivory-50);
+    --accent-text: var(--gold-400);
+    --focus: var(--gold-300);
+    --btn-bg: var(--gold-500);
+    --btn-bg-hover: var(--gold-400);
+    --btn-text: var(--navy-900);
+  }
+
+  .site-header__bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid;
+  }
+
+  .site-header__bg--light {
+    background: rgb(251 247 242 / 0.86);
+    border-color: var(--sand-200);
+  }
+
+  .site-header__bg--dark {
+    background: rgb(15 24 40 / 0.86);
+    border-color: rgb(251 247 242 / 0.14);
+  }
+
+  .site-header[data-scrolled='true'][data-theme='light'] .site-header__bg--light,
+  .site-header[data-scrolled='true'][data-theme='dark'] .site-header__bg--dark {
+    opacity: 1;
   }
 
   .site-header__inner {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: var(--space-m);
-    min-height: var(--header-h);
+    gap: var(--space-5);
+    height: var(--header-h);
   }
 
   .site-header__brand {
     display: inline-flex;
     align-items: center;
     min-height: var(--tap-min);
-    flex-shrink: 0;
-  }
-
-  .site-header__logo {
-    width: clamp(64px, 12vw, 96px);
-    height: auto;
+    text-decoration: none;
+    margin-inline-end: auto;
   }
 
   .site-header__nav {
-    margin-inline-start: auto;
+    display: none;
   }
 
   .site-header__nav ul {
     display: flex;
-    gap: var(--space-l);
-  }
-
-  .site-header__nav a,
-  .site-header__lang {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tap-min);
-    font-size: var(--step--1);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .site-header__nav a:hover,
-  .site-header__lang:hover {
-    text-decoration: underline;
+    gap: clamp(1rem, 2vw, 2rem);
+    font-size: 0.875rem;
   }
 
   .site-header__actions {
     display: flex;
     align-items: center;
-    gap: var(--space-s);
+    gap: var(--space-3);
   }
 
-  .site-header__lang {
-    padding-inline: var(--space-2xs);
+  .site-header__cta {
+    display: none;
+    --btn-h: 44px;
+    padding-inline: 22px;
   }
 
-  @media (max-width: 52rem) {
+  .site-header__menu-btn {
+    display: none;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    place-items: center;
+    margin-inline-end: -10px;
+  }
+
+  .site-header__menu-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  :global(html.js) .site-header__menu-btn {
+    display: inline-grid;
+  }
+
+  @media (min-width: 640px) {
+    .site-header__cta {
+      display: inline-flex;
+    }
+  }
+
+  @media (min-width: 1024px) {
     .site-header__nav {
+      display: block;
+    }
+
+    .site-header__brand {
+      margin-inline-end: 0;
+    }
+
+    .site-header__nav {
+      margin-inline: auto;
+    }
+
+    :global(html.js) .site-header__menu-btn {
       display: none;
     }
+  }
 
-    .site-header__actions {
-      margin-inline-start: auto;
+  /* intro: header enters last (DESIGN §7.2, t = 1.70 s) */
+  @media (prefers-reduced-motion: no-preference) {
+    .site-header__inner {
+      animation: header-in 0.5s var(--ease-out) both;
+      animation-delay: calc(var(--t0, 0s) + 0.85s);
     }
   }
 
-  @media (max-width: 24rem) {
-    .site-header__cta {
-      padding-inline: 1em;
-      font-size: var(--step--1);
+  @keyframes header-in {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
+    }
+  }
+
+  /* ---------- Menu ---------- */
+
+  .menu {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--navy-900);
+    color: var(--ivory-50);
+    z-index: var(--z-menu);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    clip-path: circle(0 at var(--cx, calc(100% - 40px)) var(--cy, 32px));
+    transition: clip-path 0.7s var(--ease-inout);
+  }
+
+  .menu[data-state='open'] {
+    clip-path: circle(150% at var(--cx, calc(100% - 40px)) var(--cy, 32px));
+  }
+
+  .menu::backdrop {
+    background: transparent;
+  }
+
+  .menu__inner {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding-block-end: max(var(--space-6), env(safe-area-inset-bottom));
+  }
+
+  .menu__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-h);
+  }
+
+  .menu__close {
+    display: inline-grid;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    margin-inline-end: -10px;
+  }
+
+  .menu__close svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .menu__links {
+    margin-block: var(--space-7);
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .menu__links a {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    min-height: var(--tap-min);
+    padding-block: var(--space-2);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 1.5rem + 3vw, 3rem);
+    line-height: 1.1;
+    text-decoration: none;
+  }
+
+  :global(:lang(am)) .menu__links a {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 1.3rem + 2vw, 2.4rem);
+  }
+
+  .menu__n {
+    font-family: var(--font-body);
+    font-size: var(--fs-eyebrow);
+    letter-spacing: 0.22em;
+    color: var(--gold-400);
+  }
+
+  .menu__foot {
+    margin-block-start: auto;
+    display: grid;
+    gap: var(--space-5);
+    justify-items: start;
+  }
+
+  .menu__contact {
+    display: grid;
+    gap: var(--space-1);
+    font-size: var(--fs-small);
+    color: var(--mist-300);
+  }
+
+  .menu__item {
+    transition:
+      transform 0.6s var(--ease-out),
+      opacity 0.6s var(--ease-out);
+    transition-delay: calc(0.25s + var(--i, 0) * 0.06s);
+  }
+
+  .menu:not([data-state='open']) .menu__item {
+    opacity: 0;
+    transform: translateY(24px);
+    transition-delay: 0s;
+  }
+
+  @media (min-width: 1024px) {
+    .menu {
+      display: none;
     }
   }
 </style>
+
+<script>
+  import { getLenis } from '../scripts/motion';
+
+  const header = document.querySelector<HTMLElement>('.site-header');
+  const menu = document.querySelector<HTMLDialogElement>('#site-menu');
+  const openBtn = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---------- Scroll state: background after 80 px, hide on down / show on up ---------- */
+  if (header) {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      header.dataset.scrolled = String(y > 80);
+      const menuOpen = menu?.open ?? false;
+      if (!reduce.matches && !menuOpen && header.contains(document.activeElement) === false) {
+        if (y > lastY + 4 && y > 240) header.dataset.hidden = 'true';
+        else if (y < lastY - 4 || y <= 240) header.dataset.hidden = 'false';
+      } else {
+        header.dataset.hidden = 'false';
+      }
+      lastY = y;
+    };
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+    header.addEventListener('focusin', () => (header.dataset.hidden = 'false'));
+    update();
+
+    /* ---------- Theme follows the section under the header (IO, works with reduced motion too) ---------- */
+    const darkSections = document.querySelectorAll<HTMLElement>('[data-header-theme="dark"]');
+    let io: IntersectionObserver | null = null;
+    const visible = new Set<Element>();
+    const observe = () => {
+      io?.disconnect();
+      visible.clear();
+      const h = header.offsetHeight;
+      // a 1 px line at the header's vertical centre
+      io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) e.isIntersecting ? visible.add(e.target) : visible.delete(e.target);
+          header.dataset.theme = visible.size ? 'dark' : 'light';
+        },
+        { rootMargin: `-${Math.round(h / 2)}px 0px -${Math.max(0, window.innerHeight - Math.round(h / 2) - 1)}px 0px` },
+      );
+      darkSections.forEach((s) => io!.observe(s));
+    };
+    observe();
+    let rt = 0;
+    window.addEventListener('resize', () => {
+      clearTimeout(rt);
+      rt = window.setTimeout(observe, 150);
+    });
+  }
+
+  /* ---------- Mobile menu ---------- */
+  if (menu && openBtn) {
+    const items = menu.querySelectorAll<HTMLElement>('.menu__item');
+    items.forEach((el, i) => el.style.setProperty('--i', String(i)));
+
+    const open = () => {
+      const r = openBtn.getBoundingClientRect();
+      menu.style.setProperty('--cx', `${r.left + r.width / 2}px`);
+      menu.style.setProperty('--cy', `${r.top + r.height / 2}px`);
+      menu.showModal();
+      openBtn.setAttribute('aria-expanded', 'true');
+      getLenis()?.stop();
+      // next frame so the closed clip-path is committed before transitioning
+      requestAnimationFrame(() => requestAnimationFrame(() => (menu.dataset.state = 'open')));
+    };
+
+    const close = (then?: () => void) => {
+      if (!menu.open) return then?.();
+      menu.dataset.state = 'closing';
+      const done = () => {
+        menu.close();
+        menu.removeAttribute('data-state');
+        openBtn.setAttribute('aria-expanded', 'false');
+        getLenis()?.start();
+        then?.();
+      };
+      if (reduce.matches) done();
+      else window.setTimeout(done, 700);
+    };
+
+    openBtn.addEventListener('click', open);
+    menu.querySelector('[data-menu-close]')?.addEventListener('click', () => close());
+    menu.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      close();
+    });
+    menu.addEventListener('click', (e) => {
+      const link = (e.target as Element).closest<HTMLAnchorElement>('a[data-menu-link]');
+      if (!link) return;
+      const hash = link.hash;
+      e.preventDefault();
+      close(() => {
+        const target = hash ? document.querySelector(hash) : null;
+        if (!target) return;
+        const lenis = getLenis();
+        if (lenis) lenis.scrollTo(target as HTMLElement, { offset: -(header?.offsetHeight ?? 64), duration: 1.2 });
+        else target.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth' });
+        history.replaceState(null, '', hash);
+      });
+    });
+    window.matchMedia('(min-width: 1024px)').addEventListener('change', (e) => e.matches && close());
+  }
+</script>
