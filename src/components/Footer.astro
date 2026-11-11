@@ -1,0 +1,137 @@
+---
+/** Provisional footer. Contact rows render only for configured values (src/data/site.ts). */
+import { Image } from 'astro:assets';
+import logoDark from '../assets/logo/logo-dark.png';
+import { mailtoHref, site, telHref, telegramHref, whatsappHref, hasAnyContact } from '../data/site';
+import { getDict, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+const c = site.contact;
+const year = new Date().getFullYear();
+
+const rows = [
+  c.phone && { label: c.phone, href: telHref() },
+  c.whatsapp && { label: 'WhatsApp', href: whatsappHref(), external: true },
+  c.telegram && { label: 'Telegram', href: telegramHref(), external: true },
+  c.email && { label: c.email, href: mailtoHref() },
+].filter((r): r is { label: string; href: string; external?: boolean } => Boolean(r));
+---
+
+<footer class="site-footer on-dark">
+  <div class="container container--wide site-footer__grid">
+    <div class="site-footer__brand">
+      <Image src={logoDark} alt={site.company.name} width={140} densities={[1, 2]} loading="lazy" />
+    </div>
+
+    <div class="site-footer__contact">
+      <h2 class="site-footer__heading">{t.footer.contact}</h2>
+      {
+        hasAnyContact() ? (
+          <>
+            {rows.length > 0 && (
+              <ul role="list">
+                {rows.map((r) => (
+                  <li>
+                    <a href={r.href} {...(r.external ? { target: '_blank', rel: 'noopener' } : {})}>
+                      {r.label}
+                      {r.external && <span class="visually-hidden"> {t.a11y.newTab}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {c.address.length > 0 && (
+              <address>
+                {c.address.map((line) => (
+                  <>
+                    {line}
+                    <br />
+                  </>
+                ))}
+              </address>
+            )}
+          </>
+        ) : (
+          <p>{t.enquiry.comingSoon}</p>
+        )
+      }
+    </div>
+
+    {
+      site.social.length > 0 && (
+        <div>
+          <h2 class="site-footer__heading">{t.footer.follow}</h2>
+          <ul role="list">
+            {site.social.map((s) => (
+              <li>
+                <a href={s.url} target="_blank" rel="noopener">
+                  {s.network}
+                  <span class="visually-hidden"> {t.a11y.newTab}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+  </div>
+
+  <div class="container container--wide site-footer__legal">
+    <p>© {year} {site.company.name}. {t.footer.rights}</p>
+    <p>{t.footer.disclaimer}</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding-block: var(--space-2xl) var(--space-l);
+    font-size: var(--step--1);
+  }
+
+  .site-footer__grid {
+    display: grid;
+    gap: var(--space-xl);
+  }
+
+  @media (min-width: 52rem) {
+    .site-footer__grid {
+      grid-template-columns: 1.5fr 1fr 1fr;
+    }
+  }
+
+  .site-footer__heading {
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: var(--tracking-caps);
+    text-transform: uppercase;
+    color: var(--color-accent-text);
+    margin-block-end: var(--space-s);
+  }
+
+  .site-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+  }
+
+  address {
+    font-style: normal;
+  }
+
+  .site-footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-s);
+    margin-block-start: var(--space-xl);
+    padding-block-start: var(--space-m);
+    border-block-start: 1px solid rgb(251 247 242 / 0.15);
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,119 @@
+---
+/** Provisional header (phase 1). Final layout and mobile menu follow docs/DESIGN.md. */
+import { Image } from 'astro:assets';
+import logo from '../assets/logo/logo.png';
+import { getDict, homePath, otherLang, htmlLang, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+const other = otherLang(lang);
+---
+
+<header class="site-header">
+  <div class="container container--wide site-header__inner">
+    <a class="site-header__brand" href={homePath(lang)} aria-label={t.a11y.home}>
+      <Image src={logo} alt="" width={96} densities={[1, 2]} loading="eager" decoding="async" class="site-header__logo" />
+    </a>
+
+    <nav class="site-header__nav" aria-label={t.a11y.mainNav}>
+      <ul role="list">
+        <li><a href="#tower">{t.nav.tower}</a></li>
+        <li><a href="#apartments">{t.nav.apartments}</a></li>
+        <li><a href="#location">{t.nav.location}</a></li>
+      </ul>
+    </nav>
+
+    <div class="site-header__actions">
+      <a class="site-header__lang" href={homePath(other)} hreflang={htmlLang[other]}>
+        <span class="visually-hidden">{t.lang.switchToLabel}: </span>
+        <span class:list={{ 'native-script': other === 'am' }} lang={htmlLang[other]}>{t.lang.switchTo}</span>
+      </a>
+      <a class="btn btn--primary site-header__cta" href="#enquire">{t.cta.bookVisit}</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    min-height: var(--header-h);
+  }
+
+  .site-header__brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    flex-shrink: 0;
+  }
+
+  .site-header__logo {
+    width: clamp(64px, 12vw, 96px);
+    height: auto;
+  }
+
+  .site-header__nav {
+    margin-inline-start: auto;
+  }
+
+  .site-header__nav ul {
+    display: flex;
+    gap: var(--space-l);
+  }
+
+  .site-header__nav a,
+  .site-header__lang {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    font-size: var(--step--1);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .site-header__nav a:hover,
+  .site-header__lang:hover {
+    text-decoration: underline;
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+  }
+
+  .site-header__lang {
+    padding-inline: var(--space-2xs);
+  }
+
+  @media (max-width: 52rem) {
+    .site-header__nav {
+      display: none;
+    }
+
+    .site-header__actions {
+      margin-inline-start: auto;
+    }
+  }
+
+  @media (max-width: 24rem) {
+    .site-header__cta {
+      padding-inline: 1em;
+      font-size: var(--step--1);
+    }
+  }
+</style>

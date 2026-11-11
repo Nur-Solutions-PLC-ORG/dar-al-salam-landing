@@ -1,0 +1,88 @@
+---
+/**
+ * The whole landing page, shared by every language route (src/pages/index.astro, src/pages/am/index.astro).
+ * Phase 1: scaffold sections. Phase 2 builds each section to docs/DESIGN.md.
+ */
+import Base from '../layouts/Base.astro';
+import Header from './Header.astro';
+import Hero from './Hero.astro';
+import Facts from './Facts.astro';
+import UnitsPreview from './UnitsPreview.astro';
+import Footer from './Footer.astro';
+import towerRender from '../assets/tower-render.jpg';
+import { responsiveSet } from '../lib/images';
+import { mapsHref, site } from '../data/site';
+import { getDict, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+
+const heroImage = await responsiveSet(
+  towerRender,
+  [400, 640, 860, 1100, 1400, 1800],
+  '(min-width: 100rem) 52rem, (min-width: 60rem) 52vw, calc(100vw - 2rem)',
+);
+---
+
+<Base lang={lang} preloadImage={{ srcset: heroImage.avif, sizes: heroImage.sizes, type: 'image/avif' }}>
+  <Header lang={lang} />
+  <main id="main" tabindex="-1">
+    <Hero lang={lang} image={heroImage} />
+    <Facts lang={lang} />
+
+    <section id="tower" class="section" aria-labelledby="story-title">
+      <div class="container container--narrow" data-reveal>
+        <p class="eyebrow">{t.story.eyebrow}</p>
+        <h2 id="story-title">{t.story.title}</h2>
+        <p>{t.story.body}</p>
+      </div>
+    </section>
+
+    <UnitsPreview lang={lang} />
+
+    <section id="location" class="section" aria-labelledby="location-title">
+      <div class="container container--narrow" data-reveal>
+        <p class="eyebrow">{t.location.eyebrow}</p>
+        <h2 id="location-title">{t.location.title}</h2>
+        <p>{t.location.body}</p>
+        <ul>
+          {site.location.landmarks.map((k) => <li>{t.location.landmarks[k]}</li>)}
+        </ul>
+        <p>
+          <a class="btn btn--ghost" href={mapsHref()} target="_blank" rel="noopener">
+            {t.location.openMaps}<span class="visually-hidden"> {t.a11y.newTab}</span>
+          </a>
+        </p>
+      </div>
+    </section>
+
+    <section id="enquire" class="section" aria-labelledby="enquire-title">
+      <div class="container container--narrow">
+        <p class="eyebrow">{t.enquiry.eyebrow}</p>
+        <h2 id="enquire-title">{t.enquiry.title}</h2>
+        <p>{t.why.flexible}. {t.why.body}</p>
+      </div>
+    </section>
+  </main>
+  <Footer lang={lang} />
+</Base>
+
+<style>
+  main:focus {
+    outline: none;
+  }
+
+  .section h2 {
+    font-size: var(--step-4);
+    margin-block: var(--space-2xs) var(--space-m);
+  }
+
+  .section ul:not([role]) {
+    margin-block: var(--space-m);
+    padding-inline-start: 1.2em;
+  }
+</style>
