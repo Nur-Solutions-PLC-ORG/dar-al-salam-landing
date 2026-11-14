@@ -60,10 +60,10 @@ const pts = (poly: number[][]) => poly.map(([x = 0, y = 0]) => `${x - x0},${y - 
     inset: 0;
     overflow: hidden;
     container-type: size;
-    /* the collage sky clashes with the navy section: the photo melts into it, no hard rectangle. (The spec's
-       120% × 100% radii leave the box edges fully opaque; 60% × 55% radii put them in the fade.) */
-    -webkit-mask-image: radial-gradient(60% 55% at 50% 45%, #000 62%, transparent 100%);
-    mask-image: radial-gradient(60% 55% at 50% 45%, #000 62%, transparent 100%);
+    /* the collage sky clashes with the navy section: the photo melts into it, no hard rectangle. Radii 50% × 45%
+       (coordinator, review r8): the box edges sit fully in the fade, so no edge or corner shows. */
+    -webkit-mask-image: radial-gradient(50% 45% at 50% 45%, #000 62%, transparent 100%);
+    mask-image: radial-gradient(50% 45% at 50% 45%, #000 62%, transparent 100%);
   }
 
   .tstage[hidden] {
