@@ -3,7 +3,7 @@
 import { Picture } from 'astro:assets';
 import Arch from '../ui/Arch.astro';
 import Eyebrow from '../ui/Eyebrow.astro';
-import balconies from '../../assets/generated/story-balconies.jpg';
+import storyTower from '../../assets/generated/story-tower.jpg';
 import keyplan from '../../assets/plans/keyplan-duotone.png';
 import { sections } from '../../data/sections';
 import { twoBedFloors } from '../../data/units';
@@ -25,11 +25,12 @@ const t = getDict(lang);
     </div>
 
     <Arch class="story__arch" outline aspect="4 / 5" data-story-arch>
-      <div class="story__parallax" data-parallax-media>
+      <!-- rev 6: the whole tower (a zoomed-out crop); S8 parallax toned down to ±2.5 so the roof stays in -->
+      <div class="story__parallax" data-parallax-media data-parallax="2.5">
         <Picture
-          src={balconies}
+          src={storyTower}
           formats={['avif', 'webp']}
-          widths={[320, 480, 640, 900]}
+          widths={[480, 640, 900, 1200]}
           width={640}
           fallbackFormat="jpg"
           sizes="(min-width: 1024px) 34vw, (min-width: 768px) 50vw, 88vw"
@@ -146,11 +147,13 @@ const t = getDict(lang);
     height: 100%;
   }
 
+  /* media box 106% tall (inset −3% 0): room for the ±2.5% S8 drift without cropping the roof */
   .story__parallax :global(img) {
     width: 100%;
-    height: 112%;
-    margin-top: -6%;
+    height: 106%;
+    margin-top: -3%;
     object-fit: cover;
+    object-position: 50% 50%;
   }
 
   .story__body {

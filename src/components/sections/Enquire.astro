@@ -7,7 +7,7 @@
  */
 import { Picture } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
-import heroTower from '../../assets/generated/hero-tower.jpg';
+import balconies from '../../assets/generated/story-balconies.jpg';
 import Arch from '../ui/Arch.astro';
 import { sections } from '../../data/sections';
 import { planFloors, units } from '../../data/units';
@@ -65,7 +65,7 @@ const config = {
       <Arch class="enquire__arch" outline aspect="4 / 5" data-story-arch>
         <div class="story-par" data-parallax-media>
           <Picture
-            src={heroTower}
+            src={balconies}
             formats={['avif', 'webp']}
             widths={[240, 360, 480]}
             width={360}

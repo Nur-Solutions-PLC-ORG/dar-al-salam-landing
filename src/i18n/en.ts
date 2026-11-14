@@ -65,7 +65,7 @@ export const en = {
     p1: 'Garment Tower stands in the heart of Garment, Addis Ababa: a high-rise of 16 floors in two blocks, with a commercial ground floor and basement parking with offices.',
     /** {floors} = the 2-bedroom floors, formatted with `floorList()`. */
     p2: 'Most homes are three-bedroom; two-bedroom homes are on floors {floors}. The plans show balconies. Each block has a lift lobby with two or more lifts, and stairs.',
-    imageAlt: 'Detail of the tower’s façade: stacked balconies with dark railings',
+    imageAlt: 'Render of Garment Tower, the whole building from the street corner',
     keyplanAlt: 'Key plan of a typical floor showing nine apartments in two blocks',
     keyplanCaption: 'Typical floor plan: two blocks',
   },
@@ -242,7 +242,7 @@ export const en = {
     contactLines: 'Contact',
     required: 'required',
     noscript: 'Please use the contact details on this page to reach us.',
-    imageAlt: 'Garment Tower render',
+    imageAlt: 'Detail of the tower’s façade: stacked balconies with dark railings',
   },
   cursor: {
     view: 'View',

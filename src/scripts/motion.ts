@@ -380,14 +380,16 @@ function storyArch() {
     const tl = gsap
       .timeline({ scrollTrigger: { trigger: arch, start: 'top 85%', end: 'top 35%', scrub: 0.6 }, defaults: { ease: 'none' } })
       .fromTo(clip, { clipPath: 'inset(18% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)' }, 0)
-      .fromTo(img, { scale: 1.2 }, { scale: 1 }, 0);
+      .fromTo(img, { scale: 1.12 }, { scale: 1 }, 0); // rev 6: was 1.2; the whole tower must be in at rest
     // the outline reveals with the media, never floating over empty sand (design QA #10)
     if (outline) tl.fromTo(outline, { clipPath: 'inset(18% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)' }, 0);
+    // S8: ±6 by default; the Story arch's whole-tower image asks for ±2.5 (data-parallax, rev 6)
+    const amp = Number((par as HTMLElement | null)?.dataset.parallax ?? 6);
     if (par)
       gsap.fromTo(
         par,
-        { yPercent: -6 },
-        { yPercent: 6, ease: 'none', scrollTrigger: { trigger: arch, start: 'top bottom', end: 'bottom top', scrub: true } },
+        { yPercent: -amp },
+        { yPercent: amp, ease: 'none', scrollTrigger: { trigger: arch, start: 'top bottom', end: 'bottom top', scrub: true } },
       );
   }
 }

@@ -72,6 +72,8 @@ const grade = (img) =>
 const crops = [
   { name: 'hero-tower.jpg', left: 190, top: 110, width: 1560, height: 1950 },
   { name: 'story-balconies.jpg', left: 560, top: 900, width: 900, height: 1125 },
+  // rev 6 (DESIGN §5.3): the whole tower for the Story arch, full render height, centred on the tower
+  { name: 'story-tower.jpg', left: 95, top: 0, width: 1730, height: 2163 },
 ];
 
 for (const c of crops) {
