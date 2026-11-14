@@ -5,7 +5,9 @@
  *
  * Draw calls are kept low by merging: every wall, header, sill and column is ONE mesh. Two vertex attributes drive
  * the shader: `aDelay` (the staggered rise of the lift, U1) and `aSide` (−1 interior, else the perimeter side 0–3).
- * The cutaway (U3) clamps a side's vertices to `uCut[side]` (2.8 → 1.0 m) instead of scaling separate meshes, so
+ * The model is cut at `defaults.modelCutH` (2.4 m, rev 8.1 B) like a section model: walls, columns, the shaft and
+ * opening headers stop there, and glazing heads clamp to it.
+ * The cutaway (U3) clamps a side's vertices to `uCut[side]` (2.4 → 1.0 m) instead of scaling separate meshes, so
  * headers and glass on a lowered façade go down with it. Raycasts (hotspot occlusion) apply the same clamp.
  * Heights are illustrative (not on the plans) and never shown in the UI.
  */
@@ -45,12 +47,12 @@ import type { P2, Unit3d } from '../../data/units3d/types';
 import css from '../../styles/unit3d.css?inline';
 
 const DEG = Math.PI / 180;
-const WALL_H = 2.8;
+const MODEL_CUT = 2.4; // rev 8.1 B: default when the JSON has no defaults.modelCutH
 const CUT_H = 1.0;
-const EL = 56 * DEG;
+const EL = 60 * DEG;
 const AZ = -35 * DEG;
-const EL_MIN = 50 * DEG;
-const EL_MAX = 62 * DEG;
+const EL_MIN = 52 * DEG;
+const EL_MAX = 68 * DEG;
 const ORBIT = 5 * DEG; // per second
 const RESUME = 5000;
 const FILL = 2.8; // rev 8.1 A: camera fill intensity, tuned so camera-facing walls read #F3ECE2–#D9CFC0
@@ -149,6 +151,8 @@ function shadowTexture() {
 
 export function createDollhouse(o: DollhouseOpts): Dollhouse {
   const { renderer, host, stage, data } = o;
+  const WALL_H = data.defaults.modelCutH ?? MODEL_CUT;
+  const cut = (h: number) => Math.min(h, WALL_H);
   const canvas = renderer.domElement;
   if (!document.getElementById('u3d-css')) {
     const st = document.createElement('style');
@@ -228,18 +232,19 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const pieces: Piece[] = [];
   const mid = (a: P2, b: P2): P2 => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   for (const w of data.walls) {
-    pieces.push({ g: seg(w.a, w.b, 0, w.h, w.t), m: 'wall', mid: mid(w.a, w.b), side: w.kind === 'interior' ? -1 : sideOf(w.a, w.b) });
+    pieces.push({ g: seg(w.a, w.b, 0, cut(w.h), w.t), m: 'wall', mid: mid(w.a, w.b), side: w.kind === 'interior' ? -1 : sideOf(w.a, w.b) });
   }
   for (const op of data.openings) {
     const side = openingSide(op.a, op.b);
     const m = mid(op.a, op.b);
-    pieces.push({ g: seg(op.a, op.b, op.head, WALL_H, op.t), m: 'wall', mid: m, side });
+    const head = cut(op.head);
+    if (head < WALL_H) pieces.push({ g: seg(op.a, op.b, head, WALL_H, op.t), m: 'wall', mid: m, side });
     if (op.type === 'window') pieces.push({ g: seg(op.a, op.b, 0, op.sill, op.t), m: 'wall', mid: m, side });
     if (op.type !== 'door') {
       const y0 = op.type === 'window' ? op.sill : 0;
-      pieces.push({ g: seg(op.a, op.b, y0, op.head, 0, true), m: 'glass', mid: m, side });
+      pieces.push({ g: seg(op.a, op.b, y0, head, 0, true), m: 'glass', mid: m, side });
       // 3 cm navy frame: head and sill lines
-      pieces.push({ g: seg(op.a, op.b, op.head - 0.03, op.head, 0.04), m: 'dark', mid: m, side });
+      pieces.push({ g: seg(op.a, op.b, head - 0.03, head, 0.04), m: 'dark', mid: m, side });
       pieces.push({ g: seg(op.a, op.b, y0, y0 + 0.03, 0.04), m: 'dark', mid: m, side });
     }
   }
@@ -255,7 +260,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
       const top = prism(s.poly, 0.02);
       top.translate(0, s.h - 0.02, 0);
       pieces.push({ g: top, m: 'top', mid: m, side: -1, solid: true });
-    } else pieces.push({ g: prism(s.poly, s.h), m: s.kind === 'wardrobe' ? 'oak' : 'wall', mid: m, side: -1, solid: true });
+    } else pieces.push({ g: prism(s.poly, cut(s.h)), m: s.kind === 'wardrobe' ? 'oak' : 'wall', mid: m, side: -1, solid: true });
   }
   const dist = (p: Piece) => Math.hypot(p.mid[0] - cx, p.mid[1] - cz);
   const walls = pieces.filter((p) => !p.solid).sort((a, b) => dist(a) - dist(b));
