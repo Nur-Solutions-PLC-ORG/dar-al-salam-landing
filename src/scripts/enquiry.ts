@@ -150,7 +150,19 @@ export function initEnquiry() {
   });
 
   /* ---------- the message (rev 8.5, R2): one line per field; a line whose field is empty is skipped ---------- */
-  /** `f` collapses whitespace, which keeps every user value on its own line. */
+  /**
+   * The visitor's own line breaks survive (review r7 nit 1): the first line follows "💬 Message:", later ones are
+   * indented under it; spaces inside a line are tidied and blank lines dropped.
+   */
+  const messageLines = (msg: string, label: string): string[] => {
+    const lines = msg
+      .split(/\r?\n/)
+      .map((l) => l.replace(/[ \t]+/g, ' ').trim())
+      .filter(Boolean);
+    if (!lines.length) return [];
+    return [f(label, { message: lines[0]! }), ...lines.slice(1).map((l) => `   ${l}`)];
+  };
+  /** `f` collapses whitespace, which keeps every other user value on its own line. */
   const compose = (msg: string) => {
     const m = t.msg;
     const home = unit.value ? (unitTbc() ? f(t.unitTbc ?? '', { code: unit.value }) : (t.units[unit.value] ?? unit.value)) : '';
@@ -161,7 +173,7 @@ export function initEnquiry() {
       f(m.phone, { phone: phone.value.trim() }),
       home ? f(m.home, { unit: home }) : null,
       floor.value ? f(m.floor, { floor: f(m.floorN, { n: floor.value }) }) : null,
-      msg ? f(m.message, { message: msg }) : null,
+      ...messageLines(msg, m.message),
       '',
       m.sign,
     ];
