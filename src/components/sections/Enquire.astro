@@ -125,7 +125,8 @@ const config = {
 
       <div class="field" data-field>
         <label for="enq-name">{e.name} <span class="field__req" aria-hidden="true">*</span></label>
-        <input id="enq-name" name="name" type="text" autocomplete="name" required aria-describedby="enq-name-err" />
+        <!-- maxlengths keep the Telegram URL under its 2,000-character cap (review r7 nit 2) -->
+        <input id="enq-name" name="name" type="text" autocomplete="name" maxlength="80" required aria-describedby="enq-name-err" />
         <p class="field__error" id="enq-name-err" data-error hidden></p>
       </div>
 
@@ -137,6 +138,7 @@ const config = {
           type="tel"
           inputmode="tel"
           autocomplete="tel"
+          maxlength="30"
           placeholder={e.phonePlaceholder}
           required
           aria-describedby="enq-phone-err"
