@@ -136,6 +136,11 @@ html.is-walking .u3d-enter {
   .explore[data-walk] .explore__panel {
     grid-column: 9 / 13;
   }
+
+  /* review r8 L7: the narrower walking panel keeps one column ("Go to the living and dining room" fits on two lines) */
+  .explore[data-walk] .u3d-rooms__list {
+    display: block;
+  }
 }
 
 @media (max-width: 1023.98px) {
