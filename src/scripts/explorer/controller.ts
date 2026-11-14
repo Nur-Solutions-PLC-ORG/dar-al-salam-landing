@@ -161,6 +161,8 @@ export function createExplorer(root: HTMLElement) {
     model = createSvgModel(svg, stage, callbacks);
     model.select(state.level === 'idle' ? null : state.floor);
     stage.dataset.tier = 'svg';
+    // the plan shows now: drop a /3d from the hash (the same rule as the first render, review r6 #4)
+    if (location.hash.startsWith('#explore')) history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   });
 
   /* ---------- tooltip / preview ---------- */
