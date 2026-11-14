@@ -2,10 +2,12 @@
 /**
  * Why Dar Al Salam + flexible payment (DESIGN §5.7 rev 2). Navy. Only what the plans and brief support;
  * no numbers or percentages for payment. Part A has a visually-hidden H2 so the heading order stays valid.
+ * Rev 5: three pillars (parking became a building feature) + the building features band (exact wordings).
  */
 import Eyebrow from '../ui/Eyebrow.astro';
 import Button from '../ui/Button.astro';
 import { sections } from '../../data/sections';
+import { site } from '../../data/site';
 import { emph, getDict, type Lang } from '../../i18n';
 
 interface Props {
@@ -20,9 +22,20 @@ const icons = {
   generous: 'M5 5h22v22H5zM5 15h10v12M15 5v6M21 15h6M15 21h4',
   balconies: 'M6 4h20v14H6zM16 4v14M3 18h26M5 18v10M27 18v10M9 22v6M13 22v6M19 22v6M23 22v6M3 28h26',
   lifts: 'M7 4h18v24H7zM16 4v24M10 13l2.5-3 2.5 3M17 19l2.5 3 2.5-3',
-  parking: 'M4 26h24M6 26V12l10-6 10 6v14M12 22v-9h5a3 3 0 0 1 0 6h-5',
 } as const;
-const pillars = (['generous', 'balconies', 'lifts', 'parking'] as const).map((k) => ({ k, ...p.pillars[k], d: icons[k] }));
+const pillars = (['generous', 'balconies', 'lifts'] as const).map((k) => ({ k, ...p.pillars[k], d: icons[k] }));
+
+// Building features (DESIGN §5.7 rev 5): our own 24-grid line icons, exact labels from the dictionary
+const featureIcons: Record<(typeof site.features)[number], string> = {
+  garbageChute:
+    '<path d="M9 3v18M15 3v18M3 7h6M15 7h6M3 13h6M15 13h6M3 19h6M15 19h6M12 9v6M10.5 13.5 12 15l1.5-1.5"/>',
+  standbyLift:
+    '<rect x="3" y="4" width="8" height="16" rx="1"/><path d="M5.5 10.5 7 9l1.5 1.5M5.5 13.5 7 15l1.5-1.5"/><rect x="13" y="4" width="8" height="16" rx="1" stroke-dasharray="2 2"/>',
+  undergroundWater:
+    '<path d="M8 9V4h8v5M2 9h20M12 12.5c2.4 3 3.6 4.9 3.6 6.3a3.6 3.6 0 0 1-7.2 0c0-1.4 1.2-3.3 3.6-6.3z"/>',
+  parking: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9.5 17V7H13a3 3 0 0 1 0 6H9.5"/>',
+};
+const features = site.features.map((k) => ({ k, label: t.features.items[k], svg: featureIcons[k] }));
 const steps = [p.steps.reserve, p.steps.overTime, p.steps.paid];
 ---
 
@@ -43,6 +56,35 @@ const steps = [p.steps.reserve, p.steps.overTime, p.steps.paid];
         ))
       }
     </ul>
+
+    {
+      features.length > 0 && (
+        <div class="features">
+          <h3 class="eyebrow features__title" data-eyebrow>
+            <span>{t.features.title}</span>
+            <span class="eyebrow__rule" aria-hidden="true" />
+          </h3>
+          <ul role="list" class="features__list" data-features>
+            {features.map((x) => (
+              <li class="feature">
+                <svg
+                  class="feature__icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  set:html={x.svg}
+                />
+                <span class="feature__label">{x.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
 
     <div class="plan">
       <h2 class="h2 plan__title" data-split set:html={emph(p.title)} />
@@ -76,11 +118,69 @@ const steps = [p.steps.reserve, p.steps.overTime, p.steps.paid];
 <style>
   .pillars {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
     gap: var(--space-7) var(--gutter);
     margin-top: var(--space-7);
+  }
+
+  /* ---------- building features band (rev 5): denser than the pillars, a spec list ---------- */
+  .features {
+    --_hair: color-mix(in srgb, var(--gold-500) 35%, transparent);
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
     padding-bottom: var(--space-9);
-    border-bottom: 1px solid var(--line);
+  }
+
+  .features__title {
+    margin: 0;
+  }
+
+  /* hairlines between cells = the list background showing through 1 px gaps */
+  .features__list {
+    display: grid;
+    gap: 1px;
+    background: var(--_hair);
+    border-block: 1px solid var(--_hair);
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-height: 56px;
+    padding: 20px 24px;
+    background: var(--bg);
+  }
+
+  .feature__icon {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    color: var(--gold-500);
+  }
+
+  .feature__icon :global(*) {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .feature__label {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--text);
+  }
+
+  @media (min-width: 640px) {
+    .features__list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .features__list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 
   .pillar {
@@ -183,6 +283,10 @@ const steps = [p.steps.reserve, p.steps.overTime, p.steps.paid];
   }
 
   @media (min-width: 768px) {
+    .pillars {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .steps {
       padding: var(--space-7) 0 0;
     }

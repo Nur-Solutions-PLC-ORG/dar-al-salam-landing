@@ -254,6 +254,27 @@ function pillarReveals(): Reveal[] {
   ];
 }
 
+/** S15 (rev 5): building feature cells fade up (stagger 0.08), each icon draws left → right with clip-path. */
+function featureReveals(): Reveal[] {
+  const list = document.querySelector<HTMLElement>('[data-features]');
+  if (!list) return [];
+  const cells = Array.from(list.children) as HTMLElement[];
+  const icons = cells.map((c) => c.querySelector('svg'));
+  return [
+    {
+      el: list,
+      hide: () => {
+        gsap.set(cells, { opacity: 0, y: 16 });
+        gsap.set(icons, { clipPath: 'inset(0% 100% 0% 0%)' });
+      },
+      play: () => {
+        gsap.to(cells, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.08, clearProps: 'transform' });
+        gsap.to(icons, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'power3.out', stagger: 0.08, delay: 0.1 });
+      },
+    },
+  ];
+}
+
 /** S18: form fields rise in sequence. */
 function formReveal(): Reveal[] {
   const form = document.querySelector<HTMLElement>('[data-enquiry]');
@@ -436,7 +457,7 @@ export function initMotion() {
         guard(() => heroScrub(desktop)),
         guard(() => revealOnce([...factsReveal(), ...eyebrowReveals()], cleanups)),
         guard(() => revealOnce([...headingReveals(), ...blockReveals()], cleanups)),
-        guard(() => revealOnce([...cardReveals(), ...mapReveal(), ...pillarReveals(), ...formReveal()], cleanups)),
+        guard(() => revealOnce([...cardReveals(), ...mapReveal(), ...pillarReveals(), ...featureReveals(), ...formReveal()], cleanups)),
         guard(() => {
           storyArch();
           paymentTimeline(window.matchMedia('(min-width: 768px)').matches);
