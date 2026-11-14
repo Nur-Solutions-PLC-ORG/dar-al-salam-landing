@@ -29,7 +29,11 @@ export const units3d: Partial<Record<string, () => Promise<{ geo: Unit3d; images
     const [geo, img] = await Promise.all([import('./bl06.json'), import('./bl06')]);
     return { geo: geo.default as unknown as Unit3d, images: img.images };
   },
+  BL07: async () => {
+    const [geo, img] = await Promise.all([import('./bl07.json'), import('./bl07')]);
+    return { geo: geo.default as unknown as Unit3d, images: img.images };
+  },
 };
 
 /** BL01 (rev 8.4) only where it is confirmed (floors 4, 6, 8, 10, 11): TBC positions never get 3D. */
-export const HAS3D: readonly string[] = ['BL01', 'BL02', 'BL03', 'BL04', 'BL05', 'BL06'];
+export const HAS3D: readonly string[] = ['BL01', 'BL02', 'BL03', 'BL04', 'BL05', 'BL06', 'BL07'];
