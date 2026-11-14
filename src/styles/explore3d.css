@@ -205,6 +205,7 @@ html.is-walking .u3d-enter {
   position: absolute;
   top: 12px;
   left: 12px;
+  right: calc(132px + 24px); /* review r8 M5: wrap before the minimap, never under it */
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -346,6 +347,10 @@ html.is-walking .u3d-enter {
 @media (max-width: 767.98px) {
   .walk-mini {
     width: 96px;
+  }
+
+  .walk-toolbar {
+    right: calc(96px + 24px);
   }
 }
 
