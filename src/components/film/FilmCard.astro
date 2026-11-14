@@ -17,6 +17,7 @@ const f = t.film;
 ---
 
 <div class="film-card" data-film-card data-label-pause={f.pause} data-label-play={f.play}>
+  <div class="film-card__media">
   <video
     class="film-card__video"
     muted
@@ -31,6 +32,7 @@ const f = t.film;
     data-film-loop
   ></video>
   <span class="film-card__scrim" aria-hidden="true"></span>
+  </div>
   <a class="film-card__open" href="/video/film.mp4" aria-haspopup="dialog" data-film-open data-cursor="play">
     <span class="film-card__play" aria-hidden="true"></span>
     <span class="film-card__label">{f.watch}</span>{' '}
@@ -38,6 +40,23 @@ const f = t.film;
     <span class="visually-hidden">{f.openSr}</span>
   </a>
   <div class="film-card__controls">
+    <!-- rev 5 sound toggle: constant name, state in aria-pressed; the visible tooltip is aria-hidden -->
+    <button
+      class="film-card__btn film-card__sound"
+      type="button"
+      aria-pressed="false"
+      aria-label={f.music}
+      data-film-sound
+      data-state="off"
+      data-label-on={f.soundOn}
+      data-label-off={f.soundOff}
+      data-label-error={f.soundError}
+      hidden
+    >
+      <span class="film-card__bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="film-card__slash" aria-hidden="true"></span>
+      <span class="film-card__tip" aria-hidden="true" data-film-sound-tip>{f.soundOff}</span>
+    </button>
     <button class="film-card__btn film-card__pause" type="button" data-film-pause hidden>
       <span class="visually-hidden" data-film-pause-label>{f.pause}</span>
       <svg viewBox="0 0 12 12" aria-hidden="true" fill="currentColor">
@@ -57,10 +76,17 @@ const f = t.film;
     width: 168px;
     aspect-ratio: 20 / 11;
     border-radius: var(--radius-s);
-    overflow: clip;
     background: var(--navy-950);
     box-shadow: var(--shadow-2);
     isolation: isolate;
+  }
+
+  /* only the media is clipped, so the sound tooltip can sit above the card */
+  .film-card__media {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: clip;
   }
 
   /* the hairline sits above the video */
@@ -206,6 +232,114 @@ const f = t.film;
 
   .film-card__pause[data-paused] .film-card__glyph-play {
     display: inline;
+  }
+
+  /* ---------- sound toggle glyph: three bars (+ a slash when off) ---------- */
+  .film-card__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+  }
+
+  .film-card__bars span {
+    width: 2px;
+    height: 12px;
+    background: currentColor;
+    transform-origin: bottom;
+    transform: scaleY(0.25);
+  }
+
+  .film-card__slash {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1.5px;
+    height: 20px;
+    background: currentColor;
+    transform: rotate(-45deg);
+  }
+
+  .film-card__sound:not([data-state='off']) .film-card__slash {
+    display: none;
+  }
+
+  .film-card__sound[data-state='loading'] .film-card__bars {
+    animation: sound-loading 0.8s ease-in-out infinite alternate;
+  }
+
+  .film-card__sound[data-state='on'] .film-card__bars span {
+    animation: eq 0.9s ease-in-out infinite alternate;
+    animation-play-state: paused;
+  }
+
+  .film-card__sound[data-state='on'] .film-card__bars span:nth-child(2) {
+    animation-duration: 1.1s;
+  }
+
+  .film-card__sound[data-state='on'] .film-card__bars span:nth-child(3) {
+    animation-duration: 0.7s;
+  }
+
+  /* the equaliser moves only while audio is actually playing */
+  .film-card__sound[data-state='on'][data-playing] .film-card__bars span {
+    animation-play-state: running;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .film-card__sound[data-state='on'] .film-card__bars span {
+      animation: none;
+      transform: scaleY(0.6);
+    }
+
+    .film-card__sound[data-state='on'] .film-card__bars span:nth-child(2) {
+      transform: scaleY(1);
+    }
+
+    .film-card__sound[data-state='on'] .film-card__bars span:nth-child(3) {
+      transform: scaleY(0.45);
+    }
+  }
+
+  @keyframes eq {
+    from {
+      transform: scaleY(0.3);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes sound-loading {
+    from {
+      opacity: 0.5;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* state tooltip ("Sound off" / "Sound on"), on hover and keyboard focus */
+  .film-card__tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    padding: 2px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--navy-950);
+    color: var(--ivory-50);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s var(--ease-out);
+  }
+
+  .film-card__sound:is(:hover, :focus-visible) .film-card__tip {
+    opacity: 1;
   }
 
   @media (hover: hover) and (pointer: fine) {

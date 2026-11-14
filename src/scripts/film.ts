@@ -8,6 +8,7 @@
  * `?film-debug` skips the connection checks only (headless Chrome reports 3g); never the motion check.
  */
 import { getLenis, prefersReducedMotion } from './motion-api';
+import { toast } from './toast';
 
 type Connection = { saveData?: boolean; effectiveType?: string };
 
@@ -122,8 +123,114 @@ export function initFilm() {
   window.addEventListener('film:s1f', (e) => {
     s1fVisible = (e as CustomEvent<{ visible: boolean }>).detail.visible;
     update();
+    sound.sync(600);
   });
-  document.addEventListener('visibilitychange', update);
+  document.addEventListener('visibilitychange', () => {
+    update();
+    sound.sync(200);
+  });
+
+  let cardInView = false;
+  const sound = initSound(card, () => cardInView && s1fVisible);
+  // music follows its own control: audible only while the card is on screen (and, on desktop, not faded by S1f)
+  new IntersectionObserver(([e]) => {
+    cardInView = Boolean(e?.isIntersecting);
+    sound.sync(600);
+  }).observe(card);
+  film.onDialog = () => sound.sync(300);
+}
+
+/* ---------- sound toggle (item 6): Web Audio gain fades, nothing fetched before the first press ---------- */
+
+function initSound(card: HTMLElement, cardShown: () => boolean) {
+  const btn = card.querySelector<HTMLButtonElement>('[data-film-sound]');
+  const noop = { sync: (_ms: number) => {} };
+  if (!btn || !('AudioContext' in window)) return noop;
+  const tip = btn.querySelector('[data-film-sound-tip]')!;
+  let ctx: AudioContext | null = null;
+  let audio: HTMLAudioElement | null = null;
+  let gain: GainNode | null = null;
+  let on = false;
+  let pauseTimer = 0;
+  let firstPlay = true; // the first load can outlast the 600 ms ramp: fade in from 0 once it actually plays
+
+  const show = (state: 'off' | 'loading' | 'on') => {
+    btn.dataset.state = state;
+    btn.setAttribute('aria-pressed', String(state !== 'off'));
+    tip.textContent = (state === 'off' ? btn.dataset.labelOff : btn.dataset.labelOn) ?? '';
+  };
+
+  const fail = () => {
+    on = false;
+    if (audio) audio.pause();
+    show('off');
+    toast(btn.dataset.labelError ?? '');
+  };
+
+  /** Ramp the gain from wherever it is now; a press mid-fade cancels the fade. */
+  const ramp = (to: number, ms: number) => {
+    if (!ctx || !gain || !audio) return;
+    const now = ctx.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(to, now + ms / 1000);
+    clearTimeout(pauseTimer);
+    if (to === 0) pauseTimer = window.setTimeout(() => audio?.pause(), ms);
+  };
+
+  const sync = (ms: number) => {
+    if (!audio) return;
+    const audible = on && cardShown() && !document.hidden && !film.dialogOpen;
+    if (!audible) {
+      ramp(0, ms);
+      return;
+    }
+    if (audio.paused) {
+      void ctx?.resume();
+      audio.play().catch(fail);
+    }
+    ramp(0.8, ms);
+  };
+
+  btn.hidden = false;
+  btn.addEventListener('click', () => {
+    // first press: everything synchronously inside the click (the user gesture)
+    if (!ctx) {
+      try {
+        ctx = new AudioContext();
+        void ctx.resume();
+        audio = new Audio();
+        audio.loop = true;
+        audio.preload = 'auto';
+        audio.src = audio.canPlayType('audio/webm; codecs="opus"') ? '/video/film-music.webm' : '/video/film-music.m4a';
+        gain = ctx.createGain();
+        gain.gain.value = 0;
+        ctx.createMediaElementSource(audio).connect(gain).connect(ctx.destination);
+        audio.addEventListener('playing', () => {
+          btn.setAttribute('data-playing', '');
+          if (!on) return;
+          show('on');
+          if (firstPlay && ctx && gain) {
+            firstPlay = false;
+            gain.gain.cancelScheduledValues(ctx.currentTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            ramp(0.8, 600);
+          }
+        });
+        audio.addEventListener('pause', () => btn.removeAttribute('data-playing'));
+        audio.addEventListener('error', () => on && fail());
+      } catch {
+        fail();
+        return;
+      }
+    }
+    on = !on;
+    if (on) show(audio && audio.readyState >= 3 && !audio.paused ? 'on' : 'loading');
+    else show('off');
+    sync(600);
+  });
+
+  return { sync };
 }
 
 /* ---------- film dialog (item 5): FLIP from the card, rise from the Story link, cross-fade with reduced motion ---------- */
