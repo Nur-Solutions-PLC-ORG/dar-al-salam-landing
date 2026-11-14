@@ -594,7 +594,7 @@ export function createExplorer(root: HTMLElement) {
       const [m, s] = await Promise.all([(walkMod ??= import('./walk')), strings!]);
       if (!dh || walk) return;
       walkStrings = (s as unknown as { walk: Record<string, string> }).walk;
-      walk = m.createWalk(dh.walkHost(), { onArrive: () => undefined });
+      walk = m.createWalk(dh.walkHost(), { onArrive: () => undefined, strings: walkStrings });
     }
     if (!walk.room) {
       selectRoom(null);

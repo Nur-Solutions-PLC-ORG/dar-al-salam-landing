@@ -5,6 +5,9 @@
  *   0.6 s the walls rise from the 2.4 m cut to the full 2.8 m, the camera-side cutaway lifts and the ceiling fades in.
  *   The initial view faces the room's balcony opening, else the middle of its longest wall. Back: the reverse (U9,
  *   1.0 s). Reduced motion: 0.2 s cross-fades.
+ * - B2 looking: drag or swipe turns the view (yaw 360°, pitch ±25°, 0.25°/px, inertia 0.9 per frame). On touch the
+ *   axis locks after 8 px and a vertical swipe still scrolls the page (touch-action: pan-y). No zoom. "Look left /
+ *   Look right" buttons (30°, 0.3 s) and the arrow keys; an optional "Use motion" toggle on phones (off by default).
  */
 import { DoubleSide, Mesh, MeshBasicMaterial, PerspectiveCamera, Quaternion, Shape, ShapeGeometry, Vector3 } from 'three';
 import type { WalkHost } from './unit3d';
@@ -44,7 +47,11 @@ export interface Walk {
   destroy(): void;
 }
 
-export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void }): Walk {
+const DEG = Math.PI / 180;
+const PITCH = 25 * DEG;
+const STEP = 30 * DEG;
+
+export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void; strings: Record<string, string> }): Walk {
   const { camera, data, uniforms: U } = h;
   const rooms = new Map(data.rooms.map((r) => [r.id, r]));
 
@@ -66,6 +73,141 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void 
     camera.rotation.set(view.pitch, view.yaw, 0, 'YXZ');
     camera.updateProjectionMatrix();
   };
+  /* ---------- B2: looking ---------- */
+  const canvas = h.renderer.domElement;
+  let vel = 0;
+  let velP = 0;
+  let drag: { x: number; y: number; axis: 'x' | 'y' | null; touch: boolean } | null = null;
+  const clampPitch = () => (view.pitch = Math.max(-PITCH, Math.min(PITCH, view.pitch)));
+  const onDown = (e: PointerEvent) => {
+    if (!current) return;
+    drag = { x: e.clientX, y: e.clientY, axis: e.pointerType === 'mouse' ? 'x' : null, touch: e.pointerType !== 'mouse' };
+    vel = velP = 0;
+    if (!drag.touch) canvas.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: PointerEvent) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (drag.touch && !drag.axis) {
+      if (Math.hypot(dx, dy) < 8) return;
+      drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    }
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    if (drag.axis === 'y' && drag.touch) return; // the page scrolls
+    vel = dx * 0.25 * DEG;
+    velP = drag.touch ? 0 : dy * 0.25 * DEG;
+    view.yaw += vel;
+    view.pitch += velP;
+    clampPitch();
+    h.request();
+  };
+  const onUp = (e: PointerEvent) => {
+    drag = null;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    h.request();
+  };
+  /** One 30° look step (buttons and arrow keys). */
+  const turn = (dir: number) => {
+    if (!current) return;
+    vel = velP = 0;
+    const t = { y: view.yaw };
+    h.run(t, { y: view.yaw + dir * STEP, duration: h.reduced ? 0 : 0.3, ease: 'power2.out', onUpdate: () => ((view.yaw = t.y), apply()) });
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (!current || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    turn(e.key === 'ArrowLeft' ? 1 : -1);
+  };
+
+  // the controls, in the stage: look left / right at the bottom corners, the toolbar top-left (B6 adds to it)
+  const ui = document.createElement('div');
+  ui.className = 'walk-ui';
+  ui.hidden = true;
+  const button = (cls: string, label: string, onClick: () => void, html = '') => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = html;
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  const arrow = (d: string) => `<svg viewBox="0 0 20 20" aria-hidden="true"><path d="${d}"/></svg>`;
+  ui.append(
+    button('walk-look walk-look--l', o.strings.lookLeft ?? '', () => turn(1), arrow('M12 4 6 10l6 6')),
+    button('walk-look walk-look--r', o.strings.lookRight ?? '', () => turn(-1), arrow('M8 4l6 6-6 6')),
+  );
+  const toolbar = document.createElement('div');
+  toolbar.className = 'walk-toolbar';
+  ui.append(toolbar);
+  h.stage.append(ui);
+
+  // gyro (phones, opt-in, never with reduced motion)
+  type Orient = DeviceOrientationEvent & { webkitCompassHeading?: number };
+  const DOE = window.DeviceOrientationEvent as typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> };
+  let gyro: { yaw: number; alpha: number | null } | null = null;
+  const onOrient = (e: Orient) => {
+    if (!gyro || e.alpha == null || e.beta == null) return;
+    if (gyro.alpha === null) gyro.alpha = e.alpha;
+    view.yaw = gyro.yaw + (e.alpha - gyro.alpha) * DEG;
+    view.pitch = (e.beta - 90) * DEG;
+    clampPitch();
+    h.request();
+  };
+  if (DOE && matchMedia('(pointer: coarse)').matches && !h.reduced) {
+    const g = button('walk-gyro', o.strings.useMotion ?? '', async () => {
+      if (gyro) {
+        gyro = null;
+        window.removeEventListener('deviceorientation', onOrient);
+        g.setAttribute('aria-pressed', 'false');
+        return;
+      }
+      try {
+        if (DOE.requestPermission && (await DOE.requestPermission()) !== 'granted') throw new Error('denied');
+        gyro = { yaw: view.yaw, alpha: null };
+        window.addEventListener('deviceorientation', onOrient);
+        g.setAttribute('aria-pressed', 'true');
+      } catch {
+        g.hidden = true; // refused or unsupported: the toggle goes away
+      }
+    }, `<span>${o.strings.useMotion ?? ''}</span>`);
+    g.setAttribute('aria-pressed', 'false');
+    g.removeAttribute('aria-label');
+    toolbar.append(g);
+  }
+
+  /** The walk driver: inertia after a drag, then hand the frame back. */
+  const driver = {
+    frame() {
+      if (!drag && (Math.abs(vel) > 1e-4 || Math.abs(velP) > 1e-4)) {
+        view.yaw += vel;
+        view.pitch += velP;
+        clampPitch();
+        vel *= 0.9;
+        velP *= 0.9;
+      }
+      if (current) apply();
+      return Boolean(gyro) || Math.abs(vel) > 1e-4 || Math.abs(velP) > 1e-4;
+    },
+  };
+  const listen = (on: boolean) => {
+    const f = on ? 'addEventListener' : 'removeEventListener';
+    canvas[f]('pointerdown', onDown as EventListener);
+    canvas[f]('pointermove', onMove as EventListener);
+    canvas[f]('pointerup', onUp as EventListener);
+    canvas[f]('pointercancel', onUp as EventListener);
+    h.stage[f]('keydown', onKey as EventListener);
+    ui.hidden = !on;
+    if (on) h.stage.tabIndex = 0;
+    else {
+      h.stage.removeAttribute('tabindex');
+      gyro = null;
+      window.removeEventListener('deviceorientation', onOrient);
+    }
+  };
+
   /** The yaw that looks from p toward q (camera forward is −z). */
   const yawTo = (p: Vector3, q: Vector3) => Math.atan2(-(q.x - p.x), -(q.z - p.z));
 
@@ -175,7 +317,8 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void 
     },
     async enter(id) {
       h.spots.classList.add('is-walking');
-      h.setDriver({ frame: () => false });
+      h.setDriver(driver);
+      listen(true);
       if (h.reduced) {
         enclose(true, 0, 0);
         await arrive(id, 0);
@@ -204,9 +347,12 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void 
         await fly({ at: back.position, quat: back.quaternion, fov: 30 }, 1.0);
       }
       h.spots.classList.remove('is-walking');
+      listen(false);
       h.setDriver(null);
     },
     destroy() {
+      listen(false);
+      ui.remove();
       h.root.remove(ceiling);
       ceiling.geometry.dispose();
       ceilMat.dispose();

@@ -143,3 +143,87 @@ html.is-walking .u3d-enter {
     height: 70svh;
   }
 }
+
+/* rev 9 (B2): look buttons at the bottom corners, the walk toolbar top-left */
+.walk-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.walk-ui[hidden] {
+  display: none;
+}
+
+.walk-look,
+.walk-gyro {
+  pointer-events: auto;
+}
+
+.walk-look {
+  position: absolute;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgb(251 247 242 / 0.5);
+  border-radius: 50%;
+  background: rgb(15 24 40 / 0.6);
+  color: var(--ivory-50);
+}
+
+.walk-look--l {
+  left: 12px;
+}
+
+.walk-look--r {
+  right: 12px;
+}
+
+.walk-look svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.walk-look:focus-visible,
+.walk-gyro:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
+
+.walk-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.walk-gyro {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgb(251 247 242 / 0.5);
+  border-radius: var(--radius-pill);
+  background: rgb(15 24 40 / 0.6);
+  color: var(--ivory-50);
+  font: 600 13px/1 var(--font-body);
+}
+
+.walk-gyro[aria-pressed='true'] {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+  color: var(--navy-900);
+}
+
+.explore[data-walk] .explore__stage:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
