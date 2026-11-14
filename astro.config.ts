@@ -7,6 +7,9 @@ export default defineConfig({
   site: site.url || undefined,
   output: 'static',
   trailingSlash: 'ignore',
+  // 'class' forwards the parent's scope through a component's `class` prop, so parents can style
+  // <Mark class>, <Arch class>, <Button class> with scoped CSS.
+  scopedStyleStrategy: 'class',
   build: {
     format: 'directory',
     inlineStylesheets: 'always',

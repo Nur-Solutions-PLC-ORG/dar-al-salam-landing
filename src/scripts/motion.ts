@@ -78,84 +78,137 @@ document.addEventListener('click', (e) => {
   target.focus({ preventScroll: true });
 });
 
-/* ---------- Scenes ---------- */
+/* ---------- One-shot reveals (IntersectionObserver, not ScrollTrigger: no refresh/layout cost) ---------- */
 
-const once = { toggleActions: 'play none none none', once: true } as const;
+type Reveal = { el: Element; hide: () => void; play: () => void };
 
-function eyebrows() {
-  for (const el of gsap.utils.toArray<HTMLElement>('[data-eyebrow]')) {
-    if (el.closest('#top')) continue;
+/**
+ * Elements below the fold get their hidden "from" state up front (one batched layout read), then play
+ * when they cross 85 % of the viewport. Elements already on screen at init are left alone (no flash).
+ */
+function revealOnce(items: Reveal[], cleanups: (() => void)[]) {
+  if (!items.length) return;
+  const vh = window.innerHeight;
+  const tops = items.map((r) => r.el.getBoundingClientRect().top); // reads first…
+  const pending = new Map<Element, Reveal>();
+  items.forEach((r, i) => {
+    if ((tops[i] ?? 0) > vh * 0.85) {
+      r.hide(); // …then writes
+      pending.set(r.el, r);
+    }
+  });
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        pending.get(e.target)?.play();
+        pending.delete(e.target);
+      }
+    },
+    { rootMargin: '0px 0px -15% 0px' },
+  );
+  pending.forEach((_, el) => io.observe(el));
+  cleanups.push(() => io.disconnect());
+}
+
+function eyebrowReveals(): Reveal[] {
+  return gsap.utils.toArray<HTMLElement>('[data-eyebrow]').flatMap((el) => {
+    if (el.closest('#top')) return [];
     const rule = el.querySelector('.eyebrow__rule');
     const label = el.querySelectorAll(':scope > span:not(.eyebrow__rule)');
-    const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: 'top 85%', ...once } });
-    if (rule) tl.from(rule, { scaleX: 0, duration: 0.7, ease: 'power3.out' }, 0);
-    tl.from(label, { autoAlpha: 0, x: -8, duration: 0.7, ease: 'power3.out', stagger: 0.06 }, 0.1);
-  }
+    return [
+      {
+        el,
+        hide: () => {
+          if (rule) gsap.set(rule, { scaleX: 0 });
+          gsap.set(label, { autoAlpha: 0, x: -8 });
+        },
+        play: () => {
+          if (rule) gsap.to(rule, { scaleX: 1, duration: 0.7, ease: 'power3.out' });
+          gsap.to(label, { autoAlpha: 1, x: 0, duration: 0.7, ease: 'power3.out', stagger: 0.06, delay: 0.1 });
+        },
+      },
+    ];
+  });
 }
 
-function splitHeadings() {
-  for (const el of gsap.utils.toArray<HTMLElement>('[data-split]')) {
-    SplitText.create(el, {
-      type: 'lines',
-      mask: 'lines',
-      autoSplit: true,
-      onSplit: (self) =>
-        gsap.from(self.lines, {
-          yPercent: 110,
-          duration: 1,
-          ease: 'expo.out',
-          stagger: 0.08,
-          scrollTrigger: { trigger: el, start: 'top 82%', ...once },
-        }),
-    });
-  }
+/** S5: SplitText only for H2s below the fold, split at reveal time (no work for headings never reached). */
+function headingReveals(): Reveal[] {
+  return gsap.utils.toArray<HTMLElement>('[data-split]').map((el) => ({
+    el,
+    hide: () => gsap.set(el, { autoAlpha: 0 }),
+    play: () => {
+      gsap.set(el, { autoAlpha: 1 });
+      SplitText.create(el, {
+        type: 'lines',
+        mask: 'lines',
+        // lines keep whole words, so the text reads normally; no aria-label on non-heading elements
+        aria: 'none',
+        onSplit: (self) =>
+          gsap.from(self.lines, {
+            yPercent: 110,
+            duration: 1,
+            ease: 'expo.out',
+            stagger: 0.08,
+            // revert to the original markup afterwards (no stale line wrappers on resize)
+            onComplete: () => self.revert(),
+          }),
+      });
+    },
+  }));
 }
 
-function reveals() {
-  for (const el of gsap.utils.toArray<HTMLElement>('[data-reveal]')) {
+function blockReveals(): Reveal[] {
+  return gsap.utils.toArray<HTMLElement>('[data-reveal]').map((el) => {
     const targets = el.dataset.reveal === 'stagger' ? Array.from(el.children) : [el];
-    gsap.from(targets, {
-      autoAlpha: 0,
-      y: 24,
-      duration: 0.8,
-      ease: 'power3.out',
-      stagger: 0.08,
-      scrollTrigger: { trigger: el, start: 'top 85%', ...once },
-    });
-  }
+    return {
+      el,
+      hide: () => gsap.set(targets, { autoAlpha: 0, y: 24 }),
+      play: () => gsap.to(targets, { autoAlpha: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.08 }),
+    };
+  });
 }
 
-function facts() {
-  const section = document.querySelector('#facts');
-  if (!section) return;
+/** S2/S3: count-up (text is pre-rendered final; widths fixed so nothing reflows) + hairlines. */
+function factsReveal(): Reveal[] {
+  const section = document.querySelector<HTMLElement>('#facts');
+  if (!section) return [];
   const counters = gsap.utils.toArray<HTMLElement>('[data-count]', section);
-  counters.forEach((el, i) => {
-    const ends = (el.dataset.count ?? '').split(',').map(Number).filter(Number.isFinite);
-    if (!ends.length) return;
-    const final = el.textContent ?? '';
-    el.style.display = 'inline-block';
-    el.style.minWidth = `${el.getBoundingClientRect().width}px`;
-    const state = ends.map(() => 0);
-    const render = () => (el.textContent = state.map((v) => Math.round(v)).join('–'));
-    render();
-    gsap.to(state, {
-      ...Object.fromEntries(ends.map((v, k) => [k, v])),
-      duration: 1.4,
-      ease: 'power2.out',
-      delay: i * 0.12,
-      onUpdate: render,
-      onComplete: () => (el.textContent = final),
-      scrollTrigger: { trigger: section, start: 'top 80%', ...once },
-    });
-  });
-  gsap.from(gsap.utils.toArray('[data-facts-rule]', section), {
-    scaleX: 0,
-    duration: 1,
-    ease: 'power3.inOut',
-    stagger: 0.12,
-    scrollTrigger: { trigger: section, start: 'top 85%', ...once },
-  });
+  const rules = gsap.utils.toArray<HTMLElement>('[data-facts-rule]', section);
+  return [
+    {
+      el: section,
+      hide: () => {
+        const widths = counters.map((el) => el.getBoundingClientRect().width);
+        counters.forEach((el, i) => {
+          el.style.display = 'inline-block';
+          el.style.minWidth = `${widths[i]}px`;
+          el.dataset.final = el.textContent ?? '';
+          el.textContent = (el.dataset.count ?? '').split(',').map(() => '0').join('–');
+        });
+        gsap.set(rules, { scaleX: 0 });
+      },
+      play: () => {
+        counters.forEach((el, i) => {
+          const ends = (el.dataset.count ?? '').split(',').map(Number);
+          const state = ends.map(() => 0);
+          gsap.to(state, {
+            ...Object.fromEntries(ends.map((v, k) => [k, v])),
+            duration: 1.4,
+            ease: 'power2.out',
+            delay: i * 0.12,
+            onUpdate: () => (el.textContent = state.map((v) => Math.round(v)).join('–')),
+            onComplete: () => (el.textContent = el.dataset.final ?? el.textContent),
+          });
+        });
+        gsap.to(rules, { scaleX: 1, duration: 1, ease: 'power3.inOut', stagger: 0.12 });
+      },
+    },
+  ];
 }
+
+/* ---------- Scrubbed scenes (ScrollTrigger) ---------- */
 
 function heroScrub(desktop: boolean) {
   const hero = document.querySelector('#top');
@@ -240,6 +293,21 @@ function magnetic() {
 
 /* ---------- Init ---------- */
 
+/** Run tasks in separate idle slices so no single long task blocks input. */
+function idleQueue(tasks: (() => void)[]) {
+  const ric: (cb: () => void) => void =
+    'requestIdleCallback' in window
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 1200 })
+      : (cb) => window.setTimeout(cb, 16);
+  const next = () => {
+    const task = tasks.shift();
+    if (!task) return;
+    task();
+    ric(next);
+  };
+  ric(next);
+}
+
 let started = false;
 
 export function initMotion() {
@@ -258,28 +326,33 @@ export function initMotion() {
       const { motion, desktop, fine } = ctx.conditions as { motion: boolean; desktop: boolean; fine: boolean };
       if (!motion) return; // DESIGN §8: static page, native scroll, final values shown.
 
-      const stopLenis = startLenis();
-      eyebrows();
-      splitHeadings();
-      reveals();
-      facts();
-      heroScrub(desktop);
-      storyArch();
-      duskVeil();
-      const stopMagnetic = fine ? magnetic() : undefined;
+      const cleanups: (() => void)[] = [startLenis()];
+      let alive = true;
+      const guard = (fn: () => void) => () => alive && ctx.add(fn);
+
+      idleQueue([
+        guard(() => heroScrub(desktop)),
+        guard(() => revealOnce([...factsReveal(), ...eyebrowReveals()], cleanups)),
+        guard(() => revealOnce([...headingReveals(), ...blockReveals()], cleanups)),
+        guard(() => {
+          storyArch();
+          duskVeil();
+        }),
+        guard(() => {
+          if (fine) cleanups.push(magnetic());
+        }),
+        // fonts change line heights → scrubbed trigger positions; one refresh after everything is set up
+        guard(() => void document.fonts?.ready.then(() => alive && ScrollTrigger.refresh())),
+      ]);
 
       return () => {
-        stopLenis();
-        stopMagnetic?.();
+        alive = false;
+        cleanups.forEach((c) => c());
       };
     },
   );
 
   root.classList.add('js', 'motion-ready');
-
-  // Late layout changes (fonts, images) move trigger positions.
-  void document.fonts?.ready.then(() => ScrollTrigger.refresh());
-  window.addEventListener('load', () => ScrollTrigger.refresh(), { once: true });
 }
 
 export { gsap, ScrollTrigger };

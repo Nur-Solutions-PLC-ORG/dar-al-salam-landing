@@ -17,6 +17,8 @@ interface Props {
 
 const { lang, image } = Astro.props;
 const t = getDict(lang);
+// pre-split H1 lines ("|" in the dictionary); each line is masked and revealed by CSS
+const lines = t.hero.title.split('|');
 ---
 
 <section id="top" class="hero" aria-labelledby="hero-title" data-header-theme="light">
@@ -25,7 +27,13 @@ const t = getDict(lang);
       <Mark class="hero__watermark" />
       <p class="eyebrow hero__eyebrow">{t.hero.eyebrow}</p>
       <h1 id="hero-title" class="hero__title">
-        <span class="hero__title-inner" set:html={emph(t.hero.title)} />
+        {
+          lines.map((line, i) => (
+            <span class="line" style={`--line: ${i}`}>
+              <span set:html={emph(line)} />
+            </span>
+          ))
+        }
       </h1>
       <p class="lead hero__lead">{t.hero.lead}</p>
       <div class="hero__ctas">
@@ -120,7 +128,16 @@ const t = getDict(lang);
     max-width: 16ch;
   }
 
-  .hero__title-inner {
+  .hero__title .line {
+    display: block;
+    overflow: clip;
+    /* room for descenders and the italic overhang inside the mask */
+    padding-block-end: 0.08em;
+    margin-block-end: -0.08em;
+    overflow-clip-margin: 0.1em;
+  }
+
+  .hero__title .line > span {
     display: block;
   }
 
@@ -217,9 +234,9 @@ const t = getDict(lang);
       animation-delay: calc(var(--t0, 0s) + 0.2s);
     }
 
-    .hero__title-inner {
+    .hero__title .line > span {
       animation: title-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-      animation-delay: calc(var(--t0, 0s) + 0.25s);
+      animation-delay: calc(var(--t0, 0s) + 0.25s + var(--line, 0) * 0.08s);
     }
 
     .hero__lead {
@@ -258,11 +275,7 @@ const t = getDict(lang);
 
   @keyframes title-in {
     from {
-      clip-path: inset(0 0 100% 0);
-      transform: translateY(0.45em);
-    }
-    to {
-      clip-path: inset(0 0 -0.2em 0);
+      transform: translateY(110%);
     }
   }
 

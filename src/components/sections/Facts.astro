@@ -31,7 +31,7 @@ const facts = [
         facts.map((f) => (
           <div class="facts__item">
             <dt class="facts__label">{f.label}</dt>
-            <dd class="facts__value tabular">
+            <dd class:list={['facts__value tabular', { 'facts__value--range': Boolean(f.unit) }]}>
               <span data-count={f.count}>{f.value}</span>
               {f.unit && <span class="facts__unit">{f.unit}</span>}
             </dd>
@@ -104,7 +104,20 @@ const facts = [
     font-weight: 400;
     line-height: 1;
     color: var(--text);
+    flex-wrap: wrap;
     white-space: nowrap;
+    min-width: 0;
+  }
+
+  /* the range is the longest value: smaller so it fits a quarter/half cell from 360 px up */
+  .facts__value--range {
+    font-size: min(var(--fs-number), 10.5vw);
+  }
+
+  @media (min-width: 768px) {
+    .facts__value--range {
+      font-size: min(var(--fs-number), 4.6vw);
+    }
   }
 
   :global(:lang(am)) .facts__value {

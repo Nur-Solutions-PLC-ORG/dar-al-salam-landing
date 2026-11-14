@@ -43,7 +43,8 @@ export const en = {
   },
   hero: {
     eyebrow: 'Garment · Addis Ababa',
-    title: 'A house of *peace* in the heart of Garment.',
+    /** `|` = line break; the H1 is pre-split into masked lines at build time (DESIGN §7.2 rev 2). */
+    title: 'A house of|*peace* in the heart|of Garment.',
     lead: '126 two- and three-bedroom homes across 14 residential floors.',
     scroll: 'Scroll',
     imageAlt: 'Render of Garment Tower: a white high-rise with dark balconies above a tree-lined street',

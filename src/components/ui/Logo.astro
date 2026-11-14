@@ -27,6 +27,7 @@ const { class: cls } = Astro.props;
   }
 
   .logo__mark {
+    flex: none;
     height: 32px;
     width: auto;
     aspect-ratio: 415 / 319;
@@ -54,6 +55,13 @@ const { class: cls } = Astro.props;
     text-transform: uppercase;
     color: var(--accent-text);
     white-space: nowrap;
+  }
+
+  @media (max-width: 399px) {
+    .logo__name {
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+    }
   }
 
   @media (min-width: 768px) {
