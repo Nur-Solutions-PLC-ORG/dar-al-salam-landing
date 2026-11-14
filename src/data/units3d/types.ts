@@ -18,7 +18,8 @@ export interface Unit3d {
   defaults: { wallH: number; modelCutH?: number; cutawayH: number; doorHead: number };
   footprint: P2[];
   walls: { id: string; a: P2; b: P2; t: number; h: number; kind: WallKind }[];
-  openings: { id: string; type: 'door' | 'glazed-door' | 'window'; a: P2; b: P2; t: number; sill: number; head: number }[];
+  /** `open` (rev 9.2): an archway, full height, no frame or glass; the walk treats it like a door. */
+  openings: { id: string; type: 'door' | 'glazed-door' | 'window' | 'open'; a: P2; b: P2; t: number; sill: number; head: number }[];
   railings: { id: string; a: P2; b: P2; h: number }[];
   /** `furniture` (rev 8.1): blocks traced over the plan's furniture; the lid reuses the floor texture, `side` colours the sides. */
   solids: { id: string; kind: 'column' | 'shaft' | 'wardrobe' | 'counter' | 'furniture'; poly: P2[]; h: number; side?: string }[];
@@ -27,6 +28,10 @@ export interface Unit3d {
    * Rev 8.4: `area` is null when the plan's label is illegible; the UI then shows the name only (never the `note`).
    */
   rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2 }[];
+  /** The unlabelled hall (walk standpoints only, rev 9). */
+  hall?: { poly: P2[] } | null;
+  /** Rev 9.2: other unlabelled spaces a visitor can stand in (no hotspot, no list row; announced as "Hall"). */
+  walkable?: { id: string; poly: P2[]; note?: string }[];
 }
 
 /**

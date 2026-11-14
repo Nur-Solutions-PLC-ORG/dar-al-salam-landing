@@ -110,9 +110,14 @@ export function createWalk(
   const rooms = new Map(data.rooms.map((r) => [r.id, r]));
 
   /* ---------- B4: where each door leads ---------- */
-  const hall = (data as typeof data & { hall?: { poly: P2[] } | null }).hall?.poly ?? null;
-  /** The room (or 'hall') containing a plan point, else null (outside, or an unlabelled space). */
-  const where = (q: P2): string | null => data.rooms.find((r) => insidePoly(q, r.poly))?.id ?? (hall && insidePoly(q, hall) ? 'hall' : null);
+  const hall = data.hall?.poly ?? null;
+  /** Rev 9.2: unlabelled spaces to stand in, as locations 'w-<id>'. */
+  const spaces = new Map((data.walkable ?? []).map((w) => [`w-${w.id}`, w.poly]));
+  /** The room, 'hall' or walkable space containing a plan point (tested in that order), else null (outside). */
+  const where = (q: P2): string | null =>
+    data.rooms.find((r) => insidePoly(q, r.poly))?.id ?? (hall && insidePoly(q, hall) ? 'hall' : ([...spaces].find(([, p]) => insidePoly(q, p))?.[0] ?? null));
+  /** The polygon a location stands in. */
+  const polyOf = (loc: string) => (loc.startsWith('hall-') ? hall : (spaces.get(loc) ?? rooms.get(loc)?.poly ?? null));
   const doors = data.openings
     .filter((op) => op.type !== 'window')
     .map((op) => {
@@ -135,7 +140,7 @@ export function createWalk(
         return { door: d, at: d.at(side * 0.7), to: other === 'hall' ? `hall-${d.id}` : other };
       });
   const nameOf = (loc: string) => {
-    const key = loc.startsWith('hall-') ? 'hall' : (rooms.get(loc)?.name ?? '');
+    const key = rooms.get(loc)?.name ?? 'hall'; // the hall and walkable spaces read "Hall"
     const n = o.names[key] ?? key;
     return o.lang === 'en' ? n.toLowerCase() : n;
   };
@@ -183,6 +188,7 @@ export function createWalk(
   const frames: BufferGeometry[] = [];
   const jambs: BufferGeometry[] = [];
   for (const op of data.openings) {
+    if (op.type === 'open') continue; // archways: no frame
     const len = Math.hypot(op.b[0] - op.a[0], op.b[1] - op.a[1]);
     const ux = (op.b[0] - op.a[0]) / len;
     const uz = (op.b[1] - op.a[1]) / len;
@@ -317,7 +323,7 @@ export function createWalk(
     chip.hidden = !on;
   };
   const moveLamp = (id: string) => {
-    const poly = id.startsWith('hall-') ? hall : rooms.get(id)?.poly;
+    const poly = polyOf(id);
     if (!poly) return;
     const c = centroidOf(poly);
     lamp.position.set(c[0], 2.4, c[1]); // the lamp lives in the model's (plan) space
@@ -587,6 +593,13 @@ export function createWalk(
       const side = d?.plus === 'hall' ? 1 : -1;
       const at = h.toWorld(d ? d.at(side * 0.9) : hall![0]!, EYE);
       return { at, yaw: d ? yawTo(h.toWorld(d.m, EYE), at) : 0 };
+    }
+    const sp = spaces.get(id);
+    if (sp) {
+      // a walkable space: stand at its centroid, looking at its farthest door
+      const at = h.toWorld(centroidOf(sp), EYE);
+      const far = ringsAt(id).sort((a, b) => h.toWorld(b.door.m, EYE).distanceTo(at) - h.toWorld(a.door.m, EYE).distanceTo(at))[0];
+      return { at, yaw: far ? yawTo(at, h.toWorld(far.door.m, EYE)) : 0 };
     }
     const r = rooms.get(id)!;
     const stand = (r as typeof r & { stand?: P2 }).stand ?? r.label;

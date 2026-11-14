@@ -282,7 +282,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     const head = cut(op.head);
     if (head < FULL_H) pieces.push({ g: seg(op.a, op.b, head, FULL_H, op.t), m: 'wall', mid: m, side });
     if (op.type === 'window') pieces.push({ g: seg(op.a, op.b, 0, op.sill, op.t), m: 'wall', mid: m, side });
-    if (op.type !== 'door') {
+    if (op.type === 'window' || op.type === 'glazed-door') {
       const y0 = op.type === 'window' ? op.sill : 0;
       pieces.push({ g: seg(op.a, op.b, y0, head, 0, true), m: 'glass', mid: m, side });
       // 3 cm navy frame: head and sill lines
