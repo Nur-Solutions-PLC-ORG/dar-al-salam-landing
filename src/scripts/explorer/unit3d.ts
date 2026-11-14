@@ -57,6 +57,12 @@ const EL_MAX = 68 * DEG;
 const ORBIT = 5 * DEG; // per second
 const RESUME = 5000;
 const FILL = 3.4; // rev 8.1 A + 8.2 G: camera fill, tuned so camera-facing walls read #D9CFC0 or lighter
+/**
+ * Floor and furniture-lid tint (design's exposure note, rev 8.5): the lights that keep the walls cream would push the
+ * plan texture to white, so the texture's own materials are dimmed instead (r187 has no per-object light layers).
+ * Tuned so a mid-grey plan texel (~199) renders within ±10 of itself.
+ */
+const FLOOR_TINT = '#B4B4B4';
 
 export interface DollhouseOpts {
   renderer: WebGLRenderer;
@@ -343,14 +349,14 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     const geo = k(mergeGeometries([L, S], true)!);
     [...lids, ...sides, L, S].forEach((g) => g.dispose());
     const mesh = new Mesh(geo, [
-      inject(new MeshLambertMaterial({ map: tex }), true, 0.5),
+      inject(new MeshLambertMaterial({ map: tex, color: FLOOR_TINT }), true, 0.5),
       inject(new MeshLambertMaterial({ vertexColors: true }), true, 0.5),
     ]);
     mesh.castShadow = mesh.receiveShadow = true;
     mesh.customDepthMaterial = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
     root.add(mesh);
   }
-  const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex })));
+  const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex, color: FLOOR_TINT })));
   floor.receiveShadow = true;
   root.add(floor);
   const plinth = new Mesh(k(prism(data.footprint, 0.35)), k(new MeshLambertMaterial({ color: '#FBF7F2' })));
