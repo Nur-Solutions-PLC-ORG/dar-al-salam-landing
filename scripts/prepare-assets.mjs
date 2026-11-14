@@ -75,5 +75,11 @@ for (const c of crops) {
 
 /* ---------- Explorer inputs ---------- */
 await copyFile(r('brand-source/plans/keyplan-duotone.png'), r('src/assets/plans/keyplan-duotone.png'));
+// Floor view base: the duotone cropped to the hotspot viewBox (DESIGN §9.3: 100 60 1200 1840), so a responsive
+// <picture> sits exactly under the SVG hotspot overlay.
+await sharp(r('brand-source/plans/keyplan-duotone.png'))
+  .extract({ left: 100, top: 60, width: 1200, height: 1840 })
+  .png({ compressionLevel: 9 })
+  .toFile(r('src/assets/plans/keyplan-floor.png'));
 await copyFile(r('docs/design/keyplan-hotspots.json'), r('src/data/keyplan-hotspots.json'));
 console.log('copied keyplan-duotone.png and keyplan-hotspots.json');

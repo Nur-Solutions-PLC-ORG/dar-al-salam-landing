@@ -8,9 +8,8 @@ import bl06 from '../assets/plans/bl06.jpg';
 import bl07 from '../assets/plans/bl07.jpg';
 import bl08 from '../assets/plans/bl08.jpg';
 import bl09 from '../assets/plans/bl09.jpg';
-import keyplan from '../assets/plans/keyplan-typical-floor.png';
-import groundFloor from '../assets/plans/ground-floor.png';
-import basementFloor from '../assets/plans/basement-floor.png';
+import keyplanDuotone from '../assets/plans/keyplan-duotone.png';
+import hotspots from './keyplan-hotspots.json';
 
 /** Room labels; translated in src/i18n/*.ts under `rooms`. */
 export type RoomKey =
@@ -36,14 +35,20 @@ export interface Unit {
   net: number;
   rooms: readonly RoomKey[];
   plan: ImageMetadata;
+  /** Key-plan polygon + label position, in key-plan pixels (viewBox 0 0 1549 1940). */
+  hotspot: { points: readonly (readonly [number, number])[]; centroid: readonly [number, number] };
+  /** Internal grouping only (DESIGN §9.1 rev 2): never rendered in the UI. */
+  block: 'north' | 'south';
 }
 
 const twoBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedroom', 'kitchen', 'bathrooms2'];
 const threeBedFlex: readonly RoomKey[] = [...twoBed, 'storeOrBedroom'];
 const threeBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedrooms2', 'kitchen', 'bathrooms2', 'store'];
 
-/** The 9 apartment types on every residential floor (source: docs/BRIEF.md). */
-export const units: readonly Unit[] = [
+/** Source: docs/BRIEF.md. */
+type UnitBase = Omit<Unit, 'hotspot' | 'block'>;
+
+const base: readonly UnitBase[] = [
   { code: 'BL01', id: 'bl01', bedrooms: 2, gross: 158.54, net: 108.57, rooms: twoBed, plan: bl01 },
   { code: 'BL02', id: 'bl02', bedrooms: 3, gross: 166.97, net: 117.0, rooms: threeBedFlex, plan: bl02 },
   { code: 'BL03', id: 'bl03', bedrooms: 3, gross: 166.97, net: 117.0, rooms: threeBed, plan: bl03 },
@@ -55,10 +60,34 @@ export const units: readonly Unit[] = [
   { code: 'BL09', id: 'bl09', bedrooms: 3, gross: 168.55, net: 118.54, rooms: threeBed, plan: bl09 },
 ];
 
-export const floorPlans = { keyplan, groundFloor, basementFloor } as const;
+const NORTH = new Set<UnitCode>(['BL01', 'BL02', 'BL03', 'BL04']);
+
+/** The 9 apartment types on every residential floor (assumption, DESIGN §9.1: all floors use the typical plan). */
+export const units: readonly Unit[] = base.map((u) => {
+  const h = (hotspots.units as Record<string, { points: number[][]; centroid: number[] }>)[u.code];
+  if (!h) throw new Error(`keyplan-hotspots.json: missing ${u.code}`);
+  return {
+    ...u,
+    hotspot: {
+      points: h.points.map(([x = 0, y = 0]) => [x, y] as const),
+      centroid: [h.centroid[0] ?? 0, h.centroid[1] ?? 0] as const,
+    },
+    block: NORTH.has(u.code) ? 'north' : 'south',
+  };
+});
+
+/** Duotone typical-floor key plan (base image for the floor view). */
+export const keyplan = keyplanDuotone;
+/** DESIGN §9.3: crops the empty margin and grid bubbles. */
+export const keyplanViewBox = '100 60 1200 1840';
 
 /** Residential floors 1–14. */
 export const residentialFloors: readonly number[] = Array.from({ length: 14 }, (_, i) => i + 1);
+
+export const unitMix = {
+  twoBed: units.filter((u) => u.bedrooms === 2).length,
+  threeBed: units.filter((u) => u.bedrooms === 3).length,
+} as const;
 
 const grossAreas = units.map((u) => u.gross);
 /** Whole-number gross range for marketing copy: 158–171 m². */

@@ -26,7 +26,7 @@ export async function responsiveSet(
   const fallbackWidth = ws[Math.floor(ws.length / 2)] ?? src.width;
 
   const [avif, webp, fallback] = await Promise.all([
-    getImage({ src, widths: ws, format: 'avif', quality: quality.avif ?? 55 }),
+    getImage({ src, widths: ws, format: 'avif', quality: quality.avif ?? 50 }),
     getImage({ src, widths: ws, format: 'webp', quality: quality.webp ?? 72 }),
     getImage({ src, width: fallbackWidth, format: 'webp', quality: quality.webp ?? 72 }),
   ]);

@@ -1,0 +1,192 @@
+---
+/**
+ * Floor key plan with unit hotspots (DESIGN §9.3). Works without WebGL and without JS:
+ * hotspots are real links to the matching home card (#unit-blXX); the explorer intercepts them.
+ * Base image = duotone plan cropped to the viewBox (scripts/prepare-assets.mjs), as AVIF/WebP.
+ */
+import { Picture } from 'astro:assets';
+import keyplanFloor from '../../assets/plans/keyplan-floor.png';
+import { units, keyplanViewBox, formatArea } from '../../data/units';
+import { fmt, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getDict(lang);
+const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
+---
+
+<div class="keyplan" data-keyplan>
+  <Picture
+    src={keyplanFloor}
+    formats={['avif', 'webp']}
+    widths={[420, 640, 900, 1200]}
+    width={640}
+    fallbackFormat="jpg"
+    sizes="(min-width: 1024px) 34vw, (min-width: 640px) 60vw, 92vw"
+    alt=""
+    loading="lazy"
+    decoding="async"
+    class="keyplan__img"
+  />
+  <svg class="keyplan__svg" viewBox={keyplanViewBox} role="group" aria-label={fmt(t.explore.keyplanLabel, { n: 1 })} data-keyplan-svg>
+    {
+      units.map((u) => (
+        <a
+          href={`#unit-${u.id}`}
+          class="hotspot"
+          data-unit={u.code}
+          data-no-scroll
+          aria-label={`${u.code}, ${fmt(t.homes.bedroomsN, { n: u.bedrooms })}, ${formatArea(u.gross, lang)} ${t.homes.gross.toLowerCase()}`}
+          style={`--cx: ${(((u.hotspot.centroid[0] - vx) / vw) * 100).toFixed(2)}%; --cy: ${(((u.hotspot.centroid[1] - vy) / vh) * 100).toFixed(2)}%`}
+        >
+          <polygon class="hotspot__fill" points={u.hotspot.points.map((p) => p.join(',')).join(' ')} />
+          <polygon class="hotspot__shape" points={u.hotspot.points.map((p) => p.join(',')).join(' ')} />
+          <text class="hotspot__label" x={u.hotspot.centroid[0]} y={u.hotspot.centroid[1]} text-anchor="middle" dominant-baseline="middle">
+            {u.code}
+          </text>
+        </a>
+      ))
+    }
+  </svg>
+  <span class="keyplan__pill" data-keyplan-pill aria-hidden="true" hidden></span>
+</div>
+
+<style>
+  .keyplan {
+    position: relative;
+    container-type: inline-size;
+    aspect-ratio: 1200 / 1840;
+    width: 100%;
+    max-height: 70svh;
+    margin-inline: auto;
+  }
+
+  @supports (aspect-ratio: 1) {
+    .keyplan {
+      width: min(100%, calc(70svh * 1200 / 1840));
+    }
+  }
+
+  .keyplan :global(picture),
+  .keyplan :global(img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .keyplan__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .hotspot {
+    outline: none;
+  }
+
+  .hotspot__fill {
+    fill: var(--gold-500);
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-out);
+  }
+
+  .hotspot__shape {
+    fill: transparent;
+    stroke: var(--input-border);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+
+  .hotspot__label {
+    font-family: var(--font-body);
+    font-size: 34px;
+    font-weight: 600;
+    fill: var(--navy-800);
+    pointer-events: none;
+    transition: opacity 0.25s var(--ease-out);
+  }
+
+  /* hover / focus */
+  .hotspot:is(:hover, :focus-visible, .is-preview) .hotspot__fill {
+    opacity: 0.28;
+  }
+
+  .hotspot:is(:hover, :focus-visible, .is-preview) .hotspot__shape,
+  .hotspot.is-selected .hotspot__shape {
+    stroke: var(--gold-600);
+    stroke-width: 2;
+  }
+
+  .hotspot:focus-visible .hotspot__shape {
+    stroke-width: 3;
+  }
+
+  .hotspot.is-selected .hotspot__fill {
+    opacity: 0.45;
+  }
+
+  /* dimmed while another unit is selected: ivory veil via opacity of a fill layer */
+  [data-has-selection] .hotspot:not(.is-selected) .hotspot__fill {
+    fill: var(--ivory-50);
+    opacity: 0.35;
+  }
+
+  [data-has-selection] .hotspot:not(.is-selected):is(:hover, :focus-visible) .hotspot__fill {
+    fill: var(--gold-500);
+    opacity: 0.28;
+  }
+
+  [data-has-selection] .hotspot:not(.is-selected) .hotspot__label {
+    opacity: 0.5;
+  }
+
+  /* "Find on a floor" pulse (twice) */
+  .hotspot.is-pulse .hotspot__fill,
+  .hotspot.is-pulse .hotspot__shape {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: hotspot-pulse 0.4s var(--ease-inout) 2;
+  }
+
+  @keyframes hotspot-pulse {
+    50% {
+      transform: scale(1.03);
+    }
+  }
+
+  /* in-plan labels become illegible below ~520 px rendered width: chips + pill take over */
+  @container (max-width: 520px) {
+    .hotspot__label {
+      display: none;
+    }
+  }
+
+  .keyplan__pill {
+    position: absolute;
+    left: var(--x, 50%);
+    top: var(--y, 50%);
+    transform: translate(-50%, -50%);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-pill);
+    background: var(--navy-800);
+    color: var(--ivory-50);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: var(--shadow-2);
+  }
+
+  .keyplan__pill[data-selected] {
+    background: var(--gold-500);
+    color: var(--navy-900);
+  }
+</style>

@@ -19,36 +19,21 @@
  */
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
+import { setLenis } from './motion-api';
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger);
 ScrollTrigger.config({ ignoreMobileResize: true });
-
-const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 let lenis: Lenis | null = null;
 
-export const getLenis = () => lenis;
-export const prefersReducedMotion = () => reducedQuery.matches;
-
-const headerOffset = () => document.querySelector<HTMLElement>('.site-header')?.offsetHeight ?? 64;
-
-/** Scroll to an element, honouring Lenis, the header height and reduced motion. */
-export function scrollToTarget(target: Element, opts: { offset?: number; immediate?: boolean } = {}) {
-  const offset = -(opts.offset ?? headerOffset());
-  if (lenis) {
-    lenis.scrollTo(target as HTMLElement, { offset, duration: 1.2, immediate: opts.immediate });
-    return;
-  }
-  const y = target.getBoundingClientRect().top + window.scrollY + offset;
-  window.scrollTo({ top: y, behavior: reducedQuery.matches || opts.immediate ? 'auto' : 'smooth' });
-}
+export { getLenis, prefersReducedMotion, scrollToTarget } from './motion-api';
 
 /* ---------- Lenis ---------- */
 
 function startLenis() {
   lenis = new Lenis({ lerp: 0.1, smoothWheel: true, syncTouch: false });
+  setLenis(lenis);
   lenis.on('scroll', ScrollTrigger.update);
   const raf = (time: number) => lenis?.raf(time * 1000);
   gsap.ticker.add(raf);
@@ -57,30 +42,13 @@ function startLenis() {
     gsap.ticker.remove(raf);
     lenis?.destroy();
     lenis = null;
+    setLenis(null);
   };
 }
 
-// In-page anchors: offset by the header, smooth via Lenis when available. Components that own their
-// links (explorer hotspots, menu) call preventDefault first and are left alone.
-document.addEventListener('click', (e) => {
-  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-  const a = (e.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="#"]');
-  if (!a || a.hasAttribute('data-no-scroll')) return;
-  const hash = a.getAttribute('href') ?? '';
-  if (hash.length < 2) return;
-  const target = document.getElementById(decodeURIComponent(hash.slice(1)));
-  if (!target) return;
-  e.preventDefault();
-  scrollToTarget(target);
-  history.pushState(null, '', hash);
-  // move focus for keyboard and screen-reader users without a second scroll
-  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-  target.focus({ preventScroll: true });
-});
-
 /* ---------- One-shot reveals (IntersectionObserver, not ScrollTrigger: no refresh/layout cost) ---------- */
 
-type Reveal = { el: Element; hide: () => void; play: () => void };
+type Reveal = { el: Element; hide: () => void; play: () => unknown };
 
 /**
  * Elements below the fold get their hidden "from" state up front (one batched layout read), then play
@@ -102,7 +70,7 @@ function revealOnce(items: Reveal[], cleanups: (() => void)[]) {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
         io.unobserve(e.target);
-        pending.get(e.target)?.play();
+        void pending.get(e.target)?.play();
         pending.delete(e.target);
       }
     },
@@ -122,11 +90,11 @@ function eyebrowReveals(): Reveal[] {
         el,
         hide: () => {
           if (rule) gsap.set(rule, { scaleX: 0 });
-          gsap.set(label, { autoAlpha: 0, x: -8 });
+          gsap.set(label, { opacity: 0, x: -8 });
         },
         play: () => {
           if (rule) gsap.to(rule, { scaleX: 1, duration: 0.7, ease: 'power3.out' });
-          gsap.to(label, { autoAlpha: 1, x: 0, duration: 0.7, ease: 'power3.out', stagger: 0.06, delay: 0.1 });
+          gsap.to(label, { opacity: 1, x: 0, duration: 0.7, ease: 'power3.out', stagger: 0.06, delay: 0.1 });
         },
       },
     ];
@@ -137,9 +105,12 @@ function eyebrowReveals(): Reveal[] {
 function headingReveals(): Reveal[] {
   return gsap.utils.toArray<HTMLElement>('[data-split]').map((el) => ({
     el,
-    hide: () => gsap.set(el, { autoAlpha: 0 }),
-    play: () => {
-      gsap.set(el, { autoAlpha: 1 });
+    hide: () => gsap.set(el, { opacity: 0 }),
+    play: async () => {
+      // SplitText is only needed below the fold: its own chunk, fetched on first use (DESIGN §10)
+      const { SplitText } = await import('gsap/SplitText');
+      gsap.registerPlugin(SplitText);
+      gsap.set(el, { opacity: 1 });
       SplitText.create(el, {
         type: 'lines',
         mask: 'lines',
@@ -164,8 +135,8 @@ function blockReveals(): Reveal[] {
     const targets = el.dataset.reveal === 'stagger' ? Array.from(el.children) : [el];
     return {
       el,
-      hide: () => gsap.set(targets, { autoAlpha: 0, y: 24 }),
-      play: () => gsap.to(targets, { autoAlpha: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.08 }),
+      hide: () => gsap.set(targets, { opacity: 0, y: 24 }),
+      play: () => gsap.to(targets, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.08 }),
     };
   });
 }

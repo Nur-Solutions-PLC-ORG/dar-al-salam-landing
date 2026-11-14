@@ -1,0 +1,134 @@
+---
+/**
+ * Tier 0 / tier 1 tower maquette (DESIGN §9.4): build-time axonometric SVG, zero JS.
+ * Decorative for assistive tech (aria-hidden): the floor list, stepper and hotspots are the controls.
+ * Tier 1 (src/scripts/explorer/svg-model.ts) wires hover/click on [data-floor] groups.
+ */
+import { buildMaquette, PULL_OUT } from '../../lib/maquette';
+
+const m = buildMaquette();
+---
+
+<svg
+  class="maquette"
+  viewBox={m.viewBox}
+  aria-hidden="true"
+  focusable="false"
+  data-maquette
+  style={`--pull-x: ${PULL_OUT.x}px; --pull-y: ${PULL_OUT.y}px`}
+>
+  <path class="maquette__ground" d={m.ground}></path>
+  <polygon class="maquette__basement" points={m.basement}></polygon>
+  <g class="maquette__podium">
+    {m.podium.faces.map((f) => <polygon class={f.kind} points={f.points} />)}
+  </g>
+  {
+    m.floors.map((f) => (
+      <g class="slab" data-floor={f.n} data-ax={f.prism.anchor[0].toFixed(1)} data-ay={f.prism.anchor[1].toFixed(1)}>
+        {f.prism.faces.map((face) => (
+          <polygon class={face.kind} points={face.points} />
+        ))}
+      </g>
+    ))
+  }
+  <g class="maquette__parapet">
+    {m.parapet.faces.map((f) => <polygon class={f.kind} points={f.points} />)}
+  </g>
+</svg>
+
+<style>
+  .maquette {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .maquette polygon {
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .maquette__ground {
+    fill: var(--navy-800);
+  }
+
+  .maquette__basement {
+    fill: none;
+    stroke: var(--gold-500);
+    stroke-opacity: 0.45;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .maquette .top {
+    fill: var(--sand-100);
+    stroke: var(--gold-500);
+    stroke-opacity: 0.55;
+    stroke-width: 1;
+  }
+
+  .maquette .side-l {
+    fill: var(--ivory-50);
+    stroke: var(--gold-500);
+    stroke-opacity: 0.35;
+    stroke-width: 0.75;
+  }
+
+  .maquette .side-m {
+    fill: var(--sand-100);
+    stroke: var(--gold-500);
+    stroke-opacity: 0.35;
+    stroke-width: 0.75;
+  }
+
+  .maquette .side-r {
+    fill: var(--sand-200);
+    stroke: var(--gold-500);
+    stroke-opacity: 0.35;
+    stroke-width: 0.75;
+  }
+
+  .maquette .glaze {
+    fill: var(--navy-600);
+    opacity: 0.85;
+  }
+
+  .maquette__podium .side-l,
+  .maquette__podium .side-m,
+  .maquette__podium .side-r {
+    fill: var(--navy-700);
+    stroke-opacity: 0.6;
+  }
+
+  .maquette__podium .top {
+    fill: var(--navy-600);
+  }
+
+  /* slab states: instant fills (no colour tweens); the pull-out is a transform transition */
+  .slab {
+    transition: transform 0.6s var(--ease-out);
+  }
+
+  .slab.is-hover .top,
+  .slab.is-selected .top {
+    fill: var(--gold-300);
+    stroke: var(--gold-600);
+    stroke-opacity: 1;
+  }
+
+  .slab.is-hover :is(.side-l, .side-m, .side-r),
+  .slab.is-selected :is(.side-l, .side-m, .side-r) {
+    fill: var(--gold-400);
+    stroke: var(--gold-600);
+    stroke-opacity: 1;
+  }
+
+  .slab.is-selected {
+    transform: translate(var(--pull-x), var(--pull-y));
+  }
+
+  :global(html.js) .maquette[data-interactive] .slab {
+    cursor: pointer;
+  }
+</style>

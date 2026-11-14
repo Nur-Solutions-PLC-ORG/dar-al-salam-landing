@@ -32,7 +32,10 @@ const facts = [
           <div class="facts__item">
             <dt class="facts__label">{f.label}</dt>
             <dd class:list={['facts__value tabular', { 'facts__value--range': Boolean(f.unit) }]}>
-              <span data-count={f.count}>{f.value}</span>
+              <span data-count={f.count} aria-hidden={f.count ? 'true' : undefined}>
+                {f.value}
+              </span>
+              {f.count && <span class="visually-hidden">{f.value}</span>}
               {f.unit && <span class="facts__unit">{f.unit}</span>}
             </dd>
           </div>

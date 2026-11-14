@@ -1,26 +1,681 @@
 ---
-/** Explore (DESIGN §5.4). M1 stub: heading only; built in M2. */
+/**
+ * Tower explorer (DESIGN §5.4, §9). Navy section with an ivory "paper" panel (.theme-paper).
+ * All three panel views are server-rendered; src/scripts/explorer/* is a state machine that toggles them
+ * and syncs #explore / #explore/f7 / #explore/f7/bl05 (replaceState).
+ * No JS: the floor list and the key plan (hotspots link to the home cards) are shown; the unit view is hidden.
+ * Model tiers: 0 = this SVG (always), 1 = SVG + JS interactions, 2 = lazy Three.js canvas over it.
+ */
+import { Picture } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
+import Button from '../ui/Button.astro';
+import Maquette from '../explorer/Maquette.astro';
+import KeyPlan from '../explorer/KeyPlan.astro';
 import { sections } from '../../data/sections';
-import { emph, getDict, type Lang } from '../../i18n';
+import { units, residentialFloors, formatArea } from '../../data/units';
+import { emph, fmt, getDict, plain, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
 }
+
 const { lang } = Astro.props;
 const t = getDict(lang);
+const floorsDesc = [...residentialFloors].reverse();
+
+/** Strings the client formats at runtime. */
+const i18n = {
+  floorN: t.explore.floorN,
+  viewFloor: t.explore.viewFloor,
+  keyplanLabel: t.explore.keyplanLabel,
+  requestFor: t.explore.requestFor,
+  unitOnFloor: t.explore.unitOnFloor,
+  backToFloor: t.explore.backToFloor,
+  floorTooltip: t.explore.floorTooltip,
+  bedShort: t.explore.bedShort,
+  hintTouch: t.explore.hintTouch,
+  hintPointer: t.explore.hintPointer,
+  hintHover: t.explore.hintHover,
+};
+const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
 ---
 
-<section id="explore" class:list={['section', 'theme-dusk']} aria-labelledby="explore-title" data-header-theme="dark">
+<section
+  id="explore"
+  class="section theme-dusk explore"
+  aria-labelledby="explore-title"
+  data-header-theme="dark"
+  data-explore
+  data-state="idle"
+  data-i18n={JSON.stringify(i18n)}
+  data-lang={lang}
+>
   <div class="container">
-    <Eyebrow n={sections.explore.n} label={t.explore.eyebrow} />
-    <h2 id="explore-title" class="h2 stub__title" data-split set:html={emph(t.explore.title)} />
+    <div class="explore__head">
+      <div>
+        <Eyebrow n={sections.explore.n} label={t.explore.eyebrow} />
+        <h2 id="explore-title" class="h2 explore__title" data-split set:html={emph(t.explore.title)} />
+      </div>
+      <nav class="crumbs" aria-label={t.explore.breadcrumb} data-crumbs hidden>
+        <ol role="list">
+          <li><button type="button" class="crumbs__btn" data-crumb="idle">{t.explore.tower}</button></li>
+          <li data-crumb-floor-li hidden>
+            <span aria-hidden="true" class="crumbs__sep">›</span>
+            <button type="button" class="crumbs__btn" data-crumb="floor"></button>
+          </li>
+          <li data-crumb-unit-li hidden>
+            <span aria-hidden="true" class="crumbs__sep">›</span>
+            <span class="crumbs__current" aria-current="location" data-crumb-unit></span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+
+    <div class="explore__grid">
+      <div class="explore__model" data-model-col>
+        <div class="explore__stage" data-stage>
+          <Maquette />
+          <div class="explore__canvas" data-canvas aria-hidden="true"></div>
+          <div class="explore__tooltip" data-tooltip aria-hidden="true" hidden></div>
+          <p class="explore__hint" data-hint aria-hidden="true" hidden></p>
+          <button type="button" class="explore__load3d" data-load-3d hidden>{t.explore.load3d}</button>
+        </div>
+
+        <div class="explore__stepper" data-model-stepper>
+          <div class="stepper">
+            <button type="button" class="stepper__btn" data-step="-1" aria-label={t.explore.prevFloor}>−</button>
+            <span class="stepper__label tabular" data-stepper-label aria-live="polite">{fmt(t.explore.floorN, { n: 1 })}</span>
+            <button type="button" class="stepper__btn" data-step="1" aria-label={t.explore.nextFloor}>+</button>
+          </div>
+          <Button class="explore__view" data-view-floor>{fmt(t.explore.viewFloor, { n: 1 })}</Button>
+        </div>
+
+        <p class="explore__strip small">{t.explore.strip}</p>
+      </div>
+
+      <div class="explore__panel theme-paper" data-panel>
+        <!-- IDLE: floor list (primary accessible control) -->
+        <div class="view view--idle" data-view="idle">
+          <h3 class="view__title h3">{t.explore.floorList}</h3>
+          <ol role="list" class="floors">
+            {
+              floorsDesc.map((n) => (
+                <li>
+                  <button type="button" class="floors__row" data-floor={n}>
+                    <span class="floors__n">{fmt(t.explore.floorN, { n })}</span>
+                    <span class="floors__mix small">{t.explore.floorSummary}</span>
+                    <svg class="floors__chev" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M6 3l5 5-5 5" />
+                    </svg>
+                  </button>
+                </li>
+              ))
+            }
+          </ol>
+          <p class="small muted floors__legend">{t.explore.legend}</p>
+        </div>
+
+        <!-- FLOOR(n): key plan + unit chips -->
+        <div class="view view--floor" data-view="floor">
+          <div class="view__bar">
+            <h3 class="view__title h3" tabindex="-1" data-floor-title>{t.explore.typicalFloor}</h3>
+            <div class="stepper stepper--panel" data-panel-stepper>
+              <button type="button" class="stepper__btn" data-step="-1" aria-label={t.explore.prevFloor} data-magnetic>−</button>
+              <button type="button" class="stepper__btn" data-step="1" aria-label={t.explore.nextFloor} data-magnetic>+</button>
+            </div>
+          </div>
+          <KeyPlan lang={lang} />
+          <ul role="list" class="chips" aria-label={t.explore.unitList}>
+            {
+              units.map((u) => (
+                <li>
+                  <button type="button" class="chip" data-unit={u.code} aria-pressed="false">
+                    <span class="chip__code">{u.code}</span>
+                    <span class="chip__meta tabular">
+                      {fmt(t.explore.bedShort, { n: u.bedrooms })} · {formatArea(u.gross, lang)}
+                    </span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+          <button type="button" class="link view__back" data-back="idle">
+            <span aria-hidden="true">‹</span> {t.explore.backToTower}
+          </button>
+        </div>
+
+        <!-- UNIT(n, code): plan + specs + CTAs -->
+        <div class="view view--unit" data-view="unit">
+          {
+            units.map((u) => (
+              <article class="unit" data-unit-card={u.code} aria-labelledby={`explore-unit-${u.id}`} hidden>
+                <button type="button" class="unit__plan" data-open-plan={u.code} aria-label={fmt(t.explore.openPlan, { code: u.code })}>
+                  <Picture
+                    src={u.plan}
+                    formats={['avif', 'webp']}
+                    widths={[400, 600, 800]}
+                    width={600}
+                    fallbackFormat="jpg"
+                    sizes="(min-width: 1024px) 36vw, 90vw"
+                    alt={fmt(t.homes.planAlt, { code: u.code, n: u.bedrooms, rooms: roomList(u) })}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+                <div class="unit__body">
+                  <p class="eyebrow" data-unit-where>{u.code}</p>
+                  <h3 class="h3" id={`explore-unit-${u.id}`} tabindex="-1" data-unit-title>
+                    {fmt(t.homes.bedroomsN, { n: u.bedrooms })}
+                  </h3>
+                  <dl class="unit__specs tabular">
+                    <div>
+                      <dt>{t.homes.grossArea}</dt>
+                      <dd>{formatArea(u.gross, lang)}</dd>
+                    </div>
+                    <div>
+                      <dt>{t.homes.netArea}</dt>
+                      <dd>{formatArea(u.net, lang)}</dd>
+                    </div>
+                  </dl>
+                  <p class="small muted unit__rooms">
+                    <span class="visually-hidden">{t.homes.rooms}: </span>
+                    {u.rooms.map((r) => t.rooms[r]).join(' · ')}
+                  </p>
+                  <div class="unit__actions">
+                    <Button href="#enquire" data-request={u.code}>
+                      {plain(fmt(t.homes.viewer.requestFor, { code: u.code }))}
+                    </Button>
+                    <Button href="#enquire" variant="secondary">
+                      {t.cta.bookVisit}
+                    </Button>
+                  </div>
+                </div>
+              </article>
+            ))
+          }
+          <div class="unit__nav">
+            <button type="button" class="link view__back" data-back="floor" data-back-floor-label>
+              <span aria-hidden="true">‹</span> <span data-back-floor-text>{t.explore.backToTower}</span>
+            </button>
+            <div class="stepper">
+              <button type="button" class="stepper__btn" data-unit-step="-1" aria-label={t.explore.prevUnit}>‹</button>
+              <button type="button" class="stepper__btn" data-unit-step="1" aria-label={t.explore.nextUnit}>›</button>
+            </div>
+          </div>
+          <p class="small muted">{t.homes.disclaimer}</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
 <style>
-  .stub__title {
+  .explore {
+    position: relative;
+    z-index: 2; /* above the dusk veil */
+  }
+
+  .explore__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-bottom: var(--space-7);
+  }
+
+  .explore__title {
     margin-top: var(--space-5);
-    max-width: 18ch;
+    max-width: 16ch;
+  }
+
+  .crumbs ol {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    font-size: var(--fs-small);
+  }
+
+  .crumbs li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .crumbs__btn {
+    min-height: var(--tap-min);
+    padding-inline: var(--space-2);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 0.3em;
+  }
+
+  .crumbs__current {
+    font-weight: 600;
+    color: var(--accent-text);
+  }
+
+  .crumbs__sep {
+    color: var(--text-muted);
+  }
+
+  .explore__grid {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .explore__model {
+    display: grid;
+    gap: var(--space-4);
+    align-content: start;
+  }
+
+  .explore__stage {
+    position: relative;
+    height: 52svh;
+    min-height: 320px;
+    touch-action: pan-y;
+  }
+
+  .explore__stage :global(.maquette) {
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .explore__stage[data-tier='3d'] :global(.maquette) {
+    opacity: 0;
+  }
+
+  .explore__canvas {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.6s var(--ease-out);
+  }
+
+  .explore__stage[data-tier='3d'] .explore__canvas {
+    opacity: 1;
+  }
+
+  .explore__canvas :global(canvas) {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: pan-y;
+  }
+
+  .explore__tooltip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(var(--tx, 0), var(--ty, 0)) translateY(-50%);
+    padding: 0.35rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background: var(--ivory-50);
+    color: var(--navy-800);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: var(--shadow-2);
+    z-index: 2;
+  }
+
+  .explore__hint {
+    position: absolute;
+    left: 50%;
+    bottom: var(--space-3);
+    transform: translateX(-50%);
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--radius-pill);
+    background: rgb(15 24 40 / 0.72);
+    border: 1px solid var(--line);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.4s var(--ease-out);
+  }
+
+  .explore__hint[data-done] {
+    opacity: 0;
+  }
+
+  .explore__load3d {
+    position: absolute;
+    top: var(--space-2);
+    right: 0;
+    min-height: var(--tap-min);
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--btn2-border);
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .explore__stepper {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  :global(html.js) .explore__stepper {
+    display: flex;
+  }
+
+  .explore__strip {
+    color: var(--text-muted);
+  }
+
+  /* stepper */
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .stepper__btn {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--input-border);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .stepper__btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .stepper__label {
+    min-width: 7.5em;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  /* panel */
+  .explore__panel {
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow-2);
+    padding: var(--space-5) var(--space-4);
+    min-width: 0;
+  }
+
+  .view {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  /* with JS only the active view shows; without JS idle + floor show, unit stays hidden */
+  :global(html.js) .explore[data-ready] .view:not(.is-active) {
+    display: none;
+  }
+
+  .view--unit {
+    display: none;
+  }
+
+  :global(html.js) .explore[data-ready] .view--unit.is-active {
+    display: grid;
+  }
+
+  :global(html:not(.js)) .view--floor,
+  .explore:not([data-ready]) .view--floor {
+    margin-top: var(--space-7);
+  }
+
+  .view__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .view__title {
+    outline-offset: 4px;
+  }
+
+  .stepper--panel {
+    display: none;
+  }
+
+  :global(html.js) .explore[data-ready] .stepper--panel {
+    display: inline-flex;
+  }
+
+  .view__back {
+    justify-self: start;
+  }
+
+  /* floor list */
+  .floors {
+    border-top: 1px solid var(--line);
+  }
+
+  .floors__row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--space-4);
+    width: 100%;
+    min-height: 48px;
+    padding: var(--space-2) var(--space-2);
+    border-bottom: 1px solid var(--line);
+    text-align: start;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .floors__row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--gold-500);
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-out);
+  }
+
+  .floors__row:is(:hover, :focus-visible, .is-preview)::before {
+    opacity: 0.16;
+  }
+
+  .floors__n {
+    font-weight: 600;
+    min-width: 6.5em;
+  }
+
+  .floors__mix {
+    color: var(--text-muted);
+  }
+
+  .floors__chev {
+    width: 16px;
+    height: 16px;
+    color: var(--accent-text);
+  }
+
+  .floors__legend {
+    margin-top: calc(-1 * var(--space-2));
+  }
+
+  /* unit chips */
+  .chips {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--space-2);
+    overscroll-behavior-x: contain;
+  }
+
+  .chip {
+    scroll-snap-align: start;
+    display: grid;
+    min-width: 8.5rem;
+    min-height: var(--tap-min);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xs);
+    box-shadow: inset 0 0 0 1px var(--input-border);
+    text-align: start;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--gold-500);
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-out);
+  }
+
+  .chip:is(:hover, .is-preview)::before {
+    opacity: 0.18;
+  }
+
+  .chip[aria-pressed='true']::before {
+    opacity: 0.45;
+  }
+
+  .chip__code {
+    font-weight: 700;
+    font-size: var(--fs-small);
+  }
+
+  .chip__meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* unit */
+  .unit {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .unit__plan {
+    display: block;
+    width: 100%;
+    padding: var(--space-4);
+    background: var(--bg-alt);
+    border-radius: var(--radius-s);
+    cursor: zoom-in;
+  }
+
+  .unit__plan :global(img) {
+    width: 100%;
+    height: auto;
+    max-height: 46svh;
+    object-fit: contain;
+  }
+
+  .unit__body {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+
+  .unit__specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+  }
+
+  .unit__specs dt {
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+  }
+
+  .unit__specs dd {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 1.1;
+  }
+
+  .unit__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .unit__actions :global(.btn) {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .unit__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-4);
+  }
+
+  /* ---------- breakpoints ---------- */
+  @media (min-width: 640px) {
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      overflow: visible;
+    }
+
+    .chip {
+      min-width: 0;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .explore__stage {
+      height: 60svh;
+    }
+
+    .explore__panel {
+      padding: var(--space-6);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .explore__grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
+      align-items: start;
+    }
+
+    .explore__model {
+      grid-column: 1 / 6;
+      position: sticky;
+      top: calc(var(--header-h) + var(--space-4));
+    }
+
+    .explore__stage {
+      height: min(80svh, 820px);
+    }
+
+    :global(html.js) .explore__stepper {
+      display: none;
+    }
+
+    .explore__panel {
+      grid-column: 6 / 13;
+    }
+
+    .unit {
+      grid-template-columns: 1.2fr 1fr;
+      align-items: start;
+    }
   }
 </style>
+
+<script>
+  import { initExplorerLoader } from '../../scripts/explorer/loader';
+  initExplorerLoader();
+</script>

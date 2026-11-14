@@ -41,11 +41,11 @@ function isInViewport(el: Element) {
   return r.bottom > 0 && r.top < window.innerHeight;
 }
 
-/** Cheap WebGL capability check (no context kept alive). */
+/** Cheap WebGL2 capability check (no context kept alive). */
 export function supportsWebGL(): boolean {
   try {
     const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') ?? c.getContext('webgl');
+    const gl = c.getContext('webgl2');
     if (!gl) return false;
     (gl as WebGLRenderingContext).getExtension('WEBGL_lose_context')?.loseContext();
     return true;
@@ -54,8 +54,14 @@ export function supportsWebGL(): boolean {
   }
 }
 
-/** Save-Data / 2G hint: prefer the lightweight fallback. */
+/** DESIGN §9.4 tier 1 conditions: Save-Data, 2g/slow-2g/3g, or < 4 GB device memory → lightweight model. */
 export function prefersLightweight(): boolean {
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-  return Boolean(conn?.saveData || (conn?.effectiveType && /(^|-)2g$/.test(conn.effectiveType)));
+  const nav = navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+    deviceMemory?: number;
+  };
+  const conn = nav.connection;
+  if (conn?.saveData) return true;
+  if (conn?.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType)) return true;
+  return typeof nav.deviceMemory === 'number' && nav.deviceMemory < 4;
 }

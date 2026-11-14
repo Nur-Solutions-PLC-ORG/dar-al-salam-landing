@@ -39,8 +39,9 @@
   --btn2-border: var(--navy-800);
 
   /* type families */
-  --font-display: 'Cormorant Garamond', 'Noto Sans Ethiopic', Georgia, 'Times New Roman', serif;
-  --font-body: 'Manrope', 'Noto Sans Ethiopic', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  /* Noto Sans Ethiopic is added only under :lang(am) below, so EN pages never download it (review H1a). */
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 
   /* fluid type scale, 360 → 1440 */
   --fs-display: clamp(2.75rem, 1.6rem + 5.1vw, 6.5rem); /* hero H1 */
@@ -103,8 +104,10 @@
   }
 }
 
-/* Amharic: Ethiopic glyphs are wider; display sizes at 0.85× (DESIGN §11). */
+/* Amharic: Ethiopic font in the stacks; Ethiopic glyphs are wider, display sizes at 0.85× (DESIGN §11). */
 :root:lang(am) {
+  --font-display: 'Cormorant Garamond', 'Noto Sans Ethiopic', Georgia, serif;
+  --font-body: 'Manrope', 'Noto Sans Ethiopic', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --fs-display: clamp(2.35rem, 1.36rem + 4.3vw, 5.5rem);
   --fs-h2: clamp(1.9rem, 1.28rem + 2.8vw, 3.8rem);
 }

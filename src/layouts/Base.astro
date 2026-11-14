@@ -55,9 +55,9 @@ const ogUrl = abs(og.src);
 
     <!--
       Runs before first paint (DESIGN §7.1/7.2):
-      - html.js: JS is available (menu button, enhanced controls).
+      - html.js: JS is available (menu button, mobile CTA, enhanced controls). Never removed later
+        (review M1: nothing is hidden by CSS waiting for motion.ts, so no safety timeout is needed).
       - html.intro: first visit this session and motion allowed → CSS-only curtain.
-      - Safety: if motion.ts hasn't marked html.motion-ready within 2.5 s, drop html.js so nothing waits on it.
     -->
     <script is:inline>
       (function () {
@@ -70,9 +70,6 @@ const ogUrl = abs(og.src);
             sessionStorage.setItem('introSeen', '1');
           }
         } catch (e) {}
-        setTimeout(function () {
-          if (!d.classList.contains('motion-ready')) d.classList.remove('js');
-        }, 2500);
       })();
     </script>
 
@@ -128,8 +125,14 @@ const ogUrl = abs(og.src);
     {
       !noMotion && (
         <script>
-          import { initMotion } from '../scripts/motion';
-          initMotion();
+          // Anchor handling + scroll helpers are tiny and needed immediately; GSAP/Lenis (motion.ts) are not:
+          // the hero is pure CSS, so motion.ts loads after `load` + idle to keep it out of the LCP window.
+          import '../scripts/motion-api';
+          const start = () => import('../scripts/motion').then((m) => m.initMotion());
+          const go = () =>
+            'requestIdleCallback' in window ? window.requestIdleCallback(() => void start(), { timeout: 2000 }) : setTimeout(start, 200);
+          if (document.readyState === 'complete') go();
+          else window.addEventListener('load', go, { once: true });
         </script>
       )
     }

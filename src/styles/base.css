@@ -124,6 +124,11 @@ p {
   text-wrap: pretty;
 }
 
+/* `hidden` always wins over component display rules */
+[hidden] {
+  display: none !important;
+}
+
 ul[role='list'],
 ol[role='list'] {
   list-style: none;
@@ -278,9 +283,10 @@ ol[role='list'] {
   outline-color: var(--gold-300);
 }
 
-/* Ethiopic text on English pages, rendered with the system font so the web font isn't downloaded. */
+/* Ethiopic text on English pages (the "አማ" toggle): system fonts only, never the web font family
+   (Android ships Noto Sans Ethiopic, iOS Kefa, Windows Ebrima), so EN never downloads it. */
 .native-script {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Ethiopic', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ebrima, Kefa, sans-serif;
 }
 
 /* Hairline rule echoing the logo's double ring */
@@ -406,6 +412,7 @@ ol[role='list'] {
   align-items: center;
   gap: var(--space-2);
   min-height: var(--tap-min);
+  min-width: var(--tap-min); /* review L2: short Amharic labels */
   text-decoration: none;
   font-weight: 600;
 }
