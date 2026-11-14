@@ -397,6 +397,9 @@ export function createExplorer(root: HTMLElement) {
     dh = dhCode = null;
     model.suspend?.(false);
     host.getAnimations().forEach((a) => a.cancel());
+    layoutWant = false; // a Flip still loading must not turn the 3D layout back on (review r6 #2)
+    flip?.progress(1).kill(); // finishing it clears Flip's inline sizes (S10's panel transform is left alone)
+    flip = null;
     root.removeAttribute('data-view3d');
     renderToggle();
   }
@@ -489,7 +492,12 @@ export function createExplorer(root: HTMLElement) {
   }
 
   /** U7: desktop stage cols 1–5 → 1–7 with a GSAP Flip; the plan image hides in 3D. */
+  // review r6 #2: the Flip is async (dynamic import), so it applies the LATEST wanted state when it lands; a fast
+  // failure (fail3d) in between must not be undone by a Flip that was started before it
+  let layoutWant = false;
+  let flip: gsap.core.Timeline | null = null;
   async function layout(on: boolean) {
+    layoutWant = on;
     if (on === root.hasAttribute('data-view3d')) return;
     const desktop = window.matchMedia('(min-width: 1024px)').matches;
     if (!desktop || prefersReducedMotion()) {
@@ -497,11 +505,13 @@ export function createExplorer(root: HTMLElement) {
       return;
     }
     const [{ Flip }] = await Promise.all([import('gsap/Flip')]);
+    if (layoutWant !== on || on === root.hasAttribute('data-view3d')) return; // superseded meanwhile
     gsap.registerPlugin(Flip);
     const targets = [$('[data-model-col]')!, panel];
     const st = Flip.getState(targets);
     root.toggleAttribute('data-view3d', on);
-    Flip.from(st, { duration: 0.6, ease: 'power3.inOut', scale: false });
+    flip?.kill();
+    flip = Flip.from(st, { duration: 0.6, ease: 'power3.inOut', scale: false });
   }
 
   /* ---------- transitions ---------- */
