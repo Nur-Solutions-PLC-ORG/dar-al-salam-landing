@@ -22,13 +22,22 @@ export interface Unit3d {
   openings: { id: string; type: 'door' | 'glazed-door' | 'window' | 'open'; a: P2; b: P2; t: number; sill: number; head: number }[];
   railings: { id: string; a: P2; b: P2; h: number }[];
   /** `furniture` (rev 8.1): blocks traced over the plan's furniture; the lid reuses the floor texture, `side` colours the sides. */
-  solids: { id: string; kind: 'column' | 'shaft' | 'wardrobe' | 'counter' | 'furniture'; poly: P2[]; h: number; side?: string }[];
+  /** Rev 10.2 (F2): fixtures (`shower` tray, `basin`, `wc`, `hob`/`sink` `on` a counter, `rug`); furniture names its `piece`. */
+  solids: {
+    id: string;
+    kind: 'column' | 'shaft' | 'wardrobe' | 'counter' | 'furniture' | 'shower' | 'basin' | 'wc' | 'hob' | 'sink' | 'rug';
+    poly: P2[];
+    h: number;
+    side?: string;
+    piece?: 'bed' | 'nightstand' | 'sofa' | 'dining' | 'chair' | 'tvUnit' | 'sideTable';
+    on?: string;
+  }[];
   /**
    * `area` is exactly the plan's label; never compute one from the polygon. `label` is the hotspot anchor.
    * Rev 8.4: `area` is null when the plan's label is illegible; the UI then shows the name only (never the `note`).
    */
   /** `stand` (rev 9.4): the walk camera's point, the most clear floor around; under 0.3 m `standClearance` it is no walk destination. */
-  rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2; stand?: P2; standClearance?: number }[];
+  rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2; stand?: P2; standClearance?: number; finish?: 'tile' | 'parquet' }[];
   /** The unlabelled hall (walk standpoints only, rev 9). */
   hall?: { poly: P2[] } | null;
   /** Rev 9.2: other unlabelled spaces a visitor can stand in (no hotspot, no list row; announced as "Hall"). */

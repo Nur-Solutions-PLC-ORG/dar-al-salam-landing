@@ -297,6 +297,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   }
   for (const s of data.solids) {
     if (s.kind === 'furniture') continue; // below: textured blocks (rev 8.1 D)
+    if (s.kind === 'rug' || s.kind === 'hob' || s.kind === 'sink') continue; // F2: the plan texture shows them until F1
     const m = centroid(s.poly);
     if (s.kind === 'counter') {
       pieces.push({ g: prism(s.poly, s.h - 0.02), m: 'counter', mid: m, side: -1, solid: true });
