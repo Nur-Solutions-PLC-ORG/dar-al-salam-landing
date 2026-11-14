@@ -54,6 +54,8 @@ interface State {
   unit: Code | null;
   /** Rev 8: the visitor's explicit "3D | Plan" choice (null = the default rule, DESIGN §9.6.2). */
   pref?: View | null;
+  /** Rev 9: walk-in mode, the room the visitor stands in (#explore/f7/bl05/3d/in/living). */
+  walk?: string | null;
 }
 
 export function createExplorer(root: HTMLElement) {
@@ -457,6 +459,10 @@ export function createExplorer(root: HTMLElement) {
   let room: string | null = null;
   /** U5: select a room (hotspot, list or a tap on its floor); the same room again, or null, deselects. */
   const selectRoom = (id: string | null) => {
+    if (state.walk && id) {
+      if (id !== state.walk) go({ ...state, walk: id }); // walking: the room list moves you there
+      return;
+    }
     if (id && id === room) id = null;
     room = id;
     dh?.select(id);
@@ -483,6 +489,7 @@ export function createExplorer(root: HTMLElement) {
   function fail3d(err?: unknown) {
     if (err) console.warn('[explorer] unit 3D unavailable, showing the plan', err);
     failed3d = true;
+    endWalk();
     room = null;
     rooms?.destroy();
     rooms = null;
@@ -500,6 +507,7 @@ export function createExplorer(root: HTMLElement) {
   async function leave3d(job: number) {
     if (!dh) return;
     const d = dh;
+    endWalk();
     selectRoom(null);
     rooms?.destroy();
     rooms = null;
@@ -562,16 +570,83 @@ export function createExplorer(root: HTMLElement) {
       lang,
       onSelect: selectRoom,
       onHover: (id) => dh?.highlight(id),
+      // rev 9 B1: walking needs WebGL (here already) and isn't offered on Save-Data or a slow connection
+      onStepInside: prefersLightweight() ? undefined : (id) => go({ ...state, walk: id }),
     });
     const entering = dh.enter();
     await fade(1, 200);
     await entering;
   }
 
+  /* ---------- rev 9 (B1–B6): walk-in mode, "Step inside" ---------- */
+  let walk: import('./walk').Walk | null = null;
+  let walkMod: Promise<typeof import('./walk')> | null = null;
+  let walkStrings: Record<string, string> = {};
+  /** Walk to match state.walk: step inside, move between rooms, or back to the 3D model. */
+  async function syncWalk() {
+    const want = dh && state.walk && viewFor() === '3d' ? state.walk : null;
+    if (!want) {
+      if (walk?.room) await walk.exit();
+      setWalking(false);
+      return;
+    }
+    if (!walk) {
+      const [m, s] = await Promise.all([(walkMod ??= import('./walk')), strings!]);
+      if (!dh || walk) return;
+      walkStrings = (s as unknown as { walk: Record<string, string> }).walk;
+      walk = m.createWalk(dh.walkHost(), { onArrive: () => undefined });
+    }
+    if (!walk.room) {
+      selectRoom(null);
+      setWalking(true);
+      await walk.enter(want);
+    } else if (walk.room !== want) await walk.goTo(want);
+  }
+  /** Drop the walk at once (the dollhouse is going away). */
+  function endWalk() {
+    walk?.destroy();
+    walk = null;
+    if (state.walk) state.walk = null;
+    setWalking(false);
+  }
+  let insideLi: HTMLLIElement | null = null;
+  function setWalking(on: boolean) {
+    if (on === root.hasAttribute('data-walk')) return;
+    document.documentElement.classList.toggle('is-walking', on);
+    void walkLayout(on);
+    // breadcrumb: … › BL05 › Inside
+    if (on && !insideLi) {
+      insideLi = document.createElement('li');
+      insideLi.innerHTML = '<span aria-hidden="true" class="crumbs__sep">›</span><span class="crumbs__current" aria-current="location"></span>';
+      $('[data-crumb-unit-li]')!.after(insideLi);
+    }
+    if (insideLi) {
+      insideLi.hidden = !on;
+      insideLi.lastElementChild!.textContent = walkStrings.inside ?? '';
+    }
+    $('[data-crumb-unit]')!.toggleAttribute('aria-current', !on);
+  }
+  /** Walk layout: desktop stage cols 1–8 and panel 9–12 (Flip 0.5 s); phones: a 70svh stage. */
+  async function walkLayout(on: boolean) {
+    const desktop = window.matchMedia('(min-width: 1024px)').matches;
+    if (!desktop || prefersReducedMotion()) {
+      root.toggleAttribute('data-walk', on);
+      return;
+    }
+    const { Flip } = await import('gsap/Flip');
+    gsap.registerPlugin(Flip);
+    const st = Flip.getState([$('[data-model-col]')!, panel]);
+    root.toggleAttribute('data-walk', on);
+    Flip.from(st, { duration: 0.5, ease: 'power3.inOut', scale: false });
+  }
+
   /** Bring the stage in line with the state: tower ↔ dollhouse (U1/U2), and the desktop layout (U7). */
   async function syncView() {
     const want = viewFor() === '3d' ? state.unit : null;
-    if (want === dhCode && (want !== null) === root.hasAttribute('data-view3d')) return;
+    if (want === dhCode && (want !== null) === root.hasAttribute('data-view3d')) {
+      await syncWalk();
+      return;
+    }
     const job = ++viewJob;
     void layout(want !== null);
     try {
@@ -584,6 +659,7 @@ export function createExplorer(root: HTMLElement) {
     // review r6 #1: the default rule can switch to 3D after go() rendered (tier 2 arrives later), so once the stage
     // has settled, the toggle and the hash follow the view actually shown
     if (job !== viewJob) return;
+    await syncWalk();
     renderToggle();
     if (location.hash.startsWith('#explore')) history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   }
@@ -618,12 +694,14 @@ export function createExplorer(root: HTMLElement) {
     if (s.level !== 'unit' || !s.unit) return `#explore/f${s.floor}`;
     // rev 8: /3d while the dollhouse shows; /plan when the visitor chose the plan of a unit that has 3D
     const v = viewFor();
-    const suffix = v === '3d' ? '/3d' : can3d() && s.pref === 'plan' ? '/plan' : '';
+    const suffix = v === '3d' ? (s.walk ? `/3d/in/${s.walk}` : '/3d') : can3d() && s.pref === 'plan' ? '/plan' : '';
     return `#explore/f${s.floor}/${s.unit.toLowerCase()}${suffix}`;
   };
 
   function go(next: State, opts: { focus?: boolean; scroll?: boolean; animate?: boolean } = {}) {
     const changedLevel = next.level !== state.level;
+    // rev 9: walking belongs to one unit's 3D view; another level, unit or the Plan view ends it
+    if (next.level !== 'unit' || next.unit !== state.unit || next.pref === 'plan') next = { ...next, walk: next.walk && next.unit === state.unit ? next.walk : null };
     Object.assign(state, next);
     render(opts.animate !== false && changedLevel);
     const url = `${location.pathname}${location.search}${hashFor(state)}`;
@@ -745,7 +823,8 @@ export function createExplorer(root: HTMLElement) {
     const active = document.activeElement;
     if (active && active !== document.body && !root.contains(active)) return;
     e.preventDefault();
-    if (room) selectRoom(null); // rev 8: Esc first deselects the room
+    if (state.walk) go({ ...state, walk: null }); // rev 9: Esc first steps back out to the 3D model
+    else if (room) selectRoom(null); // rev 8: then deselects the room
     else back();
   };
   document.addEventListener('keydown', onKey);
@@ -782,12 +861,12 @@ export function createExplorer(root: HTMLElement) {
   /* ---------- init from the URL ---------- */
 
   const fromHash = (): State | null => {
-    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9])(?:\/(3d|plan))?)?)?$/i.exec(location.hash);
+    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9])(?:\/(3d|plan)(?:\/in\/([a-z0-9-]+))?)?)?)?$/i.exec(location.hash);
     if (!m) return null;
     if (!m[1]) return { level: 'idle', floor: 1, unit: null };
     const floor = clampFloor(Number(m[1]));
     const unit = (m[2]?.toUpperCase() as Code | undefined) ?? null;
-    return { level: unit ? 'unit' : 'floor', floor, unit, pref: (m[3]?.toLowerCase() as View | undefined) ?? null };
+    return { level: unit ? 'unit' : 'floor', floor, unit, pref: (m[3]?.toLowerCase() as View | undefined) ?? null, walk: m[4]?.toLowerCase() ?? null };
   };
 
   root.dataset.ready = '';

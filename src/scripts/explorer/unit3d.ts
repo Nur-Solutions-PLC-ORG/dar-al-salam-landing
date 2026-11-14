@@ -78,7 +78,37 @@ export interface DollhouseOpts {
   onInteract: () => void;
 }
 
+/** What the walk-in chunk (walk.ts, rev 9 B1–B6) drives inside this scene. */
+export interface WalkHost {
+  scene: Scene;
+  camera: PerspectiveCamera;
+  renderer: WebGLRenderer;
+  root: Group;
+  host: HTMLElement;
+  stage: HTMLElement;
+  data: Unit3d;
+  image: HTMLImageElement;
+  /** Plan point → world (the model is centred on its footprint centroid). */
+  toWorld: (p: P2, y?: number) => Vector3;
+  /** Model cut (2.4 m) and the full storey wall (2.8 m). */
+  cutH: number;
+  fullH: number;
+  /** Shader uniforms: uModel (whole-model cut) and uCut (camera-side cutaway, per side). */
+  uniforms: { uModel: { value: number }; uCut: { value: number[] } };
+  fill: DirectionalLight;
+  spots: HTMLElement;
+  reduced: boolean;
+  request(): void;
+  run(target: object, vars: gsap.TweenVars): gsap.core.Tween;
+  /** Take the camera (walk mode) or give it back to the orbit (null). */
+  setDriver(d: { frame(dt: number): boolean } | null): void;
+  /** Put a camera where the orbit would (the way back from walk mode). */
+  orbitPose(target: PerspectiveCamera): void;
+}
+
 export interface Dollhouse {
+  /** Rev 9 B1: hooks for the walk-in chunk. */
+  walkHost(): WalkHost;
   /** U1: flat top-down → 56°/−35° with walls rising; or the static angle (reduced motion). */
   enter(): Promise<void>;
   /** U2: walls drop flat. */
@@ -159,7 +189,10 @@ function shadowTexture() {
 export function createDollhouse(o: DollhouseOpts): Dollhouse {
   const { renderer, host, stage, data } = o;
   const WALL_H = data.defaults.modelCutH ?? MODEL_CUT;
-  const cut = (h: number) => Math.min(h, WALL_H);
+  // rev 9 B1: geometry is built to the full storey (2.8 m) and the 2.4 m section cut is the uModel uniform, so walk
+  // mode can raise the walls to full height
+  const FULL_H = data.defaults.wallH ?? 2.8;
+  const cut = (h: number) => Math.min(h, FULL_H);
   const canvas = renderer.domElement;
   if (!document.getElementById('u3d-css')) {
     const st = document.createElement('style');
@@ -184,17 +217,19 @@ export function createDollhouse(o: DollhouseOpts): Dollhouse {
     uRise: { value: 99 },
     uDrop: { value: 1 },
     uCut: { value: [WALL_H, WALL_H, WALL_H, WALL_H] },
+    uModel: { value: WALL_H },
   };
   const inject = <M extends Material>(m: M, cut = true, dur = 0.7) => {
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U);
       sh.vertexShader =
-        'attribute float aDelay;\nattribute float aSide;\nuniform float uRise;\nuniform float uDrop;\nuniform float uCut[4];\n' +
+        'attribute float aDelay;\nattribute float aSide;\nuniform float uRise;\nuniform float uDrop;\nuniform float uCut[4];\nuniform float uModel;\n' +
         sh.vertexShader.replace(
           '#include <begin_vertex>',
           `#include <begin_vertex>
 float rp = clamp((uRise - aDelay) / ${dur.toFixed(2)}, 0.0, 1.0);
 transformed.y *= max(0.01, (1.0 - pow(1.0 - rp, 3.0)) * uDrop);
+transformed.y = min(transformed.y, uModel);
 ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0.5)]);' : 'if (aSide > -0.5) transformed.y = 0.0;'}`,
         );
     };
@@ -245,7 +280,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     const side = openingSide(op.a, op.b);
     const m = mid(op.a, op.b);
     const head = cut(op.head);
-    if (head < WALL_H) pieces.push({ g: seg(op.a, op.b, head, WALL_H, op.t), m: 'wall', mid: m, side });
+    if (head < FULL_H) pieces.push({ g: seg(op.a, op.b, head, FULL_H, op.t), m: 'wall', mid: m, side });
     if (op.type === 'window') pieces.push({ g: seg(op.a, op.b, 0, op.sill, op.t), m: 'wall', mid: m, side });
     if (op.type !== 'door') {
       const y0 = op.type === 'window' ? op.sill : 0;
@@ -510,11 +545,20 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
 
   const autoOrbit = () => !o.reduced && ready && !dragging && !paused && !selected && performance.now() > resumeAt;
 
+  let driver: { frame(dt: number): boolean } | null = null;
   const tick = (now: number) => {
     frame = 0;
     if (destroyed || !visible) return;
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
     lastT = now;
+    if (driver) {
+      // walk mode owns the camera
+      const more = driver.frame(dt) || tweening > 0;
+      renderer.render(scene, camera);
+      if (more) request();
+      else lastT = 0;
+      return;
+    }
     let again = tweening > 0;
     if (!dragging && Math.abs(velAz) > 1e-4) {
       cam.az += velAz;
@@ -557,6 +601,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const ndc = new Vector2();
   let downX = 0, downY = 0, lastX = 0, lastY = 0, moved = 0;
   const onDown = (e: PointerEvent) => {
+    if (driver) return; // walk mode has its own look controls
     o.onInteract();
     dragging = true;
     downX = lastX = e.clientX;
@@ -567,7 +612,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     if (e.pointerType === 'mouse') canvas.setPointerCapture(e.pointerId);
   };
   const onMove = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (!dragging || driver) return;
     const dx = e.clientX - lastX;
     const dy = e.clientY - lastY;
     lastX = e.clientX;
@@ -579,7 +624,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     request();
   };
   const onUp = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (!dragging || driver) return;
     dragging = false;
     resumeAt = performance.now() + RESUME;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
@@ -634,7 +679,40 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   fit();
   place();
 
+  const walkHost = (): WalkHost => ({
+    scene,
+    camera,
+    renderer,
+    root,
+    host,
+    stage,
+    data,
+    image: o.image,
+    toWorld: (p, y = 0) => new Vector3(p[0] - cx, y, p[1] - cz),
+    cutH: WALL_H,
+    fullH: FULL_H,
+    uniforms: U,
+    fill,
+    spots: layer,
+    reduced: o.reduced,
+    request,
+    run,
+    setDriver(d) {
+      driver = d;
+      dragging = false;
+      canvas.style.cursor = d ? 'grab' : 'grab';
+      if (!d) resumeAt = performance.now() + RESUME;
+      request();
+    },
+    orbitPose(target) {
+      const c = Math.cos(cam.el);
+      target.position.set(cam.x + Math.cos(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z - Math.sin(cam.az) * c * d);
+      target.lookAt(cam.x, 0.6, cam.z);
+    },
+  });
+
   return {
+    walkHost,
     enter() {
       return new Promise<void>((resolve) => {
         const done = () => {
@@ -683,7 +761,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
       if (frame) cancelAnimationFrame(frame);
       ro.disconnect();
       stopVis();
-      gsap.killTweensOf([cam, U.uRise, U.uDrop, hlMat]);
+      gsap.killTweensOf([cam, U.uRise, U.uDrop, U.uModel, hlMat]);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);

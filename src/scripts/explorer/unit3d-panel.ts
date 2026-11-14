@@ -21,6 +21,7 @@ export interface PanelStrings {
   altPlan: string;
   hint: string;
   rooms: Record<string, string>;
+  walk: Record<'enterHome' | 'stepInside' | 'back' | 'inside' | 'hint' | 'lookLeft' | 'lookRight' | 'goTo' | 'useMotion' | 'geometryLabel' | 'panoAlt' | 'stopped', string>;
 }
 
 export interface RoomsPanel {
@@ -43,6 +44,8 @@ export function createRoomsPanel(o: {
   lang: string;
   onSelect: (id: string | null) => void;
   onHover: (id: string | null) => void;
+  /** Rev 9 B1: walk-in entry points (absent when walking isn't offered: no WebGL, Save-Data, slow connection). */
+  onStepInside?: (id: string) => void;
 }): RoomsPanel {
   const { card, geo, s } = o;
   const body = card.querySelector('.unit__body')!;
@@ -91,6 +94,17 @@ export function createRoomsPanel(o: {
   hint.textContent = s.hint;
   actions.after(hint);
   hint.after(rooms);
+  // rev 9 B1: "Enter the home" under the actions; it starts in the living room
+  if (o.onStepInside) {
+    const living = geo.rooms.find((r) => r.name === 'livingDining') ?? geo.rooms[0];
+    const enter = document.createElement('button');
+    enter.type = 'button';
+    enter.className = 'btn btn--secondary u3d-enter';
+    enter.textContent = s.walk.enterHome;
+    enter.addEventListener('click', () => living && o.onStepInside!(living.id));
+    actions.after(enter);
+    added.push(enter);
+  }
   added.push(hint);
 
   /* ---------- room card ---------- */
@@ -109,6 +123,15 @@ export function createRoomsPanel(o: {
   const img = fig.querySelector('img')!;
   const chip = fig.querySelector<HTMLElement>('.u3d-card__chip')!;
   close.addEventListener('click', () => o.onSelect(null));
+  // rev 9 B1: the room card's primary action
+  if (o.onStepInside) {
+    const step = document.createElement('button');
+    step.type = 'button';
+    step.className = 'btn u3d-step';
+    step.textContent = s.walk.stepInside;
+    step.addEventListener('click', () => current && o.onStepInside!(current));
+    fig.append(step);
+  }
 
   const sheet = document.createElement('dialog');
   sheet.className = 'u3d-sheet theme-paper';

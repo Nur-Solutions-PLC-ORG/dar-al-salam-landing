@@ -180,6 +180,21 @@ export const en = {
     altAi: "Artist's impression of the {room} in {code}",
     altPlan: 'Floor plan detail of the {room} in {code}',
   },
+  /** Rev 9 walk-in mode (DESIGN §9.8, §11); served with the 3D strings (/i18n/unit3d.{lang}.json). */
+  walk: {
+    enterHome: 'Enter the home',
+    stepInside: 'Step inside',
+    back: 'Back to 3D model',
+    inside: 'Inside',
+    hint: 'Drag to look · Tap a ring to move',
+    lookLeft: 'Look left',
+    lookRight: 'Look right',
+    goTo: 'Go to the {room}',
+    useMotion: 'Use motion',
+    geometryLabel: 'Simplified 3D model from the floor plan',
+    panoAlt: "Artist's impression of the {room}, seen from inside",
+    stopped: '3D view stopped',
+  },
   rooms3d: {
     bedroom: 'Bedroom',
     masterBedroom: 'Master bedroom',

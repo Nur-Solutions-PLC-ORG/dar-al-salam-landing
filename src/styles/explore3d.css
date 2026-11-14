@@ -104,3 +104,42 @@
   border-style: dashed;
   color: var(--stone-500);
 }
+
+/* rev 9 (B1): walk-in mode */
+.u3d-spots.is-walking {
+  display: none;
+}
+
+.btn.u3d-step,
+.btn.u3d-enter {
+  --_h: var(--tap-min);
+  justify-self: start;
+}
+
+.btn.u3d-step {
+  margin-top: var(--space-3);
+}
+
+html.is-walking .mobile-cta {
+  visibility: hidden;
+}
+
+html.is-walking .u3d-enter {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .explore[data-walk] .explore__model {
+    grid-column: 1 / 9;
+  }
+
+  .explore[data-walk] .explore__panel {
+    grid-column: 9 / 13;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .explore[data-walk] .explore__stage {
+    height: 70svh;
+  }
+}

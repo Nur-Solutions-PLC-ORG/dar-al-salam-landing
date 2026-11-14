@@ -9,7 +9,7 @@ export const getStaticPaths = (() => langs.map((lang) => ({ params: { lang } }))
 
 export const GET: APIRoute = ({ params }) => {
   const t = getDict(params.lang as Lang);
-  return new Response(JSON.stringify({ ...t.unit3d, rooms: t.rooms3d }), {
+  return new Response(JSON.stringify({ ...t.unit3d, rooms: t.rooms3d, walk: t.walk }), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
 };

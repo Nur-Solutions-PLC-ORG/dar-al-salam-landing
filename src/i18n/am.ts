@@ -173,6 +173,21 @@ export const am: Dict = {
     altAi: 'በ{code} ያለው {room} የአርቲስት ምናባዊ ሥዕል',
     altPlan: 'በ{code} ያለው {room} የወለል ፕላን ዝርዝር',
   },
+  // rev 9 walk-in strings: DESIGN §11 drafts
+  walk: {
+    enterHome: 'ወደ ቤቱ ይግቡ',
+    stepInside: 'ወደ ውስጥ ይግቡ',
+    back: 'ወደ 3D ሞዴሉ ተመለስ',
+    inside: 'ውስጥ',
+    hint: 'ለማየት ይጎትቱ · ለመንቀሳቀስ ቀለበቱን ይንኩ',
+    lookLeft: 'ወደ ግራ ይመልከቱ',
+    lookRight: 'ወደ ቀኝ ይመልከቱ',
+    goTo: 'ወደ {room} ይሂዱ',
+    useMotion: 'የስልኩን እንቅስቃሴ ተጠቀም',
+    geometryLabel: 'ከወለል ፕላኑ የተሠራ ቀለል ያለ 3D ሞዴል',
+    panoAlt: 'የ{room} የአርቲስት ምናባዊ ሥዕል፣ ከውስጥ እንደሚታይ',
+    stopped: 'የ3D እይታው ቆሟል',
+  },
   rooms3d: {
     bedroom: 'መኝታ ክፍል',
     masterBedroom: 'ዋና መኝታ ክፍል',
