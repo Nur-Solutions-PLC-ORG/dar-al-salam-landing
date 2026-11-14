@@ -687,6 +687,8 @@ export function createExplorer(root: HTMLElement) {
   const initial = fromHash();
   if (initial) Object.assign(state, initial);
   render(false);
+  // review r6 #4: a deep link's /3d stays only where 3D can show (not without WebGL, not on a TBC position)
+  if (initial && state.level !== 'idle') history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   window.addEventListener('hashchange', () => {
     const s = fromHash();
     if (s) go(s, { animate: true });
