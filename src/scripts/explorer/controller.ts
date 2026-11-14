@@ -613,12 +613,20 @@ export function createExplorer(root: HTMLElement) {
   let walkMod: Promise<typeof import('./walk')> | null = null;
   let walkStrings: Record<string, string> = {};
   let walkPanos: Partial<Record<string, import('../../data/units3d/types').RoomPano>> = {};
+  /** Focus fell to the page (its control vanished) or was on a control that is about to vanish. */
+  const lostFocus = () => {
+    const a = document.activeElement;
+    return !a || a === document.body || Boolean(a.closest('.u3d-enter, .u3d-step, .walk-ui, .u3d-sheet, .u3d-card'));
+  };
   /** Walk to match state.walk: step inside, move between rooms, or back to the 3D model. */
   async function syncWalk() {
     const want = dh && state.walk && viewFor() === '3d' ? state.walk : null;
     if (!want) {
+      const wasIn = Boolean(walk?.room);
       if (walk?.room) await walk.exit();
       setWalking(false);
+      // review r8 M4: the walk's buttons are gone; give focus back to "Enter the home" if it was lost
+      if (wasIn && lostFocus()) $('.u3d-enter')?.focus({ preventScroll: true });
       return;
     }
     if (!walk) {
@@ -644,7 +652,9 @@ export function createExplorer(root: HTMLElement) {
     if (!walk.room) {
       selectRoom(null);
       setWalking(true);
+      const lost = lostFocus(); // "Enter the home" hides and "Step inside" closes its card as the walk starts
       await walk.enter(want);
+      if ((lost || lostFocus()) && state.walk) stage.focus({ preventScroll: true }); // arrow keys look around
     } else if (walk.room !== want) await walk.goTo(want);
   }
   /** Drop the walk at once (the dollhouse is going away). */
