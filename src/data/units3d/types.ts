@@ -29,6 +29,21 @@ export interface Unit3d {
   rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2 }[];
 }
 
+/**
+ * A walk-in panorama for a room (DESIGN §9.8 B5, rev 9): rendered only when `approved`, always with the AI label.
+ * `src` is the AVIF (≤ 450 KB) with a same-named .webp fallback beside it. `equirect` is 4096 × 2048 on a sphere;
+ * `strip` is 3:1 on a cylinder arc of `arc` degrees (default 180). `yawOffset` (degrees) turns the image so its
+ * centre faces the plan direction it was generated for, keeping the door rings on their true bearings.
+ */
+export interface RoomPano {
+  src: string;
+  kind: 'equirect' | 'strip';
+  yawOffset: number;
+  arc?: number;
+  alt: string;
+  approved: boolean;
+}
+
 /** An interior image for a room (DESIGN §9.6.5): rendered only when `approved`, always with the AI label. */
 export interface RoomImage {
   src: string;

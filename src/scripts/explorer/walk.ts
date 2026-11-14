@@ -21,11 +21,16 @@
  * - B6 toolbar and minimap: "Back to 3D model" (and the gyro toggle) top-left; top-right the unit's plan at 132 px
  *   (96 px on phones) with a gold "you are here" dot and a 60° view cone; tapping a room jumps there. The minimap is
  *   aria-hidden (the room list is its accessible twin) and hides on stages under 320 px. A 4 s hint on first entry.
+ * - B5 the panorama slot: an approved rooms[].pano replaces the geometry for that room (0.5 s cross-fade once decoded):
+ *   equirect on an inside-out sphere (r 20 m) centred on the standpoint, or a 3:1 strip on a cylinder arc with the
+ *   yaw clamped to the arc and the pitch to ±12°. The chip then reads "Artist's impression; finishes may vary.".
+ *   One panorama at a time; the previous one is disposed. Door rings keep their true bearings (world positions).
  */
 import {
   BoxGeometry,
   BufferGeometry,
   CanvasTexture,
+  CylinderGeometry,
   DoubleSide,
   ExtrudeGeometry,
   Group,
@@ -38,11 +43,14 @@ import {
   Quaternion,
   Shape,
   ShapeGeometry,
+  SphereGeometry,
+  SRGBColorSpace,
+  Texture,
   Vector3,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WalkHost } from './unit3d';
-import type { P2 } from '../../data/units3d/types';
+import type { P2, RoomPano } from '../../data/units3d/types';
 
 const EYE = 1.5;
 const FOV = 72;
@@ -92,6 +100,9 @@ export function createWalk(
     onPick: (roomId: string) => void;
     strings: Record<string, string>;
     names: Record<string, string>;
+    /** Approved-or-not panoramas by room id, and the AI label for the chip. */
+    panos: Partial<Record<string, RoomPano>>;
+    aiLabel: string;
     lang: string;
   },
 ): Walk {
@@ -325,7 +336,16 @@ export function createWalk(
   let vel = 0;
   let velP = 0;
   let drag: { x: number; y: number; axis: 'x' | 'y' | null; touch: boolean } | null = null;
-  const clampPitch = () => (view.pitch = Math.max(-PITCH, Math.min(PITCH, view.pitch)));
+  /** Pitch ±25° (on a strip panorama: the strip's own pitch room and a yaw window inside the arc). */
+  let strip: { mid: number; arc: number; pitch: number } | null = null;
+  const clampPitch = () => {
+    const lim = strip ? strip.pitch : PITCH;
+    view.pitch = Math.max(-lim, Math.min(lim, view.pitch));
+    if (!strip) return;
+    // keep the horizontal field of view inside the arc
+    const half = Math.max(0, strip.arc / 2 - Math.atan(Math.tan((camera.fov * DEG) / 2) * camera.aspect));
+    view.yaw = strip.mid + Math.max(-half, Math.min(half, Math.atan2(Math.sin(view.yaw - strip.mid), Math.cos(view.yaw - strip.mid))));
+  };
   const onDown = (e: PointerEvent) => {
     if (!current) return;
     drag = { x: e.clientX, y: e.clientY, axis: e.pointerType === 'mouse' ? 'x' : null, touch: e.pointerType !== 'mouse' };
@@ -360,7 +380,7 @@ export function createWalk(
     if (!current) return;
     vel = velP = 0;
     const t = { y: view.yaw };
-    h.run(t, { y: view.yaw + dir * STEP, duration: h.reduced ? 0 : 0.3, ease: 'power2.out', onUpdate: () => ((view.yaw = t.y), apply()) });
+    h.run(t, { y: view.yaw + dir * STEP, duration: h.reduced ? 0 : 0.3, ease: 'power2.out', onUpdate: () => ((view.yaw = t.y), clampPitch(), apply()) });
   };
   const onKey = (e: KeyboardEvent) => {
     if (!current || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
@@ -648,12 +668,95 @@ export function createWalk(
     h.run(ceilMat, { opacity: inside ? 1 : 0, duration, delay });
   };
 
+  /* ---------- B5: the panorama slot ---------- */
+  const panoAlt = document.createElement('p');
+  panoAlt.className = 'visually-hidden';
+  ui.append(panoAlt);
+  let pano: { mesh: Mesh; tex: Texture; mat: MeshBasicMaterial } | null = null;
+  const loadPano = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve(img);
+      img.onerror = () => (src.endsWith('.avif') ? (img.src = src.replace(/\.avif$/, '.webp'), (img.onerror = reject)) : reject());
+      img.src = src;
+    });
+  const dropPano = (instant: boolean) => {
+    const old = pano;
+    pano = null;
+    if (strip) {
+      strip = null;
+      if (instant || h.reduced) camera.fov = FOV;
+      else h.run(camera, { fov: FOV, duration: 0.5, ease: 'power2.out', overwrite: true, onUpdate: apply });
+    }
+    h.root.visible = true;
+    chip.textContent = o.strings.geometryLabel ?? '';
+    panoAlt.textContent = '';
+    if (!old) return;
+    const bye = () => {
+      h.scene.remove(old.mesh);
+      old.mesh.geometry.dispose();
+      old.mat.dispose();
+      old.tex.dispose();
+    };
+    if (instant || h.reduced) bye();
+    else h.run(old.mat, { opacity: 0, duration: 0.5, onComplete: bye });
+  };
+  /** The room's approved panorama, if any (else back to geometry). */
+  const showPano = async (id: string) => {
+    const pn = o.panos[id];
+    if (!pn?.approved) return dropPano(false);
+    let img: HTMLImageElement;
+    try {
+      img = await loadPano(pn.src);
+      await img.decode();
+    } catch {
+      return dropPano(false); // no image: the geometry stays
+    }
+    if (current !== id) return;
+    dropPano(true);
+    const tex = new Texture(img);
+    tex.colorSpace = SRGBColorSpace;
+    tex.needsUpdate = true;
+    const arc = (pn.arc ?? 180) * DEG;
+    const geo =
+      pn.kind === 'equirect'
+        ? new SphereGeometry(20, 48, 24)
+        : new CylinderGeometry(20, 20, (20 * arc) / 3, 64, 1, true, Math.PI - arc / 2, arc); // 3:1, centred ahead
+    geo.scale(-1, 1, 1); // seen from inside without mirroring the image
+    const mat = new MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+    const mesh = new Mesh(geo, mat);
+    mesh.position.copy(camera.position);
+    mesh.rotation.y = pn.yawOffset * DEG;
+    mesh.renderOrder = 10;
+    h.scene.add(mesh);
+    pano = { mesh, tex, mat };
+    if (pn.kind === 'strip') {
+      // a 3:1 strip covers ±atan(arc/6) vertically: narrow the view to fit inside it, leaving up to ±12° to look
+      const v = Math.atan(arc / 6);
+      const fov = Math.min(FOV * DEG, 2 * v - 8 * DEG);
+      strip = { mid: pn.yawOffset * DEG, arc, pitch: Math.min(12 * DEG, v - fov / 2) };
+      h.run(camera, { fov: fov / DEG, duration: h.reduced ? 0 : 0.5, ease: 'power2.out', overwrite: true, onUpdate: () => (clampPitch(), apply()) });
+    }
+    chip.textContent = o.aiLabel;
+    panoAlt.textContent = pn.alt;
+    h.run(mat, {
+      opacity: 1,
+      duration: h.reduced ? 0 : 0.5,
+      ease: 'power2.out',
+      onComplete: () => {
+        if (pano?.mat === mat) h.root.visible = false; // the geometry hides behind a finished panorama
+      },
+    });
+  };
+
   const fade = (to: number) => h.host.animate([{ opacity: to ? 0 : 1 }, { opacity: to }], { duration: 200, fill: 'forwards' }).finished;
 
   /** U10: through a door's centre to the next standpoint; the yaw eases to the direction of travel. */
   const through = async (door: { m: P2 }, to: string) => {
     if (h.reduced) return arrive(to, 0);
     showRings(null);
+    dropPano(false); // the glide happens in the geometry
     const p = pose(to);
     const mid = h.toWorld(door.m, EYE);
     const start = camera.position.clone();
@@ -682,6 +785,7 @@ export function createWalk(
     );
     current = to;
     showRings(to);
+    void showPano(to);
     o.onArrive(to);
   };
 
@@ -700,6 +804,7 @@ export function createWalk(
       h.request();
       await fade(1);
     } else await fly({ at: p.at, quat: quatFor(view.yaw), fov: FOV }, glide);
+    void showPano(id);
     o.onArrive(id);
   };
 
@@ -733,6 +838,7 @@ export function createWalk(
       h.orbitPose(back);
       current = null;
       showRings(null);
+      dropPano(true);
       if (h.reduced) {
         await fade(0);
         enclose(false, 0, 0);

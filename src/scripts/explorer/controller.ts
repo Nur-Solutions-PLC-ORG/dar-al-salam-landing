@@ -534,6 +534,7 @@ export function createExplorer(root: HTMLElement) {
       strings,
     ]);
     const pack = await units3d[code]!();
+    walkPanos = pack.panos;
     const image = await loadFloorImage(code.toLowerCase());
     if (job !== viewJob) return;
     // A3: the camera pushes toward the unit on the slab for 0.5 s before the cross-fade
@@ -582,6 +583,7 @@ export function createExplorer(root: HTMLElement) {
   let walk: import('./walk').Walk | null = null;
   let walkMod: Promise<typeof import('./walk')> | null = null;
   let walkStrings: Record<string, string> = {};
+  let walkPanos: Partial<Record<string, import('../../data/units3d/types').RoomPano>> = {};
   /** Walk to match state.walk: step inside, move between rooms, or back to the 3D model. */
   async function syncWalk() {
     const want = dh && state.walk && viewFor() === '3d' ? state.walk : null;
@@ -604,6 +606,8 @@ export function createExplorer(root: HTMLElement) {
           rooms?.setWalk(id);
         },
         onBack: () => go({ ...state, walk: null }),
+        panos: walkPanos,
+        aiLabel: (s as unknown as { aiLabel: string }).aiLabel,
         onPick: (id) => go({ ...state, walk: id }),
       });
     }

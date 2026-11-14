@@ -1,4 +1,4 @@
-import type { RoomImage } from './types';
+import type { RoomImage, RoomPano } from './types';
 
 /**
  * BL05 room images (DESIGN §9.6.5), keyed by room id in bl05.json. Empty until images are generated and checked
@@ -6,3 +6,6 @@ import type { RoomImage } from './types';
  * labelled "Artist's impression; finishes may vary." Until then each room shows its crop of the floor plan.
  */
 export const images: Partial<Record<string, RoomImage>> = {};
+
+/** Walk-in panoramas (DESIGN §9.8 B5), keyed by room id: empty until the AI trial's images are approved. */
+export const panos: Partial<Record<string, RoomPano>> = {};
