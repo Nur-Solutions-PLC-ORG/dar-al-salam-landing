@@ -1,0 +1,182 @@
+---
+/**
+ * Film dialog (DESIGN §5.11 rev 5). One native modal <dialog> for both openers (hero card, Story link).
+ * The dialog itself is a transparent full-viewport shell; .film__scrim, the frame and the chrome are
+ * separate layers so each can be animated (src/scripts/film.ts: FLIP from the card, rise from the link).
+ * The film loads nothing until opened: preload="none", and the poster is set by JS on first open.
+ */
+import { getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+const f = t.film;
+---
+
+<dialog class="film" aria-labelledby="film-title" aria-describedby="film-desc" data-film-dialog>
+  <div class="film__scrim" data-film-scrim></div>
+  <div class="film__col">
+    <div class="film__top" data-film-chrome>
+      <h2 id="film-title" class="eyebrow film__title">{f.title}</h2>
+      <button type="button" class="film__close" aria-label={f.close} data-film-close>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M7 7l10 10M17 7 7 17"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="film__frame" data-film-frame>
+      <video
+        class="film__video"
+        controls
+        playsinline
+        preload="none"
+        width="640"
+        height="352"
+        src="/video/film.mp4"
+        data-poster="/video/film-full-poster.webp"
+        data-film-video
+      >
+        <track kind="captions" srclang={lang} label={f.captionsLabel} src={`/video/film.${lang}.vtt`} default />
+      </video>
+    </div>
+    <p id="film-desc" class="small film__desc" data-film-chrome>{f.desc}</p>
+  </div>
+</dialog>
+
+<style>
+  /* the shell: full viewport, transparent; everything visible is a child layer */
+  .film {
+    width: 100vw;
+    height: 100svh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ivory-50);
+    overflow: hidden;
+  }
+
+  .film::backdrop {
+    background: transparent;
+  }
+
+  .film__scrim {
+    position: fixed;
+    inset: 0;
+    background: rgb(11 18 32 / 0.94);
+  }
+
+  .film__col {
+    --_w: min(960px, calc(100vw - 32px), calc((100svh - 176px) * 20 / 11));
+    position: relative;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-4);
+    height: 100%;
+    padding: 16px;
+  }
+
+  .film__top,
+  .film__frame,
+  .film__desc {
+    width: var(--_w);
+  }
+
+  .film__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .film__title {
+    margin: 0;
+    color: var(--sand-200);
+  }
+
+  .film__close {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgb(251 247 242 / 0.3);
+    color: var(--ivory-50);
+  }
+
+  .film__close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .film__close:focus-visible {
+    outline: 2px solid var(--gold-300);
+    outline-offset: 2px;
+  }
+
+  .film__frame {
+    aspect-ratio: 20 / 11;
+    border-radius: var(--radius-s);
+    overflow: clip;
+    background: var(--navy-950);
+    transform-origin: 50% 50%;
+  }
+
+  .film__video {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .film__video:focus-visible {
+    outline: 2px solid var(--gold-300);
+    outline-offset: -2px;
+  }
+
+  .film__desc {
+    color: rgb(228 218 203 / 0.8);
+  }
+
+  /* short landscape: the caption stays as the description but is visually hidden; close overlays the corner */
+  @media (max-height: 500px) {
+    .film__col {
+      --_w: min(calc(100vw - 32px), calc((100svh - 32px) * 20 / 11));
+    }
+
+    .film__desc {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .film__top {
+      position: static;
+    }
+
+    .film__title {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .film__close {
+      position: fixed;
+      z-index: 2;
+      top: 8px;
+      right: 8px;
+      background: rgb(11 18 32 / 0.6);
+    }
+  }
+</style>

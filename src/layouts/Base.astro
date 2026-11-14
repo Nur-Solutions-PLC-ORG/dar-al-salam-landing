@@ -126,6 +126,14 @@ const ogUrl = abs(og.src);
           // Anchor handling + scroll helpers are tiny and needed immediately; GSAP/Lenis (motion.ts) are not:
           // the hero is pure CSS, so motion.ts loads after `load` + idle to keep it out of the LCP window.
           import '../scripts/motion-api';
+          // rev 5: a film opener clicked before film.ts has wired its own listeners (they preventDefault first)
+          document.addEventListener('click', (e) => {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const a = (e.target as Element | null)?.closest<HTMLElement>('[data-film-open]');
+            if (!a) return;
+            e.preventDefault();
+            void import('../scripts/film').then((m) => m.openFilm(a));
+          });
           const start = () => {
             void import('../scripts/motion').then((m) => m.initMotion());
             void import('../scripts/film').then((m) => m.initFilm()); // rev 5: hero film card (§5.11)

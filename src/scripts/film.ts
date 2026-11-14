@@ -1,12 +1,13 @@
 /**
- * Tower film (DESIGN §5.11 rev 5): the hero card's muted preview loop and its pause toggle.
+ * Tower film (DESIGN §5.11 rev 5): the hero card's muted preview loop and its pause toggle, and the film dialog.
+ * Animations use the Web Animations API with GSAP's curves, so a click before motion.ts loads still flies.
  * Loaded after `load` + idle (Base.astro), so nothing here touches the LCP window.
  *
  * The loop plays only when ALL hold: motion allowed, no Save-Data, effectiveType 4g or unknown, hero on screen.
  * Otherwise the card stays a poster: no <source>s are added, zero video bytes, the pause toggle stays hidden.
  * `?film-debug` skips the connection checks only (headless Chrome reports 3g); never the motion check.
  */
-import { prefersReducedMotion } from './motion-api';
+import { getLenis, prefersReducedMotion } from './motion-api';
 
 type Connection = { saveData?: boolean; effectiveType?: string };
 
@@ -21,6 +22,8 @@ export const film = {
   cardVisible: false,
   /** Re-evaluate whether the loop should be playing. */
   update: () => {},
+  /** The dialog opened/closed (the sound toggle fades its music around it). */
+  onDialog: (_open: boolean) => {},
 };
 
 function connectionAllows() {
@@ -31,6 +34,7 @@ function connectionAllows() {
 }
 
 export function initFilm() {
+  wireOpeners();
   const card = document.querySelector<HTMLElement>('[data-film-card]');
   if (!card) return;
   film.card = card;
@@ -120,4 +124,154 @@ export function initFilm() {
     update();
   });
   document.addEventListener('visibilitychange', update);
+}
+
+/* ---------- film dialog (item 5): FLIP from the card, rise from the Story link, cross-fade with reduced motion ---------- */
+
+const EASE = {
+  expoOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  power3Out: 'cubic-bezier(0.215, 0.61, 0.355, 1)',
+  power2InOut: 'cubic-bezier(0.455, 0.03, 0.515, 0.955)',
+};
+
+let dialogCtl: ReturnType<typeof createDialog> | undefined;
+
+/** Open the film dialog from an opener (the card link or the Story link). Synchronous: the click's activation allows sound. */
+export function openFilm(opener: HTMLElement) {
+  dialogCtl ??= createDialog();
+  dialogCtl?.open(opener);
+}
+
+/** Direct listeners on the openers (they run before the early delegate in Base.astro, which then stands down). */
+function wireOpeners() {
+  document.querySelectorAll<HTMLElement>('[data-film-open]').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      openFilm(a);
+    }),
+  );
+}
+
+function createDialog() {
+  const dialog = document.querySelector<HTMLDialogElement>('[data-film-dialog]');
+  if (!dialog) return null;
+  const scrim = dialog.querySelector<HTMLElement>('[data-film-scrim]')!;
+  const frame = dialog.querySelector<HTMLElement>('[data-film-frame]')!;
+  const video = dialog.querySelector<HTMLVideoElement>('[data-film-video]')!;
+  const chrome = Array.from(dialog.querySelectorAll<HTMLElement>('[data-film-chrome]'));
+
+  let opener: HTMLElement | null = null;
+  let closing = false;
+  let anims: Animation[] = [];
+  const stop = () => {
+    anims.forEach((a) => a.cancel());
+    anims = [];
+  };
+  const run = (el: Element, k: Keyframe[], o: KeyframeAnimationOptions) => {
+    const a = el.animate(k, o);
+    anims.push(a);
+    return a;
+  };
+  const cardOf = (el: HTMLElement | null) => el?.closest<HTMLElement>('[data-film-card]') ?? null;
+  /** The card's box expressed as a transform of the (untransformed) frame: equal aspect ratios, so no distortion. */
+  const flip = (card: HTMLElement) => {
+    const a = card.getBoundingClientRect();
+    const b = frame.getBoundingClientRect();
+    const dx = a.left + a.width / 2 - (b.left + b.width / 2);
+    const dy = a.top + a.height / 2 - (b.top + b.height / 2);
+    return `translate(${dx}px, ${dy}px) scale(${a.width / b.width})`;
+  };
+  const inViewport = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+  };
+
+  function open(from: HTMLElement) {
+    if (dialog!.open) return;
+    opener = from;
+    closing = false;
+    stop();
+    // same task as the click: showModal, Lenis, loop pause, play (user activation allows sound)
+    if (!video.poster) video.poster = video.dataset.poster ?? '';
+    dialog!.showModal();
+    getLenis()?.stop();
+    document.documentElement.classList.add('has-dialog');
+    film.dialogOpen = true;
+    film.update();
+    film.onDialog(true);
+    if (video.ended) video.currentTime = 0;
+    void video.play().catch(() => undefined); // rejected → the native play button is the fallback
+
+    if (prefersReducedMotion()) {
+      run(dialog!, [{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+      video.focus({ preventScroll: true });
+      return;
+    }
+    const card = cardOf(from);
+    const main = card
+      ? run(frame, [{ transform: flip(card) }, { transform: 'none' }], { duration: 700, easing: EASE.expoOut })
+      : run(frame, [{ opacity: 0, transform: 'translateY(24px) scale(0.96)' }, { opacity: 1, transform: 'none' }], {
+          duration: 600,
+          easing: EASE.power3Out,
+        });
+    card?.setAttribute('data-film-away', ''); // the card "lifts out" during the flight
+    run(scrim, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE.power3Out });
+    chrome.forEach((el) =>
+      run(el, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], {
+        duration: 400,
+        delay: 350,
+        easing: EASE.power3Out,
+        fill: 'backwards',
+      }),
+    );
+    void main.finished.then(
+      () => dialog!.open && !closing && video.focus({ preventScroll: true }),
+      () => undefined,
+    );
+  }
+
+  function close() {
+    if (!dialog!.open || closing) return;
+    closing = true;
+    video.pause(); // the sound stops on the first frame of the close
+    stop();
+    const card = cardOf(opener);
+    const fade = (ms: number) => run(dialog!, [{ opacity: 1 }, { opacity: 0 }], { duration: ms, fill: 'forwards' });
+    let done: Animation;
+    if (prefersReducedMotion()) done = fade(200);
+    else if (card && film.cardVisible && inViewport(card)) {
+      done = run(frame, [{ transform: 'none' }, { transform: flip(card) }], { duration: 450, easing: EASE.power2InOut, fill: 'forwards' });
+      run(scrim, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+      chrome.forEach((el) => run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }));
+    } else done = fade(250);
+    void done.finished.then(
+      () => dialog!.close(),
+      () => dialog!.close(),
+    );
+  }
+
+  // final cleanup runs on every close path (button, Esc, scrim, a forced close)
+  dialog.addEventListener('close', () => {
+    stop();
+    closing = false;
+    video.pause();
+    getLenis()?.start();
+    document.documentElement.classList.remove('has-dialog');
+    cardOf(opener)?.removeAttribute('data-film-away');
+    film.dialogOpen = false;
+    film.update();
+    film.onDialog(false);
+    opener?.focus({ preventScroll: true });
+  });
+  dialog.addEventListener('cancel', (e) => {
+    e.preventDefault(); // Esc: animate first, then close
+    close();
+  });
+  dialog.querySelector('[data-film-close]')!.addEventListener('click', close);
+  dialog.addEventListener('click', (e) => {
+    if (!(e.target as Element).closest('.film__frame, .film__top, .film__desc')) close(); // the scrim
+  });
+
+  return { open, close };
 }

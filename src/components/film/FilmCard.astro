@@ -74,6 +74,11 @@ const f = t.film;
     pointer-events: none;
   }
 
+  /* during the dialog's FLIP the card "lifts out" (beats S1f's inline opacity) */
+  .film-card[data-film-away] {
+    opacity: 0 !important;
+  }
+
   .film-card:has(.film-card__open:focus-visible) {
     outline: 2px solid var(--focus);
     outline-offset: 2px;

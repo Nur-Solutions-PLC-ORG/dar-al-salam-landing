@@ -660,3 +660,8 @@ html.has-cursor .cursor-ring[data-mode='play'] ~ .cursor-dot {
 .cursor-ring:is([data-mode='view'], [data-mode='drag'], [data-mode='play']) span {
   opacity: 1;
 }
+
+/* DESIGN §5.10: the mobile CTA hides while a dialog (film, plan viewer) is open */
+html.has-dialog .mobile-cta {
+  visibility: hidden;
+}

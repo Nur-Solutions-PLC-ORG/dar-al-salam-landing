@@ -16,6 +16,7 @@ import Payment from './sections/Payment.astro';
 import Enquire from './sections/Enquire.astro';
 import Footer from './Footer.astro';
 import MobileCta from './MobileCta.astro';
+import FilmDialog from './film/FilmDialog.astro';
 import heroTower from '../assets/generated/hero-tower.jpg';
 import { responsiveSet } from '../lib/images';
 import type { Lang } from '../i18n';
@@ -49,6 +50,7 @@ const heroImage = await responsiveSet(
   </main>
   <Footer lang={lang} />
   <MobileCta lang={lang} />
+  <FilmDialog lang={lang} />
 </Base>
 
 <style>
