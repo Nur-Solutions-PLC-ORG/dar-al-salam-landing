@@ -10,7 +10,7 @@ import Eyebrow from '../ui/Eyebrow.astro';
 import balconies from '../../assets/generated/story-balconies.jpg';
 import Arch from '../ui/Arch.astro';
 import { sections } from '../../data/sections';
-import { planFloors, units } from '../../data/units';
+import { formatArea, planFloors, units } from '../../data/units';
 import { enquiryChannels, mailtoHref, site, telHref, telegramAccounts, whatsappHref } from '../../data/site';
 import { emph, floorList, fmt, getDict, type Lang } from '../../i18n';
 
@@ -38,10 +38,10 @@ const aroundHandle = (s: string) => s.split('{handle}') as [string, string?];
 const [opensBefore, opensAfter = ''] = aroundHandle(e.opensTo);
 
 const i18n = {
-  template: e.template,
-  anyUnit: e.anyUnit,
-  anyFloor: e.anyFloor,
-  floorN: e.floorIn, // in the message sentence: 'on floor 7' (review r5 #4)
+  msg: e.msg,
+  floorN: t.explore.floorN, // "Floor 7" at the start of the 🏢 line (R2)
+  // "BL05 – 3 bedroom (169.23 m²)" for the 🏠 line
+  units: Object.fromEntries(units.map((u) => [u.code, `${fmt(e.unitOption, { code: u.code, n: u.bedrooms })} (${formatArea(u.gross, lang)})`])),
   opening: e.opening,
   copied: e.copied,
   subject: e.subject,

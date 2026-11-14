@@ -274,11 +274,19 @@ export const en = {
     copy: 'Copy message',
     copiedShort: 'Copied',
     copyFallback: 'If the chat is empty, copy this message and paste it there.',
-    template: "Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}",
-    anyUnit: 'any home',
-    anyFloor: 'any floor',
-    /** The floor inside the message sentence (review r5 #4): lower case, unlike the 'Floor {n}' labels. */
-    floorIn: 'floor {n}',
+    /**
+     * The hand-off message (rev 8.5, user request R2): one line per field, a line is skipped when its field is empty
+     * (Home / Floor "Any", no message). {floor} is "Floor 7" (explore.floorN).
+     */
+    msg: {
+      hello: 'Hello Dar Al Salam 👋',
+      intro: "My name is {name}, and I'd like to know more about Garment Tower.",
+      phone: '📞 Phone: {phone}',
+      home: '🏠 Home: {unit}',
+      floor: '🏢 Floor: {floor}',
+      message: '💬 Message: {message}',
+      sign: 'Sent from the Dar Al Salam website',
+    },
     subject: 'Garment Tower enquiry',
     contactLines: 'Contact',
     required: 'required',

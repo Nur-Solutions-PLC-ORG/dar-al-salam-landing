@@ -13,7 +13,12 @@ type Channel = 'whatsapp' | 'telegram' | 'email';
 export function initEnquiry() {
   const form = document.querySelector<HTMLFormElement>('[data-enquiry]');
   if (!form) return;
-  const t = JSON.parse(form.dataset.i18n ?? '{}') as Record<string, string> & { channels: Record<Channel, string> };
+  type MsgKey = 'hello' | 'intro' | 'phone' | 'home' | 'floor' | 'message' | 'sign';
+  const t = JSON.parse(form.dataset.i18n ?? '{}') as Record<string, string> & {
+    channels: Record<Channel, string>;
+    msg: Record<MsgKey, string>;
+    units: Record<string, string>;
+  };
   const cfg = JSON.parse(form.dataset.config ?? '{}') as Record<Channel, string>;
   const f = (s: string, v: Record<string, string | number>) =>
     s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? '')).replace(/\s+/g, ' ').trim();
@@ -144,6 +149,43 @@ export function initEnquiry() {
     );
   });
 
+  /* ---------- the message (rev 8.5, R2): one line per field; a line whose field is empty is skipped ---------- */
+  /** `f` collapses whitespace, which keeps every user value on its own line. */
+  const compose = (msg: string) => {
+    const m = t.msg;
+    const home = unit.value ? (unitTbc() ? f(t.unitTbc ?? '', { code: unit.value }) : (t.units[unit.value] ?? unit.value)) : '';
+    const lines: (string | null)[] = [
+      m.hello,
+      f(m.intro, { name: name.value.trim() }),
+      '',
+      f(m.phone, { phone: phone.value.trim() }),
+      home ? f(m.home, { unit: home }) : null,
+      floor.value ? f(m.floor, { floor: f(t.floorN ?? '', { n: floor.value }) }) : null,
+      msg ? f(m.message, { message: msg }) : null,
+      '',
+      m.sign,
+    ];
+    return lines.filter((l): l is string => l !== null).join('\n');
+  };
+  /**
+   * t.me/{user}?text=… kept under ~2,000 characters: if longer, only the message field is shortened (with "…") in
+   * the URL; the copied text stays complete.
+   */
+  const MAX_URL = 2000;
+  const telegramUrl = (full: string) => {
+    const url = (s: string) => `https://t.me/${cfg.telegram}?text=${encodeURIComponent(s)}`;
+    if (url(full).length <= MAX_URL) return url(full);
+    const msg = message.value.trim();
+    let lo = 0;
+    let hi = msg.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (url(compose(`${msg.slice(0, mid).trimEnd()}…`)).length <= MAX_URL) lo = mid;
+      else hi = mid - 1;
+    }
+    return url(compose(lo ? `${msg.slice(0, lo).trimEnd()}…` : ''));
+  };
+
   /* ---------- submit ---------- */
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -159,17 +201,7 @@ export function initEnquiry() {
     const channel = (picked?.value ?? '') as Channel;
     if (!channel || !cfg[channel]) return;
 
-    const text = f(t.template ?? '', {
-      name: name.value.trim(),
-      phone: phone.value.trim(),
-      unit: unit.value
-        ? unitTbc()
-          ? f(t.unitTbc ?? '', { code: unit.value })
-          : unit.selectedOptions[0]!.textContent!.trim()
-        : (t.anyUnit ?? ''),
-      floor: floor.value ? f(t.floorN ?? '', { n: floor.value }) : (t.anyFloor ?? ''),
-      message: message.value.trim(),
-    });
+    const text = compose(message.value.trim());
 
     status.textContent = f(t.opening ?? '', { channel: t.channels[channel] });
     if (dove) {
@@ -188,7 +220,7 @@ export function initEnquiry() {
       } catch (err) {
         copy = Promise.reject(err);
       }
-      const url = `https://t.me/${cfg.telegram}?text=${encodeURIComponent(text)}`;
+      const url = telegramUrl(text);
       window.open(url, '_blank', 'noopener');
       lastText = text;
       if (again) again.href = url;
