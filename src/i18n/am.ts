@@ -153,6 +153,28 @@ export const am: Dict = {
     store: 'ዕቃ ማስቀመጫ',
     storeOrBedroom: 'ዕቃ ማስቀመጫ ወይም መኝታ ክፍል',
   },
+  // rev 8 strings: drafts from DESIGN §11, for the client to check (kitchen and living/dining reuse `rooms`)
+  unit3d: {
+    view3d: '3D',
+    viewPlan: 'ፕላን',
+    viewLabel: 'እይታ',
+    hint: 'ለማዞር ይጎትቱ · ክፍል ይንኩ',
+    roomsTitle: 'ክፍሎች',
+    closeRoom: 'ክፍሉን ዝጋ',
+    aiLabel: 'የአርቲስት ምናባዊ ሥዕል፤ ማጠናቀቂያዎች ሊለያዩ ይችላሉ።',
+    planLabel: 'ከወለል ፕላኑ',
+    altAi: 'በ{code} ያለው {room} የአርቲስት ምናባዊ ሥዕል',
+    altPlan: 'በ{code} ያለው {room} የወለል ፕላን ዝርዝር',
+  },
+  rooms3d: {
+    bedroom: 'መኝታ ክፍል',
+    masterBedroom: 'ዋና መኝታ ክፍል',
+    shower: 'ሻወር ክፍል',
+    kitchen: 'ወጥ ቤት',
+    store: 'ዕቃ ማስቀመጫ',
+    livingDining: 'ሳሎንና የመመገቢያ ክፍል',
+    balcony: 'በረንዳ',
+  },
   location: {
     eyebrow: 'አካባቢ',
     title: 'ለ*ኑሮ* ምቹ።',

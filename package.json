@@ -14,6 +14,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "assets": "node scripts/prepare-assets.mjs",
+    "assets:units": "node scripts/prepare-units3d.mjs",
     "fonts": "node scripts/fonts.mjs",
     "astro": "astro"
   },

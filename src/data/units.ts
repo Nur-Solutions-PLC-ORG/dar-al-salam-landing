@@ -10,6 +10,7 @@ import bl08 from '../assets/plans/bl08.jpg';
 import bl09 from '../assets/plans/bl09.jpg';
 import keyplanDuotone from '../assets/plans/keyplan-duotone.png';
 import hotspots from './keyplan-hotspots.json';
+import { HAS3D } from './units3d';
 
 /** Room labels; translated in src/i18n/*.ts under `rooms`. */
 export type RoomKey =
@@ -44,6 +45,8 @@ export interface Unit {
    * On the other floors its position is `'tbc'`: shown as "to be confirmed", never as another type or missing.
    */
   confirmedOn?: readonly number[];
+  /** Has traced 3D geometry (DESIGN §9.6 rev 8, src/data/units3d): BL05 only, for now. */
+  has3d: boolean;
 }
 
 const twoBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedroom', 'kitchen', 'bathrooms2'];
@@ -51,7 +54,7 @@ const threeBedFlex: readonly RoomKey[] = [...twoBed, 'storeOrBedroom'];
 const threeBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedrooms2', 'kitchen', 'bathrooms2', 'store'];
 
 /** Source: docs/BRIEF.md. */
-type UnitBase = Omit<Unit, 'hotspot' | 'block'>;
+type UnitBase = Omit<Unit, 'hotspot' | 'block' | 'has3d'>;
 
 /** BRIEF update 2026-11-14: the 2-bedroom home (BL01) is confirmed only on these floors. */
 export const twoBedFloors: readonly number[] = [4, 6, 8, 10, 11];
@@ -84,6 +87,7 @@ export const units: readonly Unit[] = base.map((u) => {
       centroid: [h.centroid[0] ?? 0, h.centroid[1] ?? 0] as const,
     },
     block: NORTH.has(u.code) ? 'north' : 'south',
+    has3d: HAS3D.includes(u.code),
   };
 });
 

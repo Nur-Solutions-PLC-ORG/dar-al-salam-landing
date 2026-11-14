@@ -161,6 +161,28 @@ export const en = {
     store: 'store',
     storeOrBedroom: 'store or bedroom',
   },
+  /** Rev 8 3D apartments (DESIGN §9.6, §11). Room names in sentence case; alt strings lower-case {room}. */
+  unit3d: {
+    view3d: '3D',
+    viewPlan: 'Plan',
+    viewLabel: 'View',
+    hint: 'Drag to turn · Tap a room',
+    roomsTitle: 'Rooms',
+    closeRoom: 'Close room',
+    aiLabel: "Artist's impression; finishes may vary.",
+    planLabel: 'From the floor plan',
+    altAi: "Artist's impression of the {room} in {code}",
+    altPlan: 'Floor plan detail of the {room} in {code}',
+  },
+  rooms3d: {
+    bedroom: 'Bedroom',
+    masterBedroom: 'Master bedroom',
+    shower: 'Shower room',
+    kitchen: 'Kitchen',
+    store: 'Store',
+    livingDining: 'Living and dining room',
+    balcony: 'Balcony',
+  },
   location: {
     eyebrow: 'Location',
     title: 'Easy to *live*.',
