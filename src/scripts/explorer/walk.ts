@@ -18,6 +18,9 @@
  *   room polygons and the hall. The hall has one standpoint per door, 0.9 m in. Taking a ring glides through the
  *   door's centre (U10, 1.2 s power2.inOut) with the yaw easing to the direction of travel; the lamp follows. Rings
  *   behind the camera or beyond 9 m hide. Reduced motion: 0.2 s cross-fades.
+ * - B6 toolbar and minimap: "Back to 3D model" (and the gyro toggle) top-left; top-right the unit's plan at 132 px
+ *   (96 px on phones) with a gold "you are here" dot and a 60° view cone; tapping a room jumps there. The minimap is
+ *   aria-hidden (the room list is its accessible twin) and hides on stages under 360 px. A 4 s hint on first entry.
  */
 import {
   BoxGeometry,
@@ -82,7 +85,15 @@ const LAMP = 6; // r187 units, tuned in a settled capture so the walls read abou
 
 export function createWalk(
   h: WalkHost,
-  o: { onArrive: (roomId: string) => void; strings: Record<string, string>; names: Record<string, string>; lang: string },
+  o: {
+    onArrive: (roomId: string) => void;
+    /** Back to the 3D model, or a jump (minimap): the controller owns the state and hash. */
+    onBack: () => void;
+    onPick: (roomId: string) => void;
+    strings: Record<string, string>;
+    names: Record<string, string>;
+    lang: string;
+  },
 ): Walk {
   const { camera, data, uniforms: U } = h;
   const rooms = new Map(data.rooms.map((r) => [r.id, r]));
@@ -422,6 +433,54 @@ export function createWalk(
       r.b.style.transform = `translate(${x}px, ${y}px)`;
     }
   };
+  // B6: "Back to 3D model" first in the toolbar
+  const backBtn = button('walk-back', o.strings.back ?? '', () => o.onBack(), `<span>${o.strings.back ?? ''}</span>`);
+  backBtn.removeAttribute('aria-label');
+  toolbar.prepend(backBtn);
+  // B6: the minimap (the unit's plan texture), a dot and a 60° view cone
+  const { minX, minZ, maxX, maxZ } = data.texture.plane;
+  const mini = document.createElement('div');
+  mini.className = 'walk-mini';
+  mini.setAttribute('aria-hidden', 'true');
+  mini.style.aspectRatio = `${h.image.naturalWidth} / ${h.image.naturalHeight}`;
+  const miniImg = document.createElement('img');
+  miniImg.src = h.image.currentSrc || h.image.src;
+  miniImg.alt = '';
+  const cone = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  cone.setAttribute('viewBox', '-20 -20 40 40');
+  cone.innerHTML = '<path d="M0 0 L17.3 -10 A20 20 0 0 1 17.3 10 Z" fill="rgb(181 148 88 / .45)"/><circle r="4" fill="#B59458" stroke="#FBF7F2" stroke-width="1.5"/>';
+  mini.append(miniImg, cone);
+  ui.append(mini);
+  /** Plan point ↔ minimap fraction (the texture covers texture.plane). */
+  const toMini = (x: number, z: number) => [(x - minX) / (maxX - minX), (z - minZ) / (maxZ - minZ)] as const;
+  mini.addEventListener('click', (e) => {
+    const r = mini.getBoundingClientRect();
+    const q: P2 = [minX + ((e.clientX - r.left) / r.width) * (maxX - minX), minZ + ((e.clientY - r.top) / r.height) * (maxZ - minZ)];
+    const at = where(q);
+    if (!at) return;
+    // a tap in the hall lands at its nearest door standpoint
+    const to = at === 'hall' ? `hall-${[...doors].filter((d) => d.plus === 'hall' || d.minus === 'hall').sort((a, b) => Math.hypot(a.m[0] - q[0], a.m[1] - q[1]) - Math.hypot(b.m[0] - q[0], b.m[1] - q[1]))[0]?.id}` : at;
+    if (to !== current) o.onPick(to);
+  });
+  const updateMini = () => {
+    const w = h.host.clientWidth;
+    mini.hidden = w < 360;
+    if (mini.hidden) return;
+    const p = camera.position;
+    const [fx, fz] = toMini(p.x - h.root.position.x, p.z - h.root.position.z);
+    // the cone points along the camera's forward (−sin yaw, −cos yaw) in plan x/z
+    const ang = (Math.atan2(-Math.cos(view.yaw), -Math.sin(view.yaw)) * 180) / Math.PI;
+    cone.style.left = `${fx * 100}%`;
+    cone.style.top = `${fz * 100}%`;
+    cone.style.transform = `translate(-50%, -50%) rotate(${ang}deg)`;
+  };
+  // B6: the hint, 4 s on the first entry
+  const hint = document.createElement('p');
+  hint.className = 'walk-hint';
+  hint.textContent = o.strings.hint ?? '';
+  hint.hidden = true;
+  ui.append(hint);
+  let hinted = false;
   const chip = document.createElement('p');
   chip.className = 'walk-chip';
   chip.textContent = o.strings.geometryLabel ?? '';
@@ -476,6 +535,7 @@ export function createWalk(
       if (current) {
         apply();
         projectRings();
+        updateMini();
       }
       return Boolean(gyro) || Math.abs(vel) > 1e-4 || Math.abs(velP) > 1e-4;
     },
@@ -652,6 +712,11 @@ export function createWalk(
       h.setDriver(driver);
       listen(true);
       inside(true);
+      if (!hinted) {
+        hinted = true;
+        hint.hidden = false;
+        setTimeout(() => (hint.hidden = true), 4000);
+      }
       if (h.reduced) {
         enclose(true, 0, 0);
         await arrive(id, 0);

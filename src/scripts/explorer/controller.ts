@@ -603,6 +603,8 @@ export function createExplorer(root: HTMLElement) {
           if (state.walk !== id) go({ ...state, walk: id });
           rooms?.setWalk(id);
         },
+        onBack: () => go({ ...state, walk: null }),
+        onPick: (id) => go({ ...state, walk: id }),
       });
     }
     if (!walk.room) {

@@ -157,7 +157,9 @@ html.is-walking .u3d-enter {
 }
 
 .walk-look,
-.walk-gyro {
+.walk-gyro,
+.walk-back,
+.walk-mini {
   pointer-events: auto;
 }
 
@@ -193,7 +195,8 @@ html.is-walking .u3d-enter {
 }
 
 .walk-look:focus-visible,
-.walk-gyro:focus-visible {
+.walk-gyro:focus-visible,
+.walk-back:focus-visible {
   outline: 2px solid var(--gold-300);
   outline-offset: 2px;
 }
@@ -207,7 +210,8 @@ html.is-walking .u3d-enter {
   gap: 8px;
 }
 
-.walk-gyro {
+.walk-gyro,
+.walk-back {
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid rgb(251 247 242 / 0.5);
@@ -307,4 +311,58 @@ html.is-walking .u3d-enter {
 .walk-ring:focus-visible {
   outline: 2px solid var(--gold-300);
   outline-offset: 2px;
+}
+
+/* rev 9 (B6): the minimap (top-right) and the first-entry hint */
+.walk-mini {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 132px;
+  overflow: hidden;
+  border: 1px solid rgb(251 247 242 / 0.6);
+  border-radius: var(--radius-xs);
+  background: var(--sand-100);
+  cursor: pointer;
+}
+
+.walk-mini[hidden] {
+  display: none;
+}
+
+.walk-mini img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.walk-mini svg {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+  .walk-mini {
+    width: 96px;
+  }
+}
+
+.walk-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(15 24 40 / 0.72);
+  color: var(--ivory-50);
+  font: 600 13px/1.2 var(--font-body);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.walk-hint[hidden] {
+  display: none;
 }
