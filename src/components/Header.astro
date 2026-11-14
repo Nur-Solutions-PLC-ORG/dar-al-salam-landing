@@ -28,7 +28,8 @@ const contactLinks = [
 ].filter((x): x is { label: string; href: string; external?: boolean } => Boolean(x));
 ---
 
-<header class="site-header" data-theme="light" data-scrolled="false" data-hidden="false">
+<!-- starts dark: the page opens on the rev 6 film hero (data-header-theme="dark"); the IO below takes over -->
+<header class="site-header" data-theme="dark" data-scrolled="false" data-hidden="false">
   <div class="site-header__bg site-header__bg--light" aria-hidden="true"></div>
   <div class="site-header__bg site-header__bg--dark" aria-hidden="true"></div>
   <div class="container site-header__inner">

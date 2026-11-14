@@ -357,42 +357,18 @@ function cursor() {
 
 /* ---------- Scrubbed scenes (ScrollTrigger) ---------- */
 
+/** S1 (rev 6, desktop only): the background drifts, the text lifts and dims, the play control fades by 50%.
+ *  The shade, grain and controls stay put. Mobile/tablet: none (S1m), the page scrolls over the playing loop. */
 function heroScrub(desktop: boolean) {
   const hero = document.querySelector('#top');
-  if (!hero) return;
-  const st = { trigger: hero, start: 'top top', end: 'bottom top', scrub: true };
-  const media = hero.querySelector('[data-hero-media]');
-  if (desktop) {
-    const tl = gsap.timeline({ scrollTrigger: st, defaults: { ease: 'none' } });
-    tl.to('[data-hero-arch]', { scale: 1.12, transformOrigin: '50% 0%' }, 0)
-      .to(media, { yPercent: 8 }, 0)
-      .to('[data-hero-copy]', { y: -80, opacity: 0.2 }, 0);
-    // S1f (rev 5): the film card fades up and out by 40% of the hero; outside the S1 scale target.
-    // Once faded it is inert (no invisible tab stop) and film.ts pauses the loop and the music.
-    const card = hero.querySelector<HTMLElement>('[data-film-card]');
-    if (card) {
-      const visible = (v: boolean) => {
-        card.inert = !v;
-        window.dispatchEvent(new CustomEvent('film:s1f', { detail: { visible: v } }));
-      };
-      gsap.to(card, {
-        y: -48,
-        opacity: 0,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hero,
-          start: 'top top',
-          end: '40% top',
-          scrub: true,
-          onLeave: () => visible(false),
-          onEnterBack: () => visible(true),
-        },
-      });
-      return () => visible(true); // matchMedia revert (resize to mobile, reduced motion)
-    }
-  } else if (media) {
-    gsap.to(media, { yPercent: 10, ease: 'none', scrollTrigger: st });
-  }
+  if (!hero || !desktop) return;
+  gsap
+    .timeline({ scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }, defaults: { ease: 'none' } })
+    .to('[data-hero-bg]', { scale: 1.08, yPercent: 6 }, 0)
+    .to('[data-hero-copy]', { y: -80, opacity: 0.2 }, 0);
+  const play = hero.querySelector('[data-hero-play]');
+  if (play)
+    gsap.to(play, { opacity: 0, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: '50% top', scrub: true } });
 }
 
 function storyArch() {

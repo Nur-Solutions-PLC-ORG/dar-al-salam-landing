@@ -10,8 +10,10 @@ import '../styles/tokens.css';
 import '../styles/base.css';
 
 export interface ImagePreload {
-  srcset: string;
-  sizes: string;
+  /** A single URL (rev 6 hero poster) or a responsive srcset + sizes. */
+  href?: string;
+  srcset?: string;
+  sizes?: string;
   type: string;
 }
 
@@ -19,7 +21,7 @@ interface Props {
   lang: Lang;
   title?: string;
   description?: string;
-  /** LCP image preload (hero AVIF srcset). */
+  /** LCP image preload (rev 6: the hero film poster). */
   preloadImage?: ImagePreload;
   ogImage?: ImageMetadata;
   ogImageAlt?: string;
@@ -86,6 +88,7 @@ const ogUrl = abs(og.src);
         <link
           rel="preload"
           as="image"
+          href={preloadImage.href}
           imagesrcset={preloadImage.srcset}
           imagesizes={preloadImage.sizes}
           type={preloadImage.type}

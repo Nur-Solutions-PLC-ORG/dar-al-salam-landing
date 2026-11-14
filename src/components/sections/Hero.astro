@@ -1,32 +1,58 @@
 ---
 /**
- * Hero (DESIGN §5.1, §7.2; amendment 5). Entrance is CSS keyframes on the intro clock (--t0),
- * so the headline never depends on JS. motion.ts adds only the S1 scroll scrub.
- * Layers: .hero__media (grid item) > .arch (S1 scale) > .arch__media (mask, static) > .hero__parallax (S1 yPercent)
- * > img (CSS intro scale). The film card (rev 5, §5.11) is a sibling of the arch, so neither the mask nor S1 touch it.
+ * Hero (DESIGN §5.1 rev 6): the tower film as a shaded background.
+ * Layers inside #top: .hero__bg (poster <img> = LCP, + the muted loop; intro scale and S1 move it)
+ * > .hero__shade (static navy gradients, verified contrast) > .hero__grain (static tile) > .hero__inner.
+ * The entrance is CSS keyframes on the intro clock (--t0), so the headline never depends on JS.
+ * src/scripts/hero-bg.ts loads the loop at DOMContentLoaded, only under the §5.1 conditions.
  */
-import FilmCard from '../film/FilmCard.astro';
-import type { ResponsiveSet } from '../../lib/images';
-import Arch from '../ui/Arch.astro';
 import Button from '../ui/Button.astro';
-import Mark from '../ui/Mark.astro';
 import { emph, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
-  image: ResponsiveSet;
 }
 
-const { lang, image } = Astro.props;
+const { lang } = Astro.props;
 const t = getDict(lang);
 // pre-split H1 lines ("|" in the dictionary); each line is masked and revealed by CSS
 const lines = t.hero.title.split('|');
 ---
 
-<section id="top" class="hero" aria-labelledby="hero-title" data-header-theme="light">
-  <div class="container grid hero__grid">
-    <div class="hero__copy" data-hero-copy>
-      <Mark class="hero__watermark" />
+<section id="top" class="hero theme-dusk" aria-labelledby="hero-title" data-header-theme="dark" data-hero>
+  <div class="hero__bg" aria-hidden="true" data-hero-bg>
+    <picture>
+      <source type="image/webp" srcset="/video/hero-bg-poster.webp" />
+      <img
+        class="hero__poster"
+        src="/video/hero-bg-poster.jpg"
+        width="640"
+        height="352"
+        alt=""
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
+    </picture>
+    <!-- no poster attribute: the <img> above is the poster (a poster attribute would fetch it twice) -->
+    <video
+      class="hero__video"
+      muted
+      loop
+      playsinline
+      preload="none"
+      disablepictureinpicture
+      {...{ disableremoteplayback: true } /* valid HTML, missing from Astro's video types */}
+      aria-hidden="true"
+      tabindex="-1"
+      data-hero-video></video>
+  </div>
+  <div class="hero__shade" aria-hidden="true"></div>
+  <div class="hero__grain" aria-hidden="true"></div>
+
+  <div class="container hero__inner">
+    <div class="hero__film" data-hero-film></div>
+    <div class="hero__content" data-hero-copy>
       <p class="eyebrow hero__eyebrow">{t.hero.eyebrow}</p>
       <h1 id="hero-title" class="hero__title">
         {
@@ -43,28 +69,6 @@ const lines = t.hero.title.split('|');
         <Button href="#explore" variant="secondary" icon="down">{t.cta.explore}</Button>
       </div>
     </div>
-
-    <div class="hero__media">
-    <Arch class="hero__arch" outline data-hero-arch>
-      <div class="hero__parallax" data-hero-media>
-        <picture>
-          <source type="image/avif" srcset={image.avif} sizes={image.sizes} />
-          <source type="image/webp" srcset={image.webp} sizes={image.sizes} />
-          <img
-            class="hero__img"
-            src={image.src}
-            width={image.width}
-            height={image.height}
-            alt={t.hero.imageAlt}
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
-          />
-        </picture>
-      </div>
-    </Arch>
-    <FilmCard lang={lang} />
-    </div>
   </div>
   <div class="hero__cue" aria-hidden="true">
     <span class="hero__cue-line"></span>
@@ -74,57 +78,108 @@ const lines = t.hero.title.split('|');
 
 <style>
   .hero {
+    --ink: 11 18 32; /* navy-950 */
     position: relative;
-    padding-block: calc(var(--header-h) + var(--space-3)) var(--space-8);
-    background: var(--bg);
     overflow: clip;
+    isolation: isolate;
+    background: var(--navy-950);
+    color: var(--ivory-50);
   }
 
-  .hero__grid {
-    row-gap: var(--space-5);
-    align-items: center;
+  /* ---------- layers ---------- */
+  .hero__bg,
+  .hero__shade,
+  .hero__grain {
+    position: absolute;
+    inset: 0;
   }
 
-  .hero__copy {
-    grid-column: 1 / -1;
+  .hero__bg {
+    z-index: 0;
+  }
+
+  .hero__poster,
+  .hero__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 50%; /* identical on both, so the cross-fade lines up */
+  }
+
+  /* the loop fades in over the poster on its first frame (power2.inOut 1.2 s); out over 0.6 s on auto-stop */
+  .hero__video {
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.455, 0.03, 0.515, 0.955);
+  }
+
+  .hero__video.is-playing {
+    opacity: 1;
+    transition-duration: 1.2s;
+  }
+
+  /* < 1024: top-and-floor gradient; the content scrim is anchored to the content (below) */
+  .hero__shade {
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      rgb(var(--ink) / 0.78) 0,
+      rgb(var(--ink) / 0.62) 64px,
+      rgb(var(--ink) / 0.3) 25%,
+      rgb(var(--ink) / 0.3) 100%
+    );
+  }
+
+  .hero__grain {
+    z-index: 2;
+    background: url(/img/grain.png) 0 0 / 128px 128px repeat;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* ---------- content: < 1024 portrait layout ---------- */
+  .hero__inner {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    padding-top: var(--header-h);
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  /* the film zone: the free band between header and text; the play control sits centred in it */
+  .hero__film {
+    flex: 1;
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+  }
+
+  .hero__content {
     position: relative;
     display: grid;
     justify-items: start;
     gap: var(--space-4);
-    order: 2;
+    max-width: 560px;
   }
 
-  /* grid item: sized like the arch, so the film card can be positioned against the arch's box */
-  .hero__media {
-    grid-column: 1 / -1;
-    order: 1;
-    justify-self: center;
-    position: relative;
-    width: min(100%, calc(var(--arch-h) * 0.8));
-    --arch-h: 58svh;
-    margin-top: 10px; /* room for the outline */
+  .hero__content::before {
+    content: '';
+    position: absolute;
+    left: -100vw;
+    right: -100vw;
+    top: -120px;
+    bottom: -100vh;
+    z-index: -1;
+    background: linear-gradient(180deg, rgb(var(--ink) / 0) 0, rgb(var(--ink) / 0.72) 120px, rgb(var(--ink) / 0.8) 100%);
+    pointer-events: none;
   }
 
-  .hero__arch {
-    width: 100%;
-    aspect-ratio: 4 / 5;
-  }
-
-  @media (max-height: 720px) and (max-width: 1023px) {
-    .hero__media {
-      --arch-h: 46svh;
-    }
-  }
-
-  .hero__parallax {
-    height: 100%;
-  }
-
-  .hero__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 40%;
+  /* hero text: ivory, sand-200 or gold-400 only (never --text-muted), for the verified contrast */
+  .hero__eyebrow {
+    color: var(--gold-400);
   }
 
   .hero__title {
@@ -132,6 +187,7 @@ const lines = t.hero.title.split('|');
     line-height: 0.95;
     letter-spacing: -0.015em;
     max-width: 14ch;
+    color: var(--ivory-50);
   }
 
   :global(:lang(am)) .hero__title {
@@ -158,61 +214,82 @@ const lines = t.hero.title.split('|');
   }
 
   .hero__lead {
-    color: var(--text-muted);
+    color: var(--sand-200);
     max-width: 34ch;
   }
 
   .hero__ctas {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     gap: var(--space-3);
+    width: 100%;
     margin-top: var(--space-2);
+  }
+
+  .hero__ctas :global(.btn) {
+    width: 100%;
+  }
+
+  @media (min-width: 480px) {
+    .hero__ctas {
+      display: flex;
+      flex-wrap: wrap;
+      width: auto;
+    }
+
+    .hero__ctas :global(.btn) {
+      width: auto;
+    }
   }
 
   .hero__cue {
     display: none;
   }
 
-  .hero__watermark {
-    display: none;
-  }
-
+  /* ---------- ≥ 1024: landscape layout on the 12-column grid ---------- */
   @media (min-width: 1024px) {
-    /* design QA #7: the hero is exactly one viewport; arch + text centred, cue 32 px from the bottom */
     .hero {
-      min-height: 100svh;
-      padding-block: calc(var(--header-h) + 24px) 48px;
+      max-height: 1200px;
     }
 
-    .hero__grid {
+    .hero__shade {
+      background:
+        linear-gradient(90deg, rgb(var(--ink) / 0.8) 0%, rgb(var(--ink) / 0.7) 48%, rgb(var(--ink) / 0.3) 72%, rgb(var(--ink) / 0.15) 100%),
+        linear-gradient(180deg, rgb(var(--ink) / 0.7) 0, rgb(var(--ink) / 0.45) 72px, rgb(var(--ink) / 0) 200px),
+        linear-gradient(0deg, rgb(var(--ink) / 0.65) 0, rgb(var(--ink) / 0) 28%),
+        radial-gradient(130% 100% at 70% 45%, rgb(var(--ink) / 0) 50%, rgb(var(--ink) / 0.4) 100%);
+    }
+
+    .hero__inner {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gutter);
       align-items: center;
+      max-height: 1200px;
+      padding-bottom: 0;
     }
 
-    .hero__copy {
+    /* text: cols 1–6 and never past 48% of the hero width (where the text-side shade is ≥ 0.70) */
+    .hero__content {
       grid-column: 1 / 7;
-      order: 1;
+      grid-row: 1;
       align-self: center;
+      max-width: min(100%, calc(48vw - max(var(--margin), (100vw - var(--container)) / 2)));
       gap: var(--space-5);
     }
 
-    .hero__media {
-      grid-column: 7 / 13;
-      order: 2;
-      justify-self: end;
-      align-self: center;
-      --arch-h: calc(100svh - var(--header-h) - 72px);
+    .hero__content::before {
+      display: none;
     }
 
-    .hero__arch {
-      max-height: 980px;
-    }
-
-    .hero__img {
-      object-position: 45% 35%;
+    .hero__film {
+      grid-column: 8 / 13;
+      grid-row: 1;
+      align-self: stretch;
     }
 
     .hero__cue {
       position: absolute;
+      z-index: 3;
       bottom: 32px;
       left: max(var(--margin), calc((100% - var(--container)) / 2));
       display: inline-flex;
@@ -222,36 +299,22 @@ const lines = t.hero.title.split('|');
       font-weight: 600;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--text-muted);
+      color: var(--sand-200);
     }
 
     .hero__cue-line {
       display: block;
       width: 1px;
       height: 40px;
-      background: var(--accent);
+      background: var(--gold-400);
       transform-origin: top;
-    }
-
-    .hero__watermark {
-      display: block;
-      position: absolute;
-      left: -6%;
-      bottom: -22%;
-      width: 520px;
-      max-width: none;
-      height: auto;
-      aspect-ratio: 415 / 319;
-      opacity: 0.06;
-      z-index: -1;
-      pointer-events: none;
     }
   }
 
-  /* ---------- Entrance (CSS, DESIGN §7.2 timeline; t0 = 0.85 s with the curtain, 0 without) ---------- */
+  /* ---------- Entrance (CSS, DESIGN §7.2 rev 6; t0 = 0.85 s with the curtain, 0 without) ---------- */
   @media (prefers-reduced-motion: no-preference) {
-    .hero__img {
-      animation: hero-img 1.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    .hero__bg {
+      animation: hero-bg-in 1.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
       animation-delay: var(--t0, 0s);
     }
 
@@ -275,20 +338,15 @@ const lines = t.hero.title.split('|');
       animation-delay: calc(var(--t0, 0s) + 0.63s);
     }
 
-    .hero__arch :global(.arch__outline) {
-      animation: draw-up 1s var(--ease-inout) backwards;
-      animation-delay: calc(var(--t0, 0s) + 0.65s);
-    }
-
     .hero__cue-line {
       animation: cue 1.6s var(--ease-inout) infinite;
       animation-delay: calc(var(--t0, 0s) + 1.05s);
     }
   }
 
-  @keyframes hero-img {
+  @keyframes hero-bg-in {
     from {
-      transform: scale(1.18);
+      transform: scale(1.12);
     }
   }
 
@@ -302,15 +360,6 @@ const lines = t.hero.title.split('|');
   @keyframes title-in {
     from {
       transform: translateY(110%);
-    }
-  }
-
-  @keyframes draw-up {
-    from {
-      clip-path: inset(100% 0 0 0);
-    }
-    to {
-      clip-path: inset(0);
     }
   }
 
@@ -332,3 +381,8 @@ const lines = t.hero.title.split('|');
     }
   }
 </style>
+
+<script>
+  import { initHeroBg } from '../../scripts/hero-bg';
+  initHeroBg();
+</script>

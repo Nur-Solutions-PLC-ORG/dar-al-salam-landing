@@ -17,8 +17,6 @@ import Enquire from './sections/Enquire.astro';
 import Footer from './Footer.astro';
 import MobileCta from './MobileCta.astro';
 import FilmDialog from './film/FilmDialog.astro';
-import heroTower from '../assets/generated/hero-tower.jpg';
-import { responsiveSet } from '../lib/images';
 import type { Lang } from '../i18n';
 
 interface Props {
@@ -27,19 +25,14 @@ interface Props {
 
 const { lang } = Astro.props;
 
-// DESIGN §5.1: widths 360…1560. Mobile arch = min(content width, 58svh × 0.8); desktop = cols 7–12.
-const heroImage = await responsiveSet(
-  heroTower,
-  [360, 540, 720, 960, 1280, 1560],
-  '(min-width: 1024px) min(46vw, 640px), min(calc(100vw - 2rem), 47svh)',
-);
 ---
 
-<Base lang={lang} preloadImage={{ srcset: heroImage.avif, sizes: heroImage.sizes, type: 'image/avif' }}>
+<!-- DESIGN §5.1 rev 6: the LCP is the hero film's poster (17 KB WebP), preloaded with high priority -->
+<Base lang={lang} preloadImage={{ href: '/video/hero-bg-poster.webp', type: 'image/webp' }}>
   <Intro />
   <Header lang={lang} />
   <main id="main" tabindex="-1">
-    <Hero lang={lang} image={heroImage} />
+    <Hero lang={lang} />
     <Facts lang={lang} />
     <Story lang={lang} />
     <Explore lang={lang} />
