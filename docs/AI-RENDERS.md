@@ -8,6 +8,7 @@ Start the trial only when this list is final. Generate everything in one sitting
 1. Generate the **shared interiors** (section A). The finishes are the same across the tower, so one set serves all 9 types.
 2. Generate one **isometric cutaway** per type (section B), using that type's plan as the reference image.
    - Optional: if there is an edit/inpaint mode, run the 9 plan clean-ups (section C). They improve the live 3D floors.
+   - **Rev 9, do these first:** the 7 room panoramas (section D). They are what makes walk-in mode look real. Then section A, B and C as above. Section E (tower) is optional.
 3. Make 2–3 variations of each and keep the best.
 4. Download originals at the largest size offered (PNG or JPG) into `brand-source/renders/` (not `public/`). Impl converts them to AVIF/WebP.
 5. Cancel the trial.
@@ -71,9 +72,52 @@ The live 3D model (DESIGN §9.6) uses each furnished plan as its floor. The plan
 - Check it by toggling over the original: walls and furniture must not move by even a pixel. Reject any image that redraws or restyles furniture.
 - Save the result as `brand-source/plans/clean/bl0X.jpg`. Design re-crops it into `docs/design/units/bl0X-floor.webp`.
 
+## D. Room panoramas for walk-in mode (rev 9; 7 shots, the highest-value items)
+For DESIGN §9.8 B5: the visitor stands in the room and looks around. One panorama per room type, shared across units where the room's shape and openings match.
+
+**Format, in order of preference. Try D-360 first, and fall back to D-strip only if the tool can't do it.**
+- **D-360:** a full 360° × 180° **equirectangular** panorama, 2:1, at least 4096 × 2048, seamless at the left and right edges, with a level horizon exactly on the vertical centre line. Camera at 1.5 m in the middle of the room.
+- **D-strip:** a 180° wide panorama, 3:1, at least 4096 × 1365, with the camera at the room's door looking toward the window or balcony wall, verticals straight.
+
+| # | Room | Reference plan crop | Notes |
+|---|---|---|---|
+| D1 | Living / dining | BL05 living room | Glazed door to the balcony on one wall; TV wall unit; dining table for six |
+| D2 | Kitchen | BL05 kitchen | L-shaped counters; one window on the short side wall |
+| D3 | Master bedroom | BL05 master bedroom | Built-in wardrobe; door to the en-suite shower room |
+| D4 | Bedroom | BL05 bedroom (9.74 m²) | Built-in wardrobe; no balcony door |
+| D5 | Shower room | BL05 shower (2.71 m²) | Small; no window unless the plan shows one |
+| D1p | Living / dining, parquet | BL01 living room | As D1 with the plan's parquet floor (BL01, BL02, BL04) |
+| D3p | Bedroom, parquet | BL01 bedroom (15.65 m²) | As D3 with the plan's parquet floor |
+
+**Prompt (D-360), change only the room line:**
+
+> 360-degree equirectangular panorama, 2:1, full sphere, seamless left-right wrap, level horizon on the centre line, camera at 1.5 m in the centre of the room. Photoreal interior of {ROOM LINE, as in section A} in a high-rise apartment in Addis Ababa, following the attached floor plan crop: same room shape, same door positions, same balcony or window wall, and no other openings. A flat white ceiling with simple recessed lights. {FLOOR: "light warm-grey ceramic tile floor" or, for D1p and D3p, "warm light parquet floor"}. Then append the **style line** from the Art direction section.
+
+**Prompt (D-strip):** replace the first sentence with: "Ultra-wide 180-degree interior panorama, 3:1, camera at 1.5 m standing in the doorway, straight verticals, level horizon."
+
+**Rules that matter more here than in section A:**
+- **Openings follow the plan and nothing else.** No extra windows, no second balcony door, no skylights. Any wall the plan draws solid stays solid.
+- **Outside the glass:** hazy daylight and sky, with low-rise rooftops and green hills only as a soft suggestion. No recognisable landmark, no sea, no towers.
+- Pass the negative line. Add: `warped walls, curved floor, duplicated furniture, stitching seam, text`.
+- **Check before approval:** open the image in a 360° viewer (any equirectangular viewer) and turn a full circle. Reject it if the seam shows, the horizon tilts, the door or window count differs from the plan, or furniture repeats.
+- Save as `brand-source/renders/pano/{id}.jpg` (D1 → `living.jpg`, D1p → `living-parquet.jpg`, and so on). Write down, per file, which wall of the plan the image's centre faces: design needs it to align the door markers (`yawOffset`).
+
+## E. Tower (rev 9; 2 items, both optional)
+For DESIGN §9.7. The site now opens the explorer on our real render with selectable floors.
+
+- **E1. Tower still with countable floors.** Our render draws 13 typical storeys above the ground storey, while the site says 16 floors. If the tool can edit the image, try:
+  > Extend this building upward by three more identical residential storeys, repeating the existing balcony and window pattern exactly, keeping the same roof, the same camera angle and the same street scene. Replace the collage sky with a plain soft evening sky. Change nothing else.
+
+  Reference: `brand-source/tower-render.jpg`. **Do not use the result without the client's sign-off**: it changes what the building looks like. If accepted, it ships with "Artist's impression". Save as `brand-source/renders/tower-16.jpg`.
+- **E2. Push-in clip (image to video).** From the same render (or E1 if accepted):
+  > Slow, smooth camera push-in toward the middle floors of the building's corner, 3 seconds, no camera shake, no change to the building, the cars or the trees, no new objects, constant lighting.
+
+  At least 1080 px on the short side, 24 or 30 fps, no audio. Reject it if the façade warps, balconies appear or vanish, or the floor count changes mid-clip. Save as `brand-source/renders/tower-pushin.mp4`. The site has a built-in push-in, so this is a bonus.
+
 ## Acceptance checklist (per image)
 - [ ] Matches the plan's room shape and openings (cutaways: room count and layout).
 - [ ] Only confirmed facts: no brands; floor material matches the plan label (ceramic or parquet).
 - [ ] No text, logos, people or foreign skyline.
 - [ ] Shipped with "Artist's impression; finishes may vary."
+- [ ] Panoramas only: turned a full circle in a 360° viewer; no seam, level horizon, openings as on the plan.
 - [ ] Original saved in `brand-source/renders/`; `approved: true` set only after this checklist passes.

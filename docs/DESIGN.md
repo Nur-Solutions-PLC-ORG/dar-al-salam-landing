@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 15 Nov 2026, rev 8.5 (user requests, BRIEF 761faf2): R1 the Location section always shows the satellite map, with a navy fallback card in place of the SVG diagram, its caption and the opt-in pill (§5.6). R2 the Telegram enquiry is a multi-line message that skips empty fields (§5.8). R3 the "Contact us on Telegram" card and its divider are removed (§5.8). All nine unit data sets are delivered (§9.6.1). 14/15 Nov 2026, rev 8.4: other-unit data format notes (illegible areas → `null`; `corridor` room; shared tracer) (§9.6.1). BL01 data delivered. Rev 8.3 (review round 6 #5): the 3D panel's rooms list goes to 2 columns only from 1200 px (§9.6.7 E). Rev 8.2 (re-check of rev 8.1, §9.6.8): stronger camera fill, greige-oak wardrobes, floor texture v1.5. Rev 8.1 (review of 4e7da27): §9.6.7 accepts impl's deviations 1–5. Hotspots now float above the cut, with leader lines. A camera fill light keeps wall faces cream. The model is cut at 2.4 m with a 60° default elevation, and the fit is 100%. BL05 gains 17 furniture blocks whose tops reuse the plan texture. The panel puts the actions above a 2-column room list. Rev 7.1 (round 5 review): the Save-Data/slow opt-in map opens at z17 with no fly; the two-finger hint moves to 70% height; the map glue budget is now 4 KB (§5.6, §10). Rev 8 (BRIEF "3D apartments", 40c474f): new §9.6, the unit dollhouse. When a unit has 3D geometry, its plan lifts into a Three.js cutaway with room hotspots, a slim side panel and a room card with the AI interior slot (placeholder: the room's plan crop). The pilot is BL05: `docs/design/units/bl05.json` plus its floor texture, check overlay and tracing script. Also §9.2 UNIT, §8, §10, §11, §12. Rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 15 Nov 2026, rev 9 (user feedback, round 8): new §9.7, the photoreal tower stage (the real render with 14 selectable floor bands, a push-in and a slab lift; the Three.js massing is removed), and new §9.8, walk-in mode ("Step inside": eye-level look-around, door rings between rooms, a minimap, and a panorama slot). Also §8, §10, §11, §12 and `docs/AI-RENDERS.md` §D–§E. Finding: the tower render draws 13 typical storeys, so the 14 bands are an even split, not a storey-accurate trace. 15 Nov 2026, rev 8.5 (user requests, BRIEF 761faf2): R1 the Location section always shows the satellite map, with a navy fallback card in place of the SVG diagram, its caption and the opt-in pill (§5.6). R2 the Telegram enquiry is a multi-line message that skips empty fields (§5.8). R3 the "Contact us on Telegram" card and its divider are removed (§5.8). All nine unit data sets are delivered (§9.6.1). 14/15 Nov 2026, rev 8.4: other-unit data format notes (illegible areas → `null`; `corridor` room; shared tracer) (§9.6.1). BL01 data delivered. Rev 8.3 (review round 6 #5): the 3D panel's rooms list goes to 2 columns only from 1200 px (§9.6.7 E). Rev 8.2 (re-check of rev 8.1, §9.6.8): stronger camera fill, greige-oak wardrobes, floor texture v1.5. Rev 8.1 (review of 4e7da27): §9.6.7 accepts impl's deviations 1–5. Hotspots now float above the cut, with leader lines. A camera fill light keeps wall faces cream. The model is cut at 2.4 m with a 60° default elevation, and the fit is 100%. BL05 gains 17 furniture blocks whose tops reuse the plan texture. The panel puts the actions above a 2-column room list. Rev 7.1 (round 5 review): the Save-Data/slow opt-in map opens at z17 with no fly; the two-finger hint moves to 70% height; the map glue budget is now 4 KB (§5.6, §10). Rev 8 (BRIEF "3D apartments", 40c474f): new §9.6, the unit dollhouse. When a unit has 3D geometry, its plan lifts into a Three.js cutaway with room hotspots, a slim side panel and a room card with the AI interior slot (placeholder: the room's plan crop). The pilot is BL05: `docs/design/units/bl05.json` plus its floor texture, check overlay and tracing script. Also §9.2 UNIT, §8, §10, §11, §12. Rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -1014,6 +1014,8 @@ The scroll pace varies on purpose: fast and light through the facts; slow and ed
 - Hero (rev 6): **the poster only**: no video sources, no curtain, no `.hero__bg` scale, no S1, no play-disc breath, and the pause toggle is hidden. The shade and grain stay, because they are static. The play control and the sound toggle work; the sound toggle shows static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
 - Location map (rev 7): the map still loads, because it is content, but it opens straight at z17 with `setView` (no fly, so no z15 tiles), with `fadeAnimation: false`. It cross-fades in over 0.2 s. The pin and card are placed at once, the ground ring doesn't pulse, and "Centre on the tower" uses `setView`. Zoom animations the user starts with the buttons, double-tap or pinch stay.
 - Telegram card (rev 7): no hover nudge on the arrow.
+- Tower stage (rev 9): no push-in and no slab lift; the band highlights and the stage cross-fades over 0.2 s.
+- Walk-in mode (rev 9): offered, but entering and moving between rooms are 0.2 s cross-fades. No inertia on the look drag, no gyro. The "Look left / Look right" buttons turn in one step.
 - 3D apartments (rev 8): the default view is `plan`. On request, 3D shows at the static angle (56° / −35°): no lift (U1 becomes a 0.2 s cross-fade at full height), no auto-orbit, instant cutaway, and an instant room look-at. Drag-to-turn stays, because the user starts it.
 - `scroll-behavior: auto`. Anchor jumps are instant.
 - Use `gsap.matchMedia()` conditions `{ motion: "(prefers-reduced-motion: no-preference)" }` so everything is set up once and reverts cleanly when the setting changes.
@@ -1152,6 +1154,8 @@ Floor outline (union of the units and cores, for the 3D slab):
 `1202,89 456,109 456,165 407,168 358,485 358,599 337,604 128,1868 333,1863 343,1850 492,1834 691,1840 1263,1811 1262,583 1196,582 1196,376 1262,374 1263,167 1204,166`
 
 ### 9.4 The model: three tiers, chosen at runtime
+
+> **Rev 9:** the explorer's first view is now the photoreal tower stage (§9.7), which needs no WebGL. The tier 2 tower massing described below is removed (§9.7 A4). The tier rules still decide whether the floor slab, the dollhouse and walk-in mode load.
 
 | Tier | When | What |
 |---|---|---|
@@ -1411,6 +1415,152 @@ Re-checked on :4321 at 1366 × 900 (three orbit angles) and 390 × 844. All six 
 | H | Wardrobes render orange, about `rgb(217,170,118)`. Under the warm light, `#B08A63` reads as orange, not oak. | Change the wardrobe colour to greige oak **`#B5A08A`**. |
 | I | The floor still shows the plan's dimension lines and labels. | **Texture v1.5 delivered:** `docs/design/units/bl05-floor.webp`, same crop and size (1024 × 1116, 97 KB), so no JSON change. Long dimension lines and labels on open floor (hall, living room, bedrooms, store) are painted out by `docs/design/units/clean-bl05-texture.py`. Labels over furniture, the rug, the kitchen, the shower rooms and the balconies stay: the script smears them. Rebuild the AVIF from it. A full clean-up (v2) is section C of `docs/AI-RENDERS.md`, using the AI trial's inpaint mode with pixel alignment kept. |
 
+### 9.7 Photoreal tower stage (rev 9, items A1–A4)
+
+User feedback, round 8: "the main building model is the same as before, not like the video". The explorer's first view becomes **our real tower render with selectable floors**, in place of the Three.js massing. It is an image, an SVG overlay and CSS transforms, so it works **without WebGL** on every tier.
+
+**Finding to know first.** The render (`brand-source/tower-render.jpg`) draws **13 typical storeys with balconies above a tall ground storey**: not 14, and not 16. The explorer keeps floors 1–14 (the plans we have). So the 14 bands **divide the façade's height evenly** and can sit up to about half a storey off the drawn balconies. They are a selection highlight, not a storey-accurate trace. The band style is soft for that reason (below), and the existing line "Renders and plans are illustrative and may change." stays under the stage. A render with countable floors is in the AI list (`docs/AI-RENDERS.md` §E) and the client questions (§12). It would replace only the image and the JSON.
+
+**Assets (delivered):**
+
+| File | What |
+|---|---|
+| `docs/design/tower-floors.json` | 2.6 KB. `cropPx` (150, 110, 1500, 1960) is the stage image crop. `floors[]` has `{floor: 14…1, poly}`, six points each across the left face, the corner and the right face, in full-image px. `ground.poly` is the ground storey. `edges` are the three building edges the bands are interpolated between. `drawn` is the 13 storeys as drawn, for reference only. |
+| `docs/design/tower-floors-check.jpg` | The 14 bands over the render, for review. |
+| `docs/design/trace-tower-floors.py` | Regenerates both. If the image changes, edit the three edges and rerun. |
+
+**A1. Stage image and overlay.**
+- **Image:** the crop above (1350 × 1850, about 3:4), via `astro:assets`: AVIF and WebP at widths 600, 900, 1200 and 1600, `loading="lazy"`, `decoding="async"`, `sizes` matching the stage. It is never the LCP, because the explorer is below the fold.
+  - Alt: "Rendering of Garment Tower from the street corner."
+  - The image sits in the existing stage box with `object-fit: cover` and `object-position: 50% 40%`.
+- **Edges:** the render's collage sky clashes with the navy section, so the image gets a mask: `mask-image: radial-gradient(120% 100% at 50% 45%, #000 62%, transparent 100%)`. The tower stands in the navy stage with no hard photo rectangle.
+- **Overlay:** an inline `<svg viewBox="0 0 1350 1850">` positioned exactly over the image (same `preserveAspectRatio` as the cover fit: `xMidYMid slice`, with the same 50% 40% focal offset). It holds one `<polygon data-floor="n">` per floor, from the JSON minus the crop offset. It is server-rendered, so hover works before any JS.
+- **Band style:**
+  - At rest: invisible (`fill-opacity: 0`).
+  - Hover, focus or preview: fill gold-500 at 0.38 with `mix-blend-mode: screen`, a 1.5 px gold-300 stroke, and a 6 px feather (`filter: blur(3px)` on a duplicate fill under the stroke; static, not animated).
+  - Selected: fill at 0.5.
+  - Transitions: opacity only, 0.2 s.
+- **Label chip:** an HTML chip pinned to the band's right end: "Floor 7 · 1 × 2-bed · 8 × 3-bed", using the rev 5 `floorMix()` strings, not "9 homes". Ivory with navy-900 text, 13 px Manrope 600. On phones it sits centred under the band.
+- **Ground storey:** hovering it shows the muted chip "Ground floor: commercial". It is not selectable.
+- **"16th floor planned"** stays as the note above the floor list (rev 5). Nothing is drawn above the roof.
+- **Controls:** the polygons are `aria-hidden` and have no tab stop. The accessible control is still the **floor list** (`<ol>` of 14 buttons) and the stepper. Hovering or focusing a list row lights its band, and vice versa.
+- **Touch:** the first tap on a band previews it (chip plus the existing "View floor 7" button). A second tap, or the button, selects it. Bands are thin on phones (about 22 px), so the stepper and list stay the primary touch controls. A vertical drag on the tower scrubs the preview floor (`touch-action: pan-x`; only while the drag started on the tower).
+- **Hint chip:** "Hover a floor" (pointer) or "Tap a floor" (touch). It fades after the first interaction.
+
+**A2. Push-in and slab lift (choosing a floor).** No scroll, GSAP, transform and opacity only:
+1. **Push-in** (1.1 s, `power3.inOut`): the image and overlay wrapper scales to **2.4** with `transform-origin` at the band's centroid, and translates so the band's centre lands at 50% / 46% of the stage. Two navy-950 veils (the regions above and below the band, as polygons in the same SVG) fade to 0.5, so the rest of the tower recedes. No blur: we animate only transform and opacity.
+2. **Slab lift** (0.5 s, `power3.out`, overlapping the last 0.2 s of step 1): a copy of the image clipped to the band's polygon (`clip-path: polygon()`, static) lifts −28 px and scales 1.04, with `drop-shadow(0 18px 24px rgb(11 18 32 / .5))` already set before the motion starts.
+3. **Cross-fade** (0.45 s) to the **floor slab** (A3). The panel moves to FLOOR(n) as today.
+- **Back to tower:** the reverse, in 0.8 s.
+- **Changing floors in FLOOR state** (stepper): no pull-back. The slab cross-fades (0.3 s) and the hidden tower image re-centres on the new band, ready for the way back.
+- **Reduced motion:** no push-in and no lift. The band is highlighted and the stage cross-fades over 0.2 s.
+
+**A3. The floor slab (FLOOR state stage).**
+- **With WebGL (tier 2):** one extruded slab: `floorOutline` at 0.35 m thick, ivory sides, with `keyplan-duotone` as the top texture. Camera: fov 28, elevation 52°, azimuth −35°, fitted to 86% of the stage. It rises 0.4 m with a soft ground shadow as it fades in.
+  - The nine unit hotspots are HTML buttons projected onto it (unit centroids from `keyplan-hotspots.json`), styled like the key-plan hotspots. TBC units keep the rev 5 dashed style.
+  - Clicking a unit goes to the dollhouse lift (§9.6.3 U1), which now starts from this slab: the camera pushes toward the unit's centroid for 0.5 s before the cross-fade.
+  - Drag turns it ±40°. There is no auto-turn.
+- **Without WebGL (tiers 0 and 1):** the stage keeps the pushed-in tower image with the band lit. With no JS, it is the plain image with CSS hover bands.
+- The key-plan SVG, chips and stepper in the panel are unchanged in both cases.
+
+**A4. What goes.** The Three.js tower massing scene (`scene.ts`: slabs, glazing bands, camera fit) is **removed**, along with its "Load 3D model" button for the tower. The server-rendered **SVG maquette stays in the markup as the fallback when the render image fails to load** (`onerror` shows it, and it sits under the image). Tier 2 now loads `three` only when a floor is chosen (the slab) or a unit opens (the dollhouse), so the explorer's first view costs no WebGL at all. §9.4's tier table applies from FLOOR state onward.
+
+**Later, optional (A5):** an AI image-to-video push-in clip (`docs/AI-RENDERS.md` §E) can replace step 1. It would be a muted, 2–3 s, ≤ 900 KB clip per floor group, played once and then cross-faded to the slab. Only if a clip passes the check there. The transform push-in is the permanent fallback.
+
+**Budget:** render AVIF ≤ 220 KB at 1200 w (≤ 320 KB at 1600 w), lazy; overlay SVG ≤ 3 KB inline; tower-stage JS ≤ 3 KB (replaces about 9 KB of massing scene code).
+
+### 9.8 Walk-in mode: "Step inside" (rev 9, items B1–B6)
+
+User feedback: "i want to enter in the home and look". From the dollhouse, the visitor steps into a room at eye height, looks around, and moves from room to room through the plan's own doors.
+
+**Movement model: fixed standpoints**, like a street-view tour. One standpoint per room and one in the hall; no free walking and no collision code. It is robust on phones, and it is the model a panorama needs (B5).
+
+**B1. Entering.**
+- When a room is selected in the dollhouse (§9.6.4), the room card gains a primary button **"Step inside"** (44 px high). The panel also gets one **"Enter the home"** button under the actions; it starts in the living room.
+- **Fly-in** (U8, 1.6 s, `power2.inOut`):
+  - The camera leaves the orbit and descends to the room's standpoint at **y = 1.5 m**. The standpoint is `rooms[].stand` if present, else `rooms[].label`.
+  - The fov goes 30° → **72°**.
+  - During the last 0.6 s, the walls rise from the 2.4 m cut to the full **2.8 m** (the shader's `uCut` values) and the **ceiling** fades in. The camera-side cutaway is switched off.
+  - Hotspots and leader lines fade out.
+  - The initial yaw faces the room's largest opening onto a balcony if it has one, else the centroid of the room polygon's longest wall.
+- **Hash:** `#explore/f7/bl05/3d/in/living`. Back/Esc returns to the dollhouse (U9, 1.0 s, the reverse). The breadcrumb gains a last segment: `… › BL05 › Inside`.
+- **Layout:** on desktop the stage widens to cols 1–8 in walk mode, and the panel narrows to cols 9–12 (Flip, 0.5 s). On phones the stage grows to 70svh.
+- **When it is offered:** only when `has3d`, WebGL2 is running, and motion is allowed **or** the user asked for it. With reduced motion, entering is a 0.2 s cross-fade to the standpoint, and moving between rooms is a cross-fade too.
+
+**B2. Looking.**
+- **Drag or swipe** turns the view: yaw is free through 360°, pitch is clamped to **±25°**. Sensitivity is 0.25° per px, with damped inertia (0.9 per frame). `touch-action: pan-y` stays, so a vertical swipe still scrolls the page unless the drag began horizontally (lock the axis after 8 px).
+- **No zoom**, and the wheel scrolls the page.
+- **Keyboard and screen readers:** two 44 px buttons at the bottom corners of the stage, "Look left" and "Look right" (30° per press, 0.3 s). Arrow keys do the same while the stage has focus.
+- **Gyro (phones, optional):** a toggle "Use motion" in the walk toolbar, off by default. On press it requests `DeviceOrientationEvent.requestPermission()` where needed. If refused or unsupported, the toggle hides. Never automatic, and off with reduced motion.
+
+**B3. The inside look (geometry, until panoramas exist).** Eye level is where the plan-art floor and block furniture look weakest, so the scene is dressed for it:
+- **Ceiling:** `ShapeGeometry(footprint)` at y = 2.8 m, ivory `#FBF7F2`, `MeshLambertMaterial`, visible only in walk mode.
+- **Walls:** full height, sand-100 as now. A 10 cm skirting line in `#E4DACB` at the base (a second thin box per wall, merged) gives the walls scale.
+- **Doors:** frames only: a 6 cm `#D9CFC0` frame around each door opening, no leaves.
+- **Glazing:** as in the dollhouse, with a 5 cm navy-800 frame. Beyond the glass and off the balconies the scene shows **a plain soft sky**: a vertical gradient `#F3ECE2` at the horizon to `#CFE0EA` overhead, as the scene background in walk mode. **No skyline, no view and no neighbouring buildings**, because we have no facts about the outlook.
+- **Light:**
+  - The dollhouse lights stay.
+  - Add one warm `PointLight` `#FFE9CC` at the current room's centroid, y = 2.4 m, with distance 9 m and decay 2 (start at intensity 30 in r187 units and tune so the far wall reads sand-100, not grey). It moves with the room change.
+  - The camera fill drops to 40% in walk mode.
+  - Shadows: the baked sun map stays; nothing new casts.
+- **Fake ambient occlusion (cheap):** a 0.35 m dark gradient strip (navy-950 at 0.18 → 0) on the floor along every wall base, plus the same in the ceiling corners. These are planes with one shared 64 px gradient texture, merged. No post-processing.
+- **Furniture:** the rev 8.1 blocks stay.
+  - Beds gain a headboard block (0.9 m high, 8 cm deep, on the side nearest a wall) and a mattress step (the top 0.18 m inset 3 cm, in `#F1ECE4`).
+  - Sofas gain a back block (0.75 m, 20 cm deep) on their wall side.
+  - Counters gain a 4 cm overhanging top.
+
+  These are derived from each block's rectangle and its nearest wall, so the JSON doesn't change.
+- **Floor:** the plan texture stays. From 1.5 m, the remaining dimension text is most visible, so the cleaned v2 textures (AI-RENDERS §C) matter most here.
+- **Honest label:** a small chip at the bottom-left of the stage in geometry mode: **"Simplified 3D model from the floor plan"**.
+
+**B4. Moving between rooms.**
+- **Door rings:** for every door or glazed-door opening of the current room, a ring sits on the floor 0.7 m inside the room from the opening's centre.
+  - 0.9 m across, gold-500 at 0.9 with an ivory inner dot, drawn as an HTML element projected each frame so the hit area is always ≥ 44 px.
+  - Label on hover or focus: "Go to the kitchen".
+  - Rings behind the camera or further than 9 m are hidden and `inert`.
+- **Where a door leads:** computed, not hand-written. Take the two points 0.5 m either side of the opening's centre along its normal, and find which room polygon (or the hall) contains each. An opening with a side in no room and not in the hall gets no ring. That covers the entrance and the unlabelled spaces.
+- **Hall standpoints:** the hall has one standpoint per door, 0.9 m into the hall from that door. Moving along the hall goes door to door.
+- **The glide** (U10, 1.2 s, `power2.inOut`): the camera moves in a straight line to the door's centre (y stays 1.5 m), then on to the next standpoint, while the yaw eases to the direction of travel. The point light follows. With reduced motion, a 0.2 s cross-fade.
+- **Balconies:** a glazed-door ring leads onto the balcony standpoint, facing outward: the railing, then the plain sky.
+- **Room list (panel):** in walk mode each row is "Go to …", and the current room is marked `aria-current`. A polite live region announces "Master bedroom, 15.82 m²" on arrival. A room with a null area announces the name only.
+
+**B5. The panorama slot (the photoreal upgrade).** This is what gets it "like the video". Same rule as §9.6.5: shown only when `approved: true`, always with the chip **"Artist's impression; finishes may vary."**
+- **Data:** `rooms[].pano?: { src, kind: 'equirect' | 'strip', yawOffset, arc?, alt, approved }` in `src/data/units3d/{id}.ts`.
+- **Equirectangular (preferred):** 4096 × 2048, AVIF ≤ 450 KB with a WebP fallback, loaded on entering that room.
+  - It is shown on an inside-out sphere (radius 20 m, 48 × 24 segments, `MeshBasicMaterial`) centred on the standpoint.
+  - The geometry scene is hidden while it shows.
+  - `yawOffset` aligns the image's centre with the plan direction it was generated for, so the **door rings still project to the right bearings**. They are drawn at the bearing and distance of each door from the standpoint, on the sphere's "floor".
+- **Strip (fallback if the generator can't do 360°):** a 3:1 image, 4096 × 1365, mapped on a cylinder segment of `arc` degrees (default 180°). Yaw is clamped to the arc minus the half-fov, pitch to ±12°. Door rings show only for doors inside the arc; the room list covers the rest.
+- **Transition:** geometry → panorama cross-fades over 0.5 s once the image has decoded. Moving to a room without a panorama cross-fades back to geometry. The chip swaps accordingly.
+- **Sharing:** panoramas are shared by room type, as in AI-RENDERS (living, kitchen, master bedroom, bedroom, shower room, with parquet variants). A shared panorama is used in a unit only when that room's plan shape and openings match the shot's reference room. Otherwise the room stays on geometry.
+
+**B6. Walk toolbar and minimap.**
+- **Toolbar**, top-left of the stage: **"Back to 3D model"** (secondary pill, 44 px), then the gyro toggle on phones.
+- **Minimap**, top-right:
+  - The unit's floor texture at 132 px wide (96 px on phones), `--radius-xs`, with a 1 px ivory border at 0.6 opacity.
+  - A gold "you are here" dot with a 60° view cone that turns with the yaw.
+  - Tapping a room on the minimap jumps there (a 0.3 s cross-fade; no glide through walls).
+  - It is `aria-hidden`; the room list is the accessible equivalent.
+  - It hides below 360 px of stage width.
+- The hint "Drag to look · Tap a ring to move" shows for 4 s on first entry.
+- The mobile sticky CTA hides in walk mode. "Request pricing" stays in the panel.
+
+**Motion (adds to §9.6.6):**
+
+| ID | Element | Animation | Duration / ease |
+|---|---|---|---|
+| T1 | Tower push-in | wrapper scale 1 → 2.4 at the band centroid; veils 0 → 0.5 | 1.1 / power3.inOut |
+| T2 | Slab lift | clipped band y 0 → −28, scale 1 → 1.04 | 0.5 / power3.out |
+| T3 | Tower → floor slab | cross-fade; slab rises 0.4 m | 0.45 / power2.out |
+| U8 | Step inside | camera to the standpoint at 1.5 m; fov 30 → 72; walls to 2.8 m; ceiling fades in | 1.6 / power2.inOut |
+| U9 | Back to 3D model | the reverse | 1.0 / power2.inOut |
+| U10 | Room to room | glide through the door; yaw to the travel direction | 1.2 / power2.inOut |
+| U11 | Geometry ↔ panorama | cross-fade | 0.5 / power2.out |
+
+**Budget:** walk-in code ≤ 7 KB gzip, in its own chunk, loaded on the first "Step inside". Panorama ≤ 450 KB each, one at a time, and the previous one is disposed. Nothing loads before the user enters. Render on demand, as the dollhouse.
+
+**Fallbacks:** no WebGL, Save-Data or a slow connection → the buttons don't render, and the 2D plan and room cards stay. A context loss inside → return to the plan view with the toast "3D view stopped".
+
 ---
 
 ## 10. Performance budget
@@ -1437,6 +1587,9 @@ Re-checked on :4321 at 1366 × 900 (three orbit angles) and 390 × 844. All six 
 | Unit geometry (rev 8) | ≤ 20 KB raw per unit (BL05: 11 KB raw, 3.2 KB gzip) | JSON, dynamic import. |
 | Unit floor texture (rev 8) | AVIF ≤ 90 KB, WebP ≤ 110 KB (BL05 WebP: 105 KB), 1024 px wide | Loaded with the unit. Never on first load, so no LCP impact. |
 | Room images (rev 8, later) | AVIF ≤ 140 KB each, 1600 × 1067 | Only on room open, and only `approved: true`. |
+| Tower render (rev 9) | AVIF ≤ 220 KB at 1200 w, ≤ 320 KB at 1600 w | Lazy; below the fold; never the LCP. Overlay SVG ≤ 3 KB inline. Tower-stage JS ≤ 3 KB. |
+| Walk-in code (rev 9) | ≤ 7 KB gzip | Own chunk, on the first "Step inside". |
+| Room panoramas (rev 9, later) | AVIF ≤ 450 KB each (4096 × 2048, or a 4096 × 1365 strip) | One at a time, on entering that room; only `approved: true`. |
 | Film music (rev 5) | ≤ 260 KB (Opus WebM 252 KB, AAC M4A fallback 258 KB) | Zero bytes until the first press of the sound toggle. Only one of the two files is ever fetched. |
 
 Targets: LCP ≤ 2.5 s and CLS ≤ 0.02 on Lighthouse mobile (slow 4G, Moto G Power); TBT ≤ 150 ms; INP ≤ 200 ms. Lighthouse scores per CLAUDE.md.
@@ -1496,6 +1649,27 @@ Rules:
   | `enquiry.copyFallback` | If the chat is empty, copy this message and paste it there. | ውይይቱ ባዶ ከሆነ ይህን መልዕክት ቀድተው እዚያ ይለጥፉት። |
 
   `{handle}` is always rendered as `<span dir="ltr" lang="en" translate="no">@user</span>`. Telegram, Google Maps, Esri and Leaflet stay untranslated in the attribution.
+- Rev 9 strings (EN / AM draft):
+
+  | Key | EN | AM (draft) |
+  |---|---|---|
+  | `tower.alt` | Rendering of Garment Tower from the street corner. | የጋርመንት ታወር ምስል፣ ከመንገዱ ጥግ እንደሚታይ። |
+  | `tower.hintHover` / `tower.hintTap` | Hover a floor / Tap a floor | ወለል ላይ ያንዣብቡ / ወለል ይንኩ |
+  | `tower.ground` | Ground floor: commercial | ምድር ወለል፦ ለንግድ |
+  | `walk.enterHome` | Enter the home | ወደ ቤቱ ይግቡ |
+  | `walk.stepInside` | Step inside | ወደ ውስጥ ይግቡ |
+  | `walk.back` | Back to 3D model | ወደ 3D ሞዴሉ ተመለስ |
+  | `walk.inside` (breadcrumb) | Inside | ውስጥ |
+  | `walk.hint` | Drag to look · Tap a ring to move | ለማየት ይጎትቱ · ለመንቀሳቀስ ቀለበቱን ይንኩ |
+  | `walk.lookLeft` / `walk.lookRight` | Look left / Look right | ወደ ግራ ይመልከቱ / ወደ ቀኝ ይመልከቱ |
+  | `walk.goTo` | Go to the {room} | ወደ {room} ይሂዱ |
+  | `walk.useMotion` | Use motion | የስልኩን እንቅስቃሴ ተጠቀም |
+  | `walk.geometryLabel` | Simplified 3D model from the floor plan | ከወለል ፕላኑ የተሠራ ቀለል ያለ 3D ሞዴል |
+  | `walk.panoAlt` | Artist's impression of the {room}, seen from inside | የ{room} የአርቲስት ምናባዊ ሥዕል፣ ከውስጥ እንደሚታይ |
+  | `walk.stopped` | 3D view stopped | የ3D እይታው ቆሟል |
+  | `rooms3d.hall` | Hall | መተላለፊያ |
+
+  The AI label reuses `unit3d.aiLabel`. `{room}` is lower-case in "Go to the {room}".
 - Rev 8 strings (EN / AM draft):
 
   | Key | EN | AM (draft) |
@@ -1522,7 +1696,7 @@ Rules:
 
 ## 12. Open items for the client (`TODO(client)` in `src/data/site.ts`)
 
-Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), **window positions and sizes per room (rev 8: the plans dimension only the kitchen window, so the 3D façades are drawn solid)**, storey and ceiling heights (the 3D uses an illustrative 2.8 m), which unlabelled BL05 duct the 55 cm shaft is (shown as a plain solid), **room areas whose plan labels are hidden under other text (shown without m² until confirmed): BL01 and BL04 kitchen and living room; BL02 en-suite shower, kitchen and living room; BL06 living room, master bedroom and kitchen; BL07 master bedroom and en-suite shower; BL08 living room**, how BL08's 1.6 m² balcony is reached (the plan draws no opening), what the unlabelled areas are (BL03 top-left tiled area, BL06 top-right ledge, BL09 wet room off the kitchen), **BL01's floor finish: its plan labels the bedrooms and living room "PARQUET ff", while the brief says ceramic tile**, unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
+Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), **a tower render or elevation with countable floors (rev 9: the current render draws 13 typical storeys above the ground storey, while the site says 16 floors and the plans cover 14)**, what the homes look out on, by side (rev 9: walk-in mode shows a plain sky until we know), **window positions and sizes per room (rev 8: the plans dimension only the kitchen window, so the 3D façades are drawn solid)**, storey and ceiling heights (the 3D uses an illustrative 2.8 m), which unlabelled BL05 duct the 55 cm shaft is (shown as a plain solid), **room areas whose plan labels are hidden under other text (shown without m² until confirmed): BL01 and BL04 kitchen and living room; BL02 en-suite shower, kitchen and living room; BL06 living room, master bedroom and kitchen; BL07 master bedroom and en-suite shower; BL08 living room**, how BL08's 1.6 m² balcony is reached (the plan draws no opening), what the unlabelled areas are (BL03 top-left tiled area, BL06 top-right ledge, BL09 wet room off the kitchen), **BL01's floor finish: its plan labels the bedrooms and living room "PARQUET ff", while the brief says ceramic tile**, unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
 
 - Contact rows hide when unset.
 - The form shows a "being set up" message.
