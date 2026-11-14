@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14 Nov 2026, rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 6 (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -12,8 +12,9 @@ Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quali
 | `brand-source/plans/keyplan-duotone.png` | The typical-floor key plan recoloured to ink-on-ivory, with the baked-in legend removed and each unit's tone normalised. This is the base image for the floor view; our own SVG hotspots supply the colour. 1549×1940, the same pixel grid as the original. |
 | `docs/design/keyplan-hotspots.json` | Polygons and centroids for BL01–BL09 in key-plan pixels, the floor-plate outline (for the 3D massing), the scale (35.7 px/m), and the legend colours. |
 | `docs/design/keyplan-hotspots-check.jpg` | The traced polygons drawn over the original plan, for visual verification. |
-| `public/video/film-loop.webm` (AV1), `film-loop.mp4` (H.264) | Muted preview loop for the hero film card, 480×264, 9.75 s (prepared by the coordinator). Ratio 20:11, the same as the film. |
-| `public/video/film-poster.webp` / `.jpg` | The loop's first frame, 480×264: the card's poster and its static state. |
+| `public/video/hero-bg.webm` (AV1), `hero-bg.mp4` (H.264), `hero-bg-poster.webp` / `.jpg` | Rev 6 hero background: a 640×352, 24 fps, 20.6 s loop with no audio and a continuous seam, plus its first frame as the poster (the LCP). The rev 5 `film-loop.*` and `film-poster.*` files are no longer used. |
+| `docs/design/hero-grain.png`, `hero-shade-check.jpg`, `hero-shade-contrast.py` | Rev 6: the grain tile, the shade previewed over the poster at 1366 and 360, and the script that verified hero text contrast over every second of the loop. |
+| `docs/design/story-arch-check.jpg` | Rev 6: the whole-tower Story crop seen through the dome mask, at rest and at 1.06 overscan. |
 | `public/video/film.mp4`, `film-full-poster.webp` / `.jpg` | The full 41 s fly-through (640×352, H.264 + AAC, faststart) and its poster, 640×352. Loaded only when the film dialog opens. The source is `brand-source/video/tower-film-original.mp4`. |
 
 ---
@@ -201,7 +202,7 @@ Small motifs:
 ```
 <header>  sticky nav
 <main>
-  #top       Hero                     ivory
+  #top       Hero                     film background + navy shade (rev 6; theme-dusk)
   #facts     Key facts strip          ivory (hairline top/bottom)
   #story     The tower / House of Peace   sand
   #explore   Tower explorer           navy (theme-dusk)
@@ -229,35 +230,144 @@ Copy below is draft English. Keep every string in the i18n dictionary. Amharic d
 - Behaviour: transparent over the hero. After 80 px of scroll it becomes `--bg` at 0.86 with `backdrop-filter: blur(12px)` and a hairline bottom border. It hides on scroll down (yPercent −100, 0.35 s `power2.out`) and shows on scroll up. Its theme follows the section under it (`data-header-theme` swap via ScrollTrigger `onToggle`). The header has two stacked background layers (light and dusk) that cross-fade on **opacity** (0.3 s); logo and text colours swap instantly at the same moment. No colour transitions.
 - Under 1024 px, a 44×44 menu button opens a full-screen navy overlay revealed with `clip-path: circle(0 at <button centre>) → circle(150%)` (0.7 s `power3.inOut`). Links stagger in (y 24 → 0, opacity, 0.06 s apart). The overlay also holds the language toggle, the CTA, and contact links where configured. Focus is trapped while it is open, and Esc closes it.
 
-### 5.1 Hero (`#top`)
+### 5.1 Hero (`#top`): rev 6, the film as the background
 
-Content: eyebrow "Garment · Addis Ababa"; H1 "A house of *peace* in the heart of Garment." (italic on *peace*); lead "126 two- and three-bedroom homes across 16 floors." (rev 5); CTAs "Book a visit" (primary) and "Explore apartments" (secondary, scrolls to `#explore`); scroll cue "Scroll" with a 1 px gold line that grows and shrinks.
+**Rev 6 replaces the rev 1–5 hero** (the still render in a 4:5 arch, and the rev 5 film card). This is the user's decision. The still render moves to the Story arch (§5.3).
+
+**Content** (copy unchanged):
+- Eyebrow: "Garment · Addis Ababa".
+- H1: "A house of *peace* in the heart of Garment." (italic on *peace*).
+- Lead: "126 two- and three-bedroom homes across 16 floors."
+- CTAs: "Book a visit" (primary) and "Explore apartments" (secondary, scrolls to `#explore`).
+- New: a **play control**, "Watch the film · 0:41".
+- New: a **controls cluster** with pause/play for the background and sound on/off.
+- Scroll cue on desktop only.
+
+**Theme.** `#top` gets `.theme-dusk` (ivory text tokens, gold-400 accents, the dusk button variants) and `data-header-theme="dark"`. The header therefore starts in its dark variant: transparent, with the ivory and gold logo and ivory links. S20 swaps it to light when `#facts` reaches the header. The page background under the film is navy-950.
+
+**Layers**, bottom to top, all `position:absolute; inset:0` inside `#top` (`position:relative; overflow:clip; isolation:isolate`):
+
+| z | Layer | What |
+|---|---|---|
+| 0 | `.hero__bg` | The wrapper that the intro scale and S1 transform. It holds:<br>• the **poster** `<picture>`: `/video/hero-bg-poster.webp` with a `.jpg` fallback, `width="640" height="352"`, `fetchpriority="high"`, `alt=""`, eager. It is decorative, because the H1 says what this is.<br>• the **`<video class="hero__video" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback aria-hidden="true">`**. It has **no `poster` attribute**, because the `<img>` is the poster and a `poster` attribute would fetch it twice. It starts at opacity 0.<br>Both use `object-fit: cover` with the **same** `object-position`, so the cross-fade lines up pixel for pixel. |
+| 1 | `.hero__shade` | Navy-950 gradients (values below). One element with several `background-image`s. Static: never animated, never removed. |
+| 2 | `.hero__grain` | `background: url(/img/grain.png) 0 0 / 128px 128px repeat; opacity: .35; pointer-events: none`. Static, so there is no rAF loop and no CSS blur. The tile is `docs/design/hero-grain.png`: 128×128, 3 KB, 7% white and 7% black specks at 60% alpha; copy it to `public/img/grain.png`. With the shade, it hides the upscale softness: the eye reads film grain instead of blur. |
+| 3 | `.hero__inner` | The content grid, the play control and the controls cluster. |
+
+**Shade values**, with `--ink: 11 18 32` (navy-950), all as `rgb(var(--ink) / a)`:
+
+- **≥ 1024 (landscape layout)**, four layers:
+  - **text side**: `linear-gradient(90deg, rgb(var(--ink)/.80) 0%, rgb(var(--ink)/.70) 48%, rgb(var(--ink)/.30) 72%, rgb(var(--ink)/.15) 100%)`
+  - **header band**: `linear-gradient(180deg, rgb(var(--ink)/.70) 0, rgb(var(--ink)/.45) 72px, rgb(var(--ink)/0) 200px)`
+  - **foot band**: `linear-gradient(0deg, rgb(var(--ink)/.65) 0, rgb(var(--ink)/0) 28%)`
+  - **vignette**: `radial-gradient(130% 100% at 70% 45%, rgb(var(--ink)/0) 50%, rgb(var(--ink)/.40) 100%)`
+  - **Rule**: all hero text sits within the left **48%** of the hero width, where the text-side layer alone is at least 0.70.
+- **< 1024 (portrait layout)**, two layers:
+  - **top and floor**: `linear-gradient(180deg, rgb(var(--ink)/.78) 0, rgb(var(--ink)/.62) 64px, rgb(var(--ink)/.30) 25%, rgb(var(--ink)/.30) 100%)`
+  - **content scrim**, anchored to the content rather than to the hero height, so it still covers the text on short screens: `.hero__content::before { content:""; position:absolute; left:-100vw; right:-100vw; top:-120px; bottom:-100vh; z-index:-1; background: linear-gradient(180deg, rgb(var(--ink)/0) 0, rgb(var(--ink)/.72) 120px, rgb(var(--ink)/.80) 100%); }`. The hero's `overflow: clip` trims the overhang.
+- **Verified**: I composited these exact gradients over **every second of the 20.6 s loop** (21 frames, including the white facade, sky and cloud frames and the poster) at 1366×768, 1920×1080, 360×740, 360×640 and 768×1024. The script is `docs/design/hero-shade-contrast.py`, and the poster-frame preview is `docs/design/hero-shade-check.jpg`. Worst case, using the 99.5th-percentile brightest pixel in each text zone, for ivory `#FBF7F2` text:
+
+| Viewport | Header / nav zone | Text zone |
+|---|---|---|
+| 1366×768 | 5.6:1 | 6.8:1 |
+| 1920×1080 | 5.5:1 | 6.8:1 |
+| 360×740 | 6.0:1 | 9.8:1 |
+| 360×640 | 6.0:1 | 9.7:1 |
+| 768×1024 | 6.0:1 | 9.7:1 |
+
+  All of these clear 4.5:1 for body text and 3:1 for the H1, with margin left over for the grain specks. **If the loop is ever re-cut, re-run the script.** Muted text (`--text-muted`) is not allowed in the hero; use ivory, sand-200 or gold-400 only.
+
+**Crop on phones (`object-position`).**
+- **≥ 1024**: `50% 50%`. The 20:11 frame almost fills a 16:9 screen; at 1366×768 about 2% is cropped at the sides.
+- **< 1024 (portrait)**: `50% 50%` as well. A 360×740 phone sees the centre **27%** of each frame, about 172 source px upscaled about 2.1×. A 768×1024 tablet sees the centre 41%. Most shots in the loop keep the tower centred (see the contact sheet), so the centre slice is the tower itself. Don't pan with JS: per-shot panning would need a shot list, and any drift is worse than a soft crop. The stronger portrait shade, mostly over the lower 60%, plus the grain, carries the softness.
+- No scaling beyond `cover`.
+
+**Layout per viewport.** `#top` has `min-height: 100svh`; at ≥ 1024 it is also capped at `max-height: 1200px`. Content never depends on the video, so there is no CLS: every layer is absolutely positioned and the poster has intrinsic dimensions.
 
 ```
-Mobile 360                         Desktop 1440
-┌──────────────────────┐           ┌──────────────────────────────────────────────────────────┐
-│ ▢logo      EN|አማ  ☰ │           │ ▢logo   The tower Explore Homes Location Payment  EN|አማ (Book a visit) │
-│                      │           ├──────────────────────────────────────────────────────────┤
-│   ╭──────────────╮   │           │                                   ╭────────────────────╮  │
-│  ╱  tower render  ╲  │           │ GARMENT · ADDIS ABABA            ╱                      ╲ │
-│ │   (arch mask,    │ │           │                                 │   tower render         ││
-│ │    4:5, ~58svh)  │ │           │ A house of                      │   arch mask 4:5        ││
-│ │                  │ │           │ peace in the heart              │   cols 7–12            ││
-│ └──────────────────┘ │           │ of Garment.                     │   height ≈ 100svh-     ││
-│ GARMENT · ADDIS ABABA│           │ (cols 1–6, display)             │   header-48px          ││
-│ A house of peace in  │           │                                 │                        ││
-│ the heart of Garment.│           │ 126 two- and three-bedroom ...  │                        ││
-│ 126 two- and three-  │           │ (Book a visit) (Explore →)      │                        ││
-│ bedroom homes ...    │           │                                 │                        ││
-│ (Book a visit)       │           │ ── Scroll                       └────────────────────────┘│
-│ (Explore apartments) │           └──────────────────────────────────────────────────────────┘
+360 × 740 (portrait layout; 768 is the same, wider)       1366 × 768 (landscape layout; 1920 the same, larger)
+┌──────────────────────┐                                   ┌───────────────────────────────────────────────────────────────┐
+│ ▢logo   EN|አማ    ☰  │ ← header, dark variant            │ ▢logo  The tower Explore Homes Location Payment  EN|አማ (Book a visit) │
+│                      │                                   │                                                               │
+│   film (centre 27%)  │                                   │ GARMENT · ADDIS ABABA                 film, lighter shade      │
+│                      │                                   │ A house of peace                                               │
+│ ( ▶  Watch the film · 0:41 )   ← play pill, centred      │ in the heart of                            ╭──────╮            │
+│   in the free film zone                                  │ Garment.                                    │  ▶   │ ← 88 px    │
+│ ░░░░░░ scrim starts 120 px above the eyebrow ░░░░░░      │ 126 two- and three-bedroom homes…           ╰──────╯   play     │
+│ GARMENT · ADDIS ABABA│                                   │ (Book a visit) (Explore apartments ↓)  ( Watch the film · 0:41 )│
+│ A house of peace in  │                                   │                                                               │
+│ the heart of Garment.│                                   │ ── Scroll                                          (⏸) (♪)    │
+│ 126 two- and three-  │                                   └───────────────────────────────────────────────────────────────┘
+│ bedroom homes …      │                                    text: cols 1–6, ≤ 48% of width   play: centred in cols 8–12
+│ (Book a visit)       │                                    controls: bottom-right, 32 px in from the container edge
+│ (Explore apartments) │
+│                (⏸)(♪)│ ← controls row, right-aligned
 └──────────────────────┘
 ```
 
-- Mobile: the arch is 100% of the content width, aspect 4:5 capped at `58svh`, with text below. The H1 must sit above the fold at 360×640, so test it and reduce the arch height if needed.
-- Desktop: two columns. The arch is cols 7–12, top aligned 24 px below the header, with `.arch--outline` around it. A faint mark watermark (gold-500 at 6%, 520 px) sits behind the text column, bottom-left.
-- **Film card (rev 5):** a small "Watch the film · 0:41" card overlaps the arch's lower-left edge and plays a muted preview loop. It opens the film dialog. Full spec in §5.11. The still render stays in the arch and stays the LCP; the film never replaces it, never goes full-bleed and is never cropped into the arch.
-- **LCP** is the hero image. `<Picture>` gives AVIF/WebP at widths 360/540/720/960/1280/1560. Use `fetchpriority="high"`, a preload `<link>` with matching `imagesizes`, no lazy loading, and explicit width/height.
+- **< 1024** (360, 390, 768): `#top` is a flex column: header spacer (`--header-h`), then the **film zone** (`flex: 1; min-height: 72px; display: grid; place-items: center`), then `.hero__content`.
+  - The content is bottom-aligned with `padding-bottom: max(16px, env(safe-area-inset-bottom))`. Its order: eyebrow, H1, lead, CTAs (stacked full width under 480 px, side by side from 480 px), then the controls row (right-aligned, 44 px, `margin-top: 16px`).
+  - The scroll cue is hidden.
+  - At 768 the text block is capped at 560 px and left-aligned within the container. The film zone is about 420 px tall and shows the tower clearly.
+  - Budget check at 360×640: header 64 + content about 448 leaves a film zone of about 128 px, which holds the 48 px play pill. The H1 is above the fold by construction.
+- **≥ 1024** (1366, 1920): the 12-column grid.
+  - The text is in cols 1–6 (max 48% of the hero width), vertically centred (`align-self: center`) with `padding-top: var(--header-h)`.
+  - The play control sits in cols 8–12, centred both ways.
+  - The scroll cue is bottom-left at 32 px.
+  - The controls cluster is bottom-right: `right` aligned to the container's right edge, `bottom: 32px`.
+  - At 1920 the H1 uses the existing `--fs-display` clamp maximum. Nothing else changes, apart from the 88 px play disc becoming 104 px.
+
+**Play control** ("Watch the film · 0:41"). The markup is the rev 5 link, moved here:
+
+```html
+<a class="hero__play" href="/video/film.mp4" aria-haspopup="dialog" data-film-open>
+  <span class="hero__play-disc" aria-hidden="true"></span>
+  <span class="hero__play-label">Watch the film · <span class="tabular">0:41</span></span>
+  <span class="visually-hidden">: the tower fly-through with music</span>
+</a>
+```
+
+- **≥ 1024**:
+  - A vertical stack: an 88 px disc (104 px at ≥ 1600) with a 12 px gap above a label pill.
+  - The disc is gold-500 with a navy-950 triangle (28 px; optically centred, nudged right by 2 px), plus a 1.5 px ivory ring at 0.7, 8 px outside the disc.
+  - Label pill: ivory Manrope 600, 14 px, on `rgb(var(--ink)/.72)`, 36 px tall, padding 0 16 px, `--radius-pill`. The pill gets its own background because the shade is light over there.
+  - Hover (fine pointer): the disc scales to 1.08 and the ring to 1.15 (0.45 s, `power3.out`).
+  - Idle "breath": the ring scales 1 → 1.25 and fades 0.7 → 0 over 2.4 s, repeating. This is the S14 pulse. It is paused offscreen, while the dialog is open and when the background is paused, and it is off with reduced motion.
+- **< 1024**: one 48 px pill, with a 36 px gold disc and triangle, then the label, on `rgb(var(--ink)/.72)`, centred in the film zone. No breath.
+- The cursor label is "Play" (§6). Focus: the `--focus` ring around the disc on desktop, or around the pill on phones.
+- With no JS it opens `film.mp4` natively. With JS it opens the §5.11 dialog **unshaded, with sound**.
+
+**Controls cluster** (`<div class="hero__controls" role="group" aria-label="Background film">`):
+- Two 44 px circles, 8 px apart, each `rgb(var(--ink)/.55)` with a 1 px ivory hairline at 0.35 and a 16 px ivory glyph. Order from the left: **pause/play**, then **sound**.
+- **Pause/play** (WCAG 2.2.2):
+  - `<button type="button">` whose label swaps between "Pause background film" and "Play background film", with the glyph swapping between two bars and a triangle.
+  - It has **no `aria-pressed`**: a swapped label plus `aria-pressed` would announce the state twice. This also corrects rev 5.
+  - It is hidden when the background isn't allowed to play (poster-only cases), because then nothing moves.
+- **Sound**: the rev 5 sound toggle (§5.11), unchanged in behaviour and markup (constant name "Film music", `aria-pressed`, the equaliser glyph and its states). It is placed here instead of on the card. It is visible whenever JS runs, including in poster-only mode.
+- **Clear of the mobile sticky CTA.** The bar (§5.10) only appears once the hero has left the viewport, and the controls are the last thing in the hero to scroll out, so the two are never on screen together. No offset is needed. Still, `.hero__controls` gets `margin-bottom: env(safe-area-inset-bottom)` for iOS.
+
+**Background playback rules** (these replace the rev 5 card rules):
+- **Loading.** On `DOMContentLoaded`, if all of the following hold, append the `<source>`s (`hero-bg.webm` with `type='video/webm; codecs="av01.0.01M.08"'` first, then `hero-bg.mp4` with `type="video/mp4"`) and call `load()`:
+  - `prefers-reduced-motion: no-preference`
+  - `!navigator.connection?.saveData`
+  - `effectiveType` is `4g` or unknown
+  - the hero is intersecting
+  
+  No idle wait, because the background is the hero itself. The poster still paints first, and the preload hint goes only to the poster.
+- **Fade-in.** `play()` is called on `canplaythrough`. On the first `playing` event, add `.is-playing`, which runs `opacity 0 → 1` over 1.2 s with `cubic-bezier(.455,.03,.515,.955)` on the video. **Not before the curtain is up**: wait for the curtain's `animationend`, or skip the wait if there is no intro. The poster is the loop's first frame, so the cross-fade is invisible apart from the start of motion.
+- **Pause** when the hero is fully out of view (IntersectionObserver, threshold 0), when `document.hidden`, or when the film dialog is open. Resume when the condition ends, unless the user pressed pause.
+- **Auto-stop after 3 loops (about 62 s).** Fade the video to opacity 0 over 0.6 s back onto the poster, then `pause()`. The toggle shows "Play background film". Pressing it resumes and resets the count. This keeps phones cool and battery use low on a page people leave open.
+- **Poster only** (reduced motion, Save-Data, slow connection, no JS): no `<source>` is added and zero video bytes are fetched. The pause toggle is hidden. The play control and the sound toggle work (the sound toggle needs JS).
+- QA note: headless Chrome reports `effectiveType: '3g'`, so a poster-only hero is correct in headless screenshots. To test the video, override `navigator.connection` in the test harness.
+
+**LCP and CLS.**
+- The LCP element is the **poster `<img>`** (17 KB WebP), or the H1 if Chrome decides otherwise. Both paint early.
+- Preload it in `<head>`: `<link rel="preload" as="image" href="/video/hero-bg-poster.webp" type="image/webp" fetchpriority="high">`. The old hero `<Picture>` preload is removed.
+- Chrome ignores "low-entropy" images under 0.05 bits per displayed pixel as LCP candidates. At 1920×1080 the 17 KB poster is about 0.066 bpp, which still counts. **Keep the poster ≥ 14 KB**: don't over-compress it, or the LCP silently moves to the H1. That isn't harmful, but it is less predictable.
+- The `<video>` is the same size as the poster, so its first frame never creates a later, larger LCP entry.
+- CLS is 0: all layers are absolute, the hero has a fixed `min-height`, and the fonts are already handled (§10).
+
+**Removed in rev 6**: the 4:5 hero arch, `.arch--outline` around it, the mark watermark behind the text (it would be lost over the film), the hero `<Picture>` and its preload, and the rev 5 film card with its loop files (`film-loop.*` and `film-poster.*` can be deleted from `public/video/`). `src/assets/generated/hero-tower.jpg` stays for the OG image. The Story arch gets a new, zoomed-out crop of the same render (§5.3). The Enquire arch moves to the balconies detail (`story-balconies.jpg`), so the page doesn't show the same tower view twice.
 
 ### 5.2 Key facts (`#facts`)
 
@@ -277,9 +387,9 @@ Mobile                       Desktop
 
 - Large statement (H2, max 18ch per line): "*Dar Al Salam* means House of Peace. We designed it to feel that way." That claim is brand voice, not a fact, so keep it modest.
 - Two short paragraphs drawn only from the facts: Garment location, two-block layout, nine homes per floor, balconies, a lift lobby with 2+ lifts and stairs per block (BRIEF wording), basement parking.
-- Media: a second crop of the tower render in a tall arch (detail of the balconies: `left 560, top 900, width 900, height 1125`), plus a small framed **key-plan duotone** thumbnail captioned "Typical floor: nine homes, two blocks".
+- Media (rev 6): **the whole tower**, a zoomed-out crop of the render in the tall 4:5 arch, so the full building reads (the user's request). Generate `src/assets/generated/story-tower.jpg` from `src/assets/tower-render.jpg` (2251×2163) with the crop `left 95, top 0, width 1730, height 2163`. That is the full height of the render, centred on the tower, which spans x ≈ 240–1680. Output widths 480/640/900/1200. `object-position: 50% 50%`. I checked it through the real dome mask, both at rest and at the S7/S8 overscan, in `docs/design/story-arch-check.jpg`: the roof clears the dome's peak and both shoulders, and the street and entrance stay in. There is no taller source, so this is the furthest zoom-out possible without inventing sky. Alt text: "Render of Garment Tower, the whole building from the street corner". The old balconies detail (`left 560, top 900, width 900, height 1125`) moves to the Enquire arch. Also a small framed **key-plan duotone** thumbnail captioned "Typical floor: nine homes, two blocks".
 - Desktop: the statement spans cols 1–7. The arch spans cols 8–12 and is offset 120 px down (staggered editorial layout). Mobile stacks statement, then arch, then paragraphs.
-- Rev 5: after the paragraphs, one text link, "Watch the film · 0:41", with a 20 px gold play disc before it. It opens the same film dialog as the hero card (§5.11) and gets the focus back when the dialog closes. It is a second way in for people who scrolled past the hero, **not a second player**: no video and no loop here. Explore gets no film entry, because the fly-through doesn't help anyone pick a floor or a unit.
+- Rev 5: after the paragraphs, one text link, "Watch the film · 0:41", with a 20 px gold play disc before it. It opens the same film dialog as the hero play control (§5.1, §5.11) and gets the focus back when the dialog closes. It is a second way in for people who scrolled past the hero, **not a second player**: no video and no loop here. Explore gets no film entry, because the fly-through doesn't help anyone pick a floor or a unit.
 
 ### 5.4 Tower explorer (`#explore`, navy): see §9 for the full spec
 
@@ -416,7 +526,7 @@ Desktop                                              Mobile
 │ Book a visit or request  │ [______________]    │   │ request plans…     │
 │ floor plans & pricing.   │ Phone               │   │ Name  [_________]  │
 │                          │ [+251 __________]   │   │ Phone [_________]  │
-│ ╭─────╮ tower arch small │ Preferred home      │   │ Home  [Any ▾]      │
+│ ╭─────╮ balconies arch   │ Preferred home      │   │ Home  [Any ▾]      │
 │ │     │                  │ [Any ▾] [Floor: Any▾]│  │ Floor [Any ▾]      │
 │ ╰─────╯                  │ Reply via           │   │ Reply ( )WA ( )TG  │
 │ Contact lines (if set)   │ (•)WhatsApp ( )Telegram (  )Email│ Message [____]│
@@ -444,6 +554,8 @@ Desktop                                              Mobile
 Under 768 px, after the hero has left the viewport: a bottom bar, 64 px plus `env(safe-area-inset-bottom)`, ivory with a hairline top border. It holds "Book a visit" (primary, flex 1) and a WhatsApp icon button (only if configured). It slides in at y 100% → 0 over 0.4 s with `power3.out` and hides while `#enquire` or the footer is in view. Content gets `padding-bottom` so the bar never covers the last element. It also hides while the film dialog is open.
 
 ### 5.11 Tower film (rev 5): hero card and film dialog
+
+> **Rev 6:** the **card** in this section is removed. The film is now the hero background (§5.1). What still applies: the **film dialog** (opened by the hero play control and the §5.3 link), the **sound toggle** (now in the hero controls cluster), the captions and the text description. Where the dialog text below says "FLIP from the card", read it as the **circle reveal from the play control**: the frame starts as `clip-path: circle(44px at <play disc centre, relative to the frame>)` and grows to `circle(150% at …)` over 0.7 s `power3.inOut`, the scrim fades in over 0.4 s, and close reverses it over 0.45 s if the play control is on screen, otherwise it fades. The dialog film is **unshaded**: no grain, no gradient, just the scrim around the frame. Opening it pauses the background loop and fades out the music. Closing it resumes both, under the §5.1 rules. Reduced motion uses the 0.2 s cross-fade. The sound toggle's "card out of view" rule becomes "hero fully out of view": the controls are the hero's last element, so the toggle is on screen whenever music is audible.
 
 **The constraint.** The film is 640×352 and the preview loop is 480×264. Both are sharp only at small sizes, so the film is always shown **at or below about 1.5× its source width**. It is never full-bleed, never stretched, and never cropped into the arch. The still render keeps the arch and the LCP.
 
@@ -662,7 +774,7 @@ From the §5.3 text link there is no matching card, so the frame rises instead: 
 
 ### 7.2 Intro and hero (first load)
 
-The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 96 px. **It is CSS-driven and starts on first paint, so it never waits for JS.** It shows only when `sessionStorage.introSeen` is unset; the inline head script adds `html.intro`. It never runs when `prefers-reduced-motion` is set. The hero image paints underneath at full opacity, so LCP is not delayed.
+The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 96 px. Rev 6: the curtain lifts off the **dark hero**: the poster with its shade and grain, which have been painted underneath from the first frame. The ivory-to-navy reveal is the moment. **It is CSS-driven and starts on first paint, so it never waits for JS.** It shows only when `sessionStorage.introSeen` is unset; the inline head script adds `html.intro`. It never runs when `prefers-reduced-motion` is set. The hero image paints underneath at full opacity, so LCP is not delayed.
 
 **The whole intro and hero reveal is CSS `@keyframes` on one shared clock (the curtain's), with no JS dependency.** The H1 is pre-split into lines at build time (each line wrapped in `<span class="line"><span>` in the markup, with `overflow: clip`), so no SplitText is needed above the fold. On repeat visits (`html.intro` absent) the same keyframes run with `animation-delay` shifted by −0.85 s. With reduced motion or no JS, keyframes are not applied and everything is visible. GSAP takes over only for scroll-linked behaviour after the reveal (S1). The table gives keyframe timings; the eases map to CSS `cubic-bezier` equivalents (power3.out = `cubic-bezier(.215,.61,.355,1)`, expo.out = `cubic-bezier(.16,1,.3,1)`, power2.inOut = `cubic-bezier(.455,.03,.515,.955)`). Confirm this in Lighthouse; if the curtain hurts LCP, remove it and keep step 4 onward.
 
@@ -671,16 +783,17 @@ The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 
 | 0.00 | mark: dome and ring | `clip-path: inset(100% 0 0 0)` → `inset(0)` | 0.7 | power3.out |
 | 0.25 | mark: dove | y 12, opacity 0 → y 0, 1 | 0.6 | power3.out |
 | 0.85 | curtain | yPercent 0 → −100 (lifts like a door) | 0.9 | expo.inOut (`cubic-bezier(.87,0,.13,1)`) |
-| 0.85 | hero image (inside arch) | scale 1.18 → 1 | 1.8 | expo.out |
+| 0.85 | `.hero__bg` (poster; the video inherits it later) | scale 1.12 → 1. The shade and grain are not scaled: they are static and always present | 1.8 | expo.out |
 | 1.05 | eyebrow | opacity 0, y 12 → 1, 0 | 0.6 | power3.out |
 | 1.10 | H1 lines (pre-split in markup, CSS keyframes) | translateY 110% → 0, `animation-delay` +0.08 s per line | 1.1 | expo.out |
 | 1.40 | lead, CTAs | opacity 0, y 16 → 1, 0, stagger 0.08 | 0.7 | power3.out |
-| 1.50 | arch outline | `clip-path: inset(100% 0 0 0)` → `inset(0)` (draws upward) | 1.0 | power2.inOut |
+| 1.55 | play control (rev 6) | opacity 0, scale 0.85 → 1, 1, origin at the disc centre | 0.7 | power3.out |
 | 1.70 | header | opacity 0, y −12 → 1, 0 | 0.5 | power3.out |
 | 1.90 | scroll cue line | scaleY 0 → 1 loop (origin top, then bottom) | 1.6 | power2.inOut, repeat −1 |
-| 1.95 | film card (rev 5, §5.11) | `clip-path: inset(100% 0 0 0 round 6px)` → `inset(0 round 6px)`, y 16 → 0 | 0.8 | power3.out |
+| 1.80 | controls cluster (rev 6) | opacity 0, y 8 → 1, 0 | 0.5 | power3.out |
+| ≥ 1.75 | background video (JS, rev 6) | opacity 0 → 1 over the poster, on the first `playing` event and not before the curtain's `animationend` | 1.2 | power2.inOut |
 
-The card's keyframe only reveals it. The loop is started by JS (§5.11), never before `window` `load`. If the sources are ready earlier, playback still waits for this keyframe's `animationend`, so the reveal never shows a jump cut.
+The video fade is the only JS step on this clock, and it only ever adds motion on top of a finished, legible frame. If the video never arrives, the poster is the hero. Total: the poster paints at first paint, the text is readable at about 1.5 s, and the motion starts at about 1.8 s or whenever the data arrives.
 
 Without the curtain (repeat visit), the same keyframes start at t = 0.85 with everything shifted earlier. Total time to interactive content is about 1 s.
 
@@ -690,16 +803,15 @@ Without the curtain (repeat visit), the same keyframes start at t = 0.85 with ev
 
 | # | Element | Animation | Trigger · start → end | Scrub | Dur / ease |
 |---|---|---|---|---|---|
-| S1 | Hero arch (desktop) | `.arch` scale 1 → 1.12, media yPercent 0 → 8, text block y 0 → −80 and opacity 1 → 0.2 | `#top` · `top top` → `bottom top` | `true` | ease none |
-| S1m | Hero arch (mobile) | media yPercent 0 → 10 only | same | `true` | none |
-| S1f | Film card (desktop ≥1024, rev 5) | y 0 → −48, opacity 1 → 0. The card is outside the S1 scale target, so it doesn't grow with the arch. On mobile it scrolls with the arch, with no tween. | `#top` · `top top` → `40% top` | `true` | none |
+| S1 | Hero (desktop ≥1024, rev 6) | `.hero__bg` scale 1 → 1.08 and yPercent 0 → 6; text block y 0 → −80 and opacity 1 → 0.2; play control opacity 1 → 0 by 50%. The shade, grain and controls stay put | `#top` · `top top` → `bottom top` | `true` | ease none |
+| S1m | Hero (mobile and tablet, rev 6) | **none**. The page just scrolls over a playing video; a scrub on top of it isn't worth the cost on phones | — | — | — |
 | S2 | Facts numerals | count-up from 0 (14, 126; "158–171" counts both ends; "2 & 3" fades only). The text is pre-rendered as the final value and JS tweens from 0, so widths are fixed by tabular-nums and a `min-width` per cell. | `#facts` · `top 80%` | once | 1.4 / power2.out, stagger 0.12 |
 | S3 | Facts hairlines | scaleX 0 → 1 (origin left) | `#facts` · `top 85%` | once | 1.0 / power3.inOut |
 | S4 | All section eyebrows | rule scaleX 0 → 1, label opacity and x −8 → 0 | each eyebrow · `top 85%` | once | 0.7 / power3.out |
 | S5 | H2s below the fold (`[data-split]`; the only SplitText use) | SplitText lines, mask lines, yPercent 110 → 0, stagger 0.08 | heading · `top 82%` | once | 1.0 / expo.out |
 | S6 | Body paragraphs and lists (`[data-reveal]`) | opacity 0, y 24 → 1, 0, children stagger 0.08 | block · `top 85%` | once | 0.8 / power3.out |
-| S7 | Story arch | wrapper `clip-path: inset(18% 0 0 0)` → `inset(0)`; media scale 1.2 → 1 | arch · `top 85%` → `top 35%` | `0.6` | none |
-| S8 | Story arch parallax | media yPercent −6 → 6 | arch · `top bottom` → `bottom top` | `true` | none |
+| S7 | Story arch | wrapper `clip-path: inset(18% 0 0 0)` → `inset(0)`; media scale 1.12 → 1 (rev 6: was 1.2; the whole tower must be in at rest) | arch · `top 85%` → `top 35%` | `0.6` | none |
+| S8 | Story arch parallax | media yPercent −2.5 → 2.5 on a media box 106% tall (`inset: -3% 0`). Rev 6: was ±6, which would crop the roof of the whole-tower image | arch · `top bottom` → `bottom top` | `true` | none |
 | S9 | Dusk transition into explorer | **Static, no JS** (rev 3; the fixed veil dimmed the end of the story copy). `#explore::before`: `position:absolute; left:0; right:0; bottom:100%; height:32svh; background:linear-gradient(to bottom, rgb(15 24 40 / 0), var(--navy-900)); pointer-events:none`. `#story` gets `padding-bottom: calc(var(--section-y) + 32svh)` so no story content ever sits in the gradient | — | — | — |
 | S10 | Explorer intro (desktop ≥1024) | **pin** `#explore` for `+=60%`: camera rises from ground level (y 8 m, looking up) to the 3/4 view, the model rotates −25° → 0°, and the panel slides in x 40 → 0 with opacity. After the pin releases, the model is fully interactive and scroll is never captured again. | `#explore` · `top top` → `+=60%` | `0.8` | none |
 | S10m | Explorer intro (mobile and tablet) | no pin; the model fades and rises (y 40 → 0) once | `#explore` · `top 75%` | once | 1.0 / power3.out |
@@ -729,7 +841,7 @@ The scroll pace varies on purpose: fast and light through the facts; slow and ed
 - Counters show the final values immediately.
 - Explorer: no camera fly. Floor and unit changes cross-fade over 0.2 s. No auto-rotate. The drag-to-turn control stays, because it is user-initiated.
 - Flip filtering is instant. Dialogs open without scale.
-- Film (rev 5): the hero card shows its poster only (no loop, no sources fetched, no pause toggle). The sound toggle still works, with static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
+- Hero (rev 6): **the poster only**: no video sources, no curtain, no `.hero__bg` scale, no S1, no play-disc breath, and the pause toggle is hidden. The shade and grain stay, because they are static. The play control and the sound toggle work; the sound toggle shows static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
 - `scroll-behavior: auto`. Anchor jumps are instant.
 - Use `gsap.matchMedia()` conditions `{ motion: "(prefers-reduced-motion: no-preference)" }` so everything is set up once and reverts cleanly when the setting changes.
 
@@ -925,13 +1037,13 @@ Floor outline (union of the units and cores, for the 3D slab):
 | JS, explorer tier 2 | **≤ 170 KB** | `three` imported via named ESM imports (tree-shaken) plus the scene code. Loaded only near `#explore` and only for tier 2. |
 | JS, plan viewer | ≤ 4 KB | Dynamic import on first "View plan" (or idle prefetch). |
 | Fonts (initial) | ≤ 110 KB | Cormorant (latin, variable) plus Manrope (latin). Ethiopic loads **only** on /am, subset to the `am` dictionary glyphs (target ≤ 60 KB), preloaded there only. Cormorant italic is a static 500-weight latin file (≈ 20 KB), not preloaded. |
-| Hero image (LCP) | ≤ 70 KB at 390w AVIF, ≤ 160 KB at 1440w | Preloaded; `fetchpriority="high"`. |
+| Hero poster (LCP, rev 6) | **14–40 KB** WebP (now 17 KB); JPEG fallback ≤ 40 KB (now 29 KB) | `public/video/hero-bg-poster.*`, 640×352. Preloaded, `fetchpriority="high"`. The lower bound keeps it above Chrome's 0.05 bits-per-pixel LCP threshold at 1920×1080 (§5.1). |
+| Hero background loop (rev 6) | ≤ 1.2 MB AV1 WebM (now 1.0 MB), ≤ 1.2 MB H.264 MP4 (now 1.15 MB) | 640×352, 24 fps, 20.6 s, no audio. Requested at `DOMContentLoaded` only under the §5.1 conditions; never preloaded; zero bytes with reduced motion, Save-Data, a slow connection or no JS. Only one of the two files is fetched. |
+| Hero grain (rev 6) | ≤ 4 KB PNG (now 3 KB) | `public/img/grain.png`, from `docs/design/hero-grain.png`. |
 | Other images | lazy; plan thumbs ≤ 45 KB each (AVIF 600w); viewer images ≤ 250 KB each, loaded on open | `astro:assets` `<Picture formats={['avif','webp']}>` with `widths` and `sizes` on every image. |
 | Key-plan duotone | ≤ 120 KB at 1100w WebP | Lazy; loads with the explorer section. |
-| Film card poster (rev 5) | ≤ 15 KB WebP (now 10 KB) | In the hero HTML via `poster`, `fetchpriority` left at default (never `high`). It is far smaller than the arch render, so it can never become the LCP element. |
-| Film preview loop (rev 5) | ≤ 450 KB AV1 WebM (now 415 KB), ≤ 600 KB H.264 MP4 fallback (now 551 KB) | Never part of the initial load: fetched only after `load` + idle, and only under the §5.11 conditions. Zero bytes with reduced motion, Save-Data, a slow connection or no JS. |
 | Full film (rev 5) | 3.8 MB H.264 + AAC (faststart), plus a ≤ 35 KB poster | `preload="none"`. Fetched only when the dialog opens. Faststart means it plays progressively. |
-| Film JS (rev 5) | ≤ 4 KB | Part of the app bundle: card loader, dialog, FLIP, sound toggle. Uses GSAP, which is already loaded. No video or audio library. |
+| Film JS (rev 5, rev 6) | ≤ 4 KB | Part of the app bundle: background loader, dialog, circle reveal, sound toggle. Uses GSAP, which is already loaded. No video or audio library. |
 | Film music (rev 5) | ≤ 260 KB (Opus WebM 252 KB, AAC M4A fallback 258 KB) | Zero bytes until the first press of the sound toggle. Only one of the two files is ever fetched. |
 
 Targets: LCP ≤ 2.5 s and CLS ≤ 0.02 on Lighthouse mobile (slow 4G, Moto G Power); TBT ≤ 150 ms; INP ≤ 200 ms. Lighthouse scores per CLAUDE.md.
@@ -958,7 +1070,7 @@ Rules:
 - Film (rev 5): the pause control for the autoplaying loop (2.2.2), the modal dialog's focus behaviour, the text description and the captions track are all specified in §5.11.
 - TBC states (rev 5) are conveyed in text, never by the hatch or dashed lines alone.
 - New rev 5 strings, to be added to both dictionaries with the Amharic flagged for client review:
-  - film: "Watch the film", "The tower film", "Close film", "Pause preview", "Play preview", the film description, `[Music]`
+  - film: "Watch the film", "The tower film", "Close film", "Pause background film", "Play background film" (rev 6, replacing the "preview" strings), "Background film" (the group label), the film description, `[Music]`
   - sound: "Film music", "Sound on", "Sound off", "Sound couldn't start"
   - features: the four feature labels
   - TBC: "To be confirmed", the TBC body, "Ask about this home", "See BL01 on floor {n}", the form hint
