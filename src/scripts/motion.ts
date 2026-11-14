@@ -199,32 +199,6 @@ function cardReveals(): Reveal[] {
   });
 }
 
-/** S13: roads draw (clip-path), pins pop, labels fade. */
-function mapReveal(): Reveal[] {
-  const map = document.querySelector<HTMLElement>('[data-map]');
-  if (!map) return [];
-  const roads = map.querySelector('[data-map-roads]');
-  const pins = map.querySelectorAll('[data-map-pin]');
-  const labels = map.querySelectorAll('[data-map-label]');
-  return [
-    {
-      el: map,
-      hide: () => {
-        gsap.set(roads, { clipPath: 'inset(0% 100% 0% 0%)' });
-        gsap.set(pins, { scale: 0, transformOrigin: '50% 50%' });
-        gsap.set(labels, { opacity: 0 });
-      },
-      play: () => {
-        gsap
-          .timeline()
-          .to(roads, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.4, ease: 'power2.inOut' })
-          .to(pins, { scale: 1, duration: 0.5, ease: 'back.out(2)', stagger: 0.1 }, '-=0.4')
-          .to(labels, { opacity: 1, duration: 0.5, stagger: 0.06 }, '-=0.2');
-      },
-    },
-  ];
-}
-
 /** S15: pillar icons draw left → right (clip-path), text follows. */
 function pillarReveals(): Reveal[] {
   const grid = document.querySelector<HTMLElement>('[data-pillars]');
@@ -472,7 +446,7 @@ export function initMotion() {
         guard(() => heroScrub(desktop)),
         guard(() => revealOnce([...factsReveal(), ...eyebrowReveals()], cleanups)),
         guard(() => revealOnce([...headingReveals(), ...blockReveals()], cleanups)),
-        guard(() => revealOnce([...cardReveals(), ...mapReveal(), ...pillarReveals(), ...featureReveals(), ...formReveal()], cleanups)),
+        guard(() => revealOnce([...cardReveals(), ...pillarReveals(), ...featureReveals(), ...formReveal()], cleanups)),
         guard(() => {
           storyArch();
           paymentTimeline(window.matchMedia('(min-width: 768px)').matches);

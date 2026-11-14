@@ -1,10 +1,10 @@
 ---
 /**
- * Location (DESIGN §5.6 rev 7). The visual is a Leaflet satellite map (Esri World Imagery) with a pin at the client's
- * coordinates, loaded by src/scripts/location-map.ts when the section is within 800 px. The server-rendered SVG
- * diagram is the only fallback (no JS, before the map is ready, slow connection or Save-Data with a "Show the
- * satellite map" pill, tile failure); the two never show together. Diagram positions are schematic (from the
- * brochure map) and landmarks are never plotted on the satellite map. The list below is the accessible version.
+ * Location (DESIGN §5.6 rev 7, rev 8.5 user request). The visual is always the Leaflet satellite map (Esri World
+ * Imagery) with a pin at the client's coordinates, loaded by src/scripts/location-map.ts when the section is within
+ * 800 px (no cost at page load). The stylised diagram is gone. With no JS, before the map is ready, or when the tiles
+ * fail, the frame shows a small fallback card instead: the pin, the name, and the two Maps links. The caption belongs
+ * to the satellite image only. Landmarks are never plotted on the map; the list below is the accessible version.
  */
 import Eyebrow from '../ui/Eyebrow.astro';
 import { sections } from '../../data/sections';
@@ -17,15 +17,6 @@ interface Props {
 const { lang } = Astro.props;
 const t = getDict(lang);
 
-// diagram space 400 × 500 (4:5)
-const SITE = { x: 112, y: 286 };
-const nodes = [
-  { key: 'garmentTaxiStation', x: 214, y: 150, align: 'right' },
-  { key: 'haileGarmentRoundabout', x: 270, y: 280, align: 'below' },
-  { key: 'laftoSquare', x: 262, y: 384, align: 'right' },
-  { key: 'africaCdc', x: 362, y: 214, align: 'left' },
-] as const;
-const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
 // The client's pin (site.location.mapsUrl) wins; without it, search the office address if set, else the brief's query
 const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') : site.location.mapsQuery;
 const l = t.location;
@@ -41,7 +32,6 @@ const mapConfig = {
   t: {
     region: l.mapRegion,
     card: l.pinCard,
-    caption: l.captionMap,
     two: l.twoFingers,
     in: l.zoomIn,
     out: l.zoomOut,
@@ -91,63 +81,32 @@ const mapConfig = {
       class="location__map arch arch--soft"
       data-map
       data-map-config={JSON.stringify(mapConfig)}
-      data-show-map={l.showMap}
     >
       <div class="arch__media location__media">
-        <div class="map" role="img" aria-label={t.location.mapLabel}>
-          <svg class="map__svg" viewBox="0 0 400 500" aria-hidden="true" focusable="false">
-            <g class="map__roads" data-map-roads>
-              <!-- main road: site → roundabout -->
-              <path d="M-10 296 C 60 292, 150 288, 244 282" />
-              <!-- roundabout → north (taxi station) -->
-              <path d="M262 256 C 248 210, 232 176, 208 120 S 170 30, 160 -10" />
-              <!-- roundabout → south (Lafto) -->
-              <path d="M276 306 C 274 350, 266 400, 258 510" />
-              <!-- ring road, east -->
-              <path d="M330 -10 C 312 120, 312 200, 322 260 S 360 420, 372 510" />
-              <!-- roundabout → east -->
-              <path d="M296 278 C 320 274, 360 266, 410 258" />
-              <!-- local streets -->
-              <path class="map__minor" d="M70 -10 C 82 120, 96 210, 104 300 S 116 440, 120 510" />
-              <path class="map__minor" d="M-10 420 C 100 410, 180 400, 262 392" />
-              <path class="map__minor" d="M120 180 C 160 170, 190 160, 214 150" />
-              <circle class="map__ring" cx="270" cy="280" r="26" />
-            </g>
-            <g class="map__pins">
+        <!-- fallback (no JS, before the map is ready, tile failure): hidden by location-map.ts once the map shows -->
+        <div class="location__fallback theme-dusk" data-map-fallback>
+          <div class="location__card">
+            <svg class="location__card-pin" viewBox="0 0 40 52" aria-hidden="true">
+              <path d="M20 50C14 40 3 31 3 20a17 17 0 1 1 34 0c0 11-11 20-17 30Z" />
+              <path class="location__card-key" transform="translate(20 20) scale(1.4)" d="M0-8a4.6 4.6 0 0 1 2.6 8.4L4.4 8h-8.8l1.8-7.6A4.6 4.6 0 0 1 0-8Z" />
+            </svg>
+            <p class="location__card-title">{l.pinCard}</p>
+            <ul class="location__card-links" role="list">
               {
-                nodes.map((n) => (
-                  <g class="map__pin" data-map-pin transform={`translate(${n.x} ${n.y})`}>
-                    <circle r="6" />
-                  </g>
+                ctas.map((c) => (
+                  <li>
+                    <a class:list={['btn', { 'btn--secondary': !c.primary }]} href={c.href} target="_blank" rel="noopener">
+                      {c.label}
+                      <span class="visually-hidden"> {t.a11y.newTab}</span>
+                    </a>
+                  </li>
                 ))
               }
-            </g>
-            <g class="map__site" transform={`translate(${SITE.x} ${SITE.y})`}>
-              <circle class="map__pulse" r="16" data-map-pulse />
-              <circle class="map__site-dot" r="16" />
-              <!-- keyhole -->
-              <path class="map__keyhole" d="M0-8a4.6 4.6 0 0 1 2.6 8.4L4.4 8h-8.8l1.8-7.6A4.6 4.6 0 0 1 0-8Z" />
-            </g>
-          </svg>
-          <div class="map__labels" aria-hidden="true">
-            <span class="map__label map__label--site" style={`left:${pct(SITE.x, 400)};top:${pct(SITE.y + 30, 500)}`} data-map-label>
-              {t.location.site}
-            </span>
-            {
-              nodes.map((n) => (
-                <span
-                  class={`map__label map__label--${n.align}`}
-                  style={`left:${pct(n.x, 400)};top:${pct(n.y, 500)}`}
-                  data-map-label
-                >
-                  {t.location.landmarks[n.key]}
-                </span>
-              ))
-            }
+            </ul>
           </div>
         </div>
       </div>
-      <figcaption class="small muted location__caption" data-map-caption>{l.caption}</figcaption>
+      <figcaption class="small muted location__caption" data-map-caption hidden>{l.captionMap}</figcaption>
     </figure>
 
     <div class="location__aside">
@@ -193,122 +152,51 @@ const mapConfig = {
     height: auto;
   }
 
-  .map {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-
-  .map__svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .map__roads path {
-    fill: none;
-    stroke: var(--line-strong);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-    stroke-linecap: round;
-  }
-
-  .map__roads .map__minor {
-    stroke-width: 1;
-    stroke-dasharray: 3 4;
-  }
-
-  .map__ring {
-    fill: none;
-    stroke: var(--navy-800);
-    stroke-opacity: 0.4;
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .map__pin circle {
-    fill: var(--navy-800);
-    stroke: var(--ivory-50);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .map__site-dot {
-    fill: var(--gold-500);
-  }
-
-  .map__keyhole {
-    fill: var(--navy-900);
-  }
-
-  .map__pulse {
-    fill: var(--gold-500);
-    opacity: 0;
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .map__pulse {
-      animation: pulse 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-      animation-play-state: paused;
-    }
-
-    .map[data-onscreen] .map__pulse {
-      animation-play-state: running;
-    }
-  }
-
-  @keyframes pulse {
-    from {
-      opacity: 0.5;
-      transform: scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: scale(2.2);
-    }
-  }
-
-  .map__labels {
+  /* the fallback (rev 8.5): navy-900 filling the frame's box (no layout shift when the live map covers it) */
+  .location__fallback {
     position: absolute;
     inset: 0;
-    pointer-events: none;
+    display: grid;
+    place-items: center;
+    padding: 30% var(--space-5) var(--space-5); /* clear of the arch's dome */
+    background: var(--navy-900);
+    color: var(--ivory-50);
   }
 
-  .map__label {
-    position: absolute;
-    width: max-content; /* labels near the edge must not shrink-to-fit into a sliver */
-    max-width: 9.5rem;
-    font-size: clamp(0.6875rem, 0.6rem + 0.35vw, 0.8125rem);
-    font-weight: 600;
-    line-height: 1.25;
-    color: var(--navy-800);
-    background: rgb(251 247 242 / 0.85);
-    padding: 0.15em 0.4em;
-    border-radius: var(--radius-xs);
-    transform: translate(10px, -50%);
-  }
-
-  .map__label--left {
-    transform: translate(calc(-100% - 10px), -50%);
-    text-align: end;
-  }
-
-  .map__label--below {
-    transform: translate(-50%, 34px);
+  .location__card {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-4);
+    width: min(100%, 320px);
     text-align: center;
   }
 
-  .map__label--site {
-    transform: translate(-50%, 0);
-    font-family: var(--font-display);
-    font-size: clamp(0.95rem, 0.85rem + 0.4vw, 1.15rem);
-    color: var(--gold-700);
-    background: none;
+  .location__card-pin {
+    width: 40px;
+    height: 52px;
+    fill: var(--gold-500);
+    stroke: var(--ivory-50);
+    stroke-width: 2;
   }
 
-  :global(:lang(am)) .map__label--site {
-    font-family: var(--font-body);
+  .location__card-key {
+    fill: var(--navy-900);
+    stroke: none;
+  }
+
+  .location__card-title {
+    font: 600 17px/1.3 var(--font-body);
+  }
+
+  .location__card-links {
+    display: grid;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  .location__card-links .btn {
+    width: 100%;
+    white-space: normal;
   }
 
   .location__caption {
@@ -363,23 +251,10 @@ const mapConfig = {
     }
   }
 
-  /* the live map fills the diagram's box (no layout shift); built by location-map.ts */
+  /* the live map fills the frame (no layout shift); built by location-map.ts */
   .location__media :global(.lmap) {
     position: absolute;
     inset: 0;
-  }
-
-  /* slow connection / Save-Data: the diagram plus this pill over its lower third */
-  .location__media :global(.location__show) {
-    position: absolute;
-    left: 50%;
-    bottom: 18%;
-    z-index: 2;
-    transform: translateX(-50%);
-    max-width: calc(100% - 32px);
-    background: var(--ivory-50);
-    white-space: normal;
-    text-align: center;
   }
 
   .location__list {
@@ -425,11 +300,5 @@ const mapConfig = {
 
 <script>
   import { initLocationMap } from '../../scripts/location-loader';
-
-  // S14: the diagram's site pulse runs only while it is on screen
-  const map = document.querySelector<HTMLElement>('.map');
-  if (map && 'IntersectionObserver' in window) {
-    new IntersectionObserver(([e]) => map.toggleAttribute('data-onscreen', Boolean(e?.isIntersecting))).observe(map);
-  }
   initLocationMap();
 </script>

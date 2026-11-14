@@ -1,11 +1,12 @@
 /**
  * Satellite map (DESIGN §5.6 + S13/S14, rev 7). Imported by location-loader.ts; brings Leaflet 1.9.4 and its CSS.
  * - Esri World Imagery, no labels overlay; the attribution is always visible (bottom right).
- * - Built at z15 at opacity 0 over the diagram (z17 with reduced motion). The entrance runs once the first tiles
- *   have loaded AND the map is at top 75%: fade in (the diagram is then hidden and the caption swaps), flyTo z17
+ * - Built at z15 at opacity 0 over the fallback card (z17 with reduced motion, Save-Data or a slow connection: no
+ *   fly-in). The entrance runs once the first tiles have loaded AND the map is at top 75%: fade in (the fallback card
+ *   is then hidden and the satellite caption shows), flyTo z17
  *   over 2 s, then the pin drops, the card follows and the ground ring pulses (CSS, map.css).
  * - Failure (no first `load` within 10 s, or more than half of the first view's tiles erroring): the map is removed
- *   and the diagram stays, silently.
+ *   and the fallback card stays, silently.
  * - No scroll trap: no wheel zoom; on a coarse pointer one finger scrolls the page (no dragging), two fingers pinch
  *   and pan, and a one-finger touch shows the "two fingers" hint.
  */
@@ -18,18 +19,19 @@ interface MapConfig {
   lat: number;
   lng: number;
   tiles: string;
-  t: Record<'region' | 'card' | 'caption' | 'two' | 'in' | 'out' | 'centre', string>;
+  t: Record<'region' | 'card' | 'two' | 'in' | 'out' | 'centre', string>;
 }
 
 const ATTRIBUTION =
   'Powered by <a href="https://www.esri.com">Esri</a> | Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
 const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-const KEYHOLE = 'M0-8a4.6 4.6 0 0 1 2.6 8.4L4.4 8h-8.8l1.8-7.6A4.6 4.6 0 0 1 0-8Z'; // the diagram pin's keyhole
+const KEYHOLE = 'M0-8a4.6 4.6 0 0 1 2.6 8.4L4.4 8h-8.8l1.8-7.6A4.6 4.6 0 0 1 0-8Z'; // the brand's keyhole
 const FADE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'; // power2.out
 
 let mounted = false;
 
-export function mountMap(fig: HTMLElement, focus: boolean) {
+/** `direct`: open at z17 with no fly-in (Save-Data or a slow connection; reduced motion does the same). */
+export function mountMap(fig: HTMLElement, direct: boolean) {
   if (mounted) return;
   mounted = true;
   const style = document.createElement('style');
@@ -37,7 +39,7 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
   document.head.append(style);
   const cfg = JSON.parse(fig.dataset.mapConfig ?? '{}') as MapConfig;
   const media = fig.querySelector<HTMLElement>('.location__media')!;
-  const diagram = media.querySelector<HTMLElement>('.map');
+  const fallback = media.querySelector<HTMLElement>('[data-map-fallback]');
   const caption = fig.querySelector<HTMLElement>('[data-map-caption]');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -51,8 +53,8 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
 
   const map = L.map(el, {
     center: centre,
-    // rev 7.1: opened from the Save-Data / slow-connection pill → straight at z17 (no z15 tiles), like reduced motion
-    zoom: reduced || focus ? 17 : 15,
+    // Save-Data / slow connection (rev 8.5: no pill, it just loads) → straight at z17 (no z15 tiles), like reduced motion
+    zoom: reduced || direct ? 17 : 15,
     minZoom: 14,
     maxZoom: 19,
     maxBounds: L.latLngBounds([cfg.lat - d, cfg.lng - d], [cfg.lat + d, cfg.lng + d]),
@@ -82,7 +84,7 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
     errorTileUrl: BLANK,
   });
 
-  /* ---------- failure → the diagram stays ---------- */
+  /* ---------- failure → the fallback card stays ---------- */
   let started = 0;
   let failed = 0;
   let loaded = false;
@@ -125,20 +127,19 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
   io.observe(fig);
 
   function enter() {
-    if (entered || !tilesReady || !(inView || focus)) return;
+    if (entered || !tilesReady || !inView) return;
     entered = true;
     io.disconnect();
     el.inert = false;
     el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: reduced ? 200 : 600, easing: FADE, fill: 'forwards' })
       .finished.then(() => {
-        if (diagram) diagram.hidden = true;
-        if (caption) caption.textContent = cfg.t.caption;
-        if (reduced || focus) return drop();
+        if (fallback) fallback.hidden = true;
+        if (caption) caption.hidden = false;
+        if (reduced || direct) return drop();
         map.once('moveend', drop);
         map.flyTo(centre, 17, { duration: 2 });
       })
       .catch(() => undefined);
-    if (focus) el.focus({ preventScroll: true });
   }
 
   /* ---------- pin, card, ground ring ---------- */
