@@ -3,8 +3,9 @@
  * 3D apartment inputs (DESIGN §9.6.1 rev 8). Run with `npm run assets:units`; outputs are committed.
  * For every docs/design/units/{id}.json:
  * - copies the geometry to src/data/units3d/{id}.json (imported dynamically by the explorer)
- * - writes the floor texture to public/units/{id}-floor.avif (≤ 90 KB, the highest quality that fits) and copies the
- *   design WebP next to it as the fallback
+ * - writes the floor texture to public/units/{id}-floor.avif at the highest quality that fits ≤ 90 KB AND under the
+ *   design WebP (browsers fetch the AVIF first, so it must never be the bigger file), and copies the WebP next to it
+ *   as the fallback
  */
 import { readdir, copyFile, mkdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -24,13 +25,14 @@ for (const id of ids) {
   const src = r(`docs/design/units/${id}-floor.webp`);
   await copyFile(src, r(`public/units/${id}-floor.webp`));
   const out = r(`public/units/${id}-floor.avif`);
+  const webp = (await stat(src)).size;
+  const limit = Math.min(AVIF_MAX, webp);
   let q = 70;
   for (; q >= 30; q -= 4) {
     await sharp(src).avif({ quality: q, effort: 7, chromaSubsampling: '4:2:0' }).toFile(out);
-    if ((await stat(out)).size <= AVIF_MAX) break;
+    if ((await stat(out)).size <= limit) break;
   }
   const { size } = await stat(out);
-  if (size > AVIF_MAX) throw new Error(`${id}: AVIF is ${size} B even at q${q}`);
-  const webp = (await stat(src)).size;
+  if (size > limit) throw new Error(`${id}: AVIF is ${size} B even at q${q} (limit ${limit} B)`);
   console.log(`${id}: json copied; avif q${q} ${(size / 1024).toFixed(1)} KB; webp ${(webp / 1024).toFixed(1)} KB`);
 }

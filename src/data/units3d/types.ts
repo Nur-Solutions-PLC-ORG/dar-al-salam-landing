@@ -7,7 +7,7 @@ export type P2 = readonly [number, number];
 
 export type WallKind = 'interior' | 'facade' | 'corridor' | 'lightwell';
 
-export type Room3dKey = 'bedroom' | 'masterBedroom' | 'shower' | 'kitchen' | 'store' | 'livingDining' | 'balcony';
+export type Room3dKey = 'bedroom' | 'masterBedroom' | 'shower' | 'kitchen' | 'store' | 'livingDining' | 'balcony' | 'corridor';
 
 export interface Unit3d {
   unit: string;
@@ -22,8 +22,11 @@ export interface Unit3d {
   railings: { id: string; a: P2; b: P2; h: number }[];
   /** `furniture` (rev 8.1): blocks traced over the plan's furniture; the lid reuses the floor texture, `side` colours the sides. */
   solids: { id: string; kind: 'column' | 'shaft' | 'wardrobe' | 'counter' | 'furniture'; poly: P2[]; h: number; side?: string }[];
-  /** `area` is exactly the plan's label; never compute one from the polygon. `label` is the hotspot anchor. */
-  rooms: { id: string; name: Room3dKey; area: number; poly: P2[]; label: P2 }[];
+  /**
+   * `area` is exactly the plan's label; never compute one from the polygon. `label` is the hotspot anchor.
+   * Rev 8.4: `area` is null when the plan's label is illegible; the UI then shows the name only (never the `note`).
+   */
+  rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2 }[];
 }
 
 /** An interior image for a room (DESIGN §9.6.5): rendered only when `approved`, always with the AI label. */

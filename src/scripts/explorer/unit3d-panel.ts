@@ -49,7 +49,8 @@ export function createRoomsPanel(o: {
   const specs = body.querySelector('.unit__specs')!;
   const actions = body.querySelector('.unit__actions')!;
   const nameOf = (key: string) => s.rooms[key] ?? key;
-  const label = (r: Unit3d['rooms'][number]) => `${nameOf(r.name)} · ${o.area(r.area)}`;
+  // rev 8.4: a room whose plan label is illegible (area null) shows its name only, never a guessed area
+  const label = (r: Unit3d['rooms'][number]) => (r.area == null ? nameOf(r.name) : `${nameOf(r.name)} · ${o.area(r.area)}`);
   const added: Element[] = [];
 
   /* ---------- Rooms list ---------- */
@@ -71,7 +72,7 @@ export function createRoomsPanel(o: {
     n.textContent = nameOf(r.name);
     const a = document.createElement('span');
     a.className = 'tabular';
-    a.textContent = o.area(r.area);
+    a.textContent = r.area == null ? '' : o.area(r.area);
     b.append(n, a);
     b.addEventListener('click', () => o.onSelect(r.id));
     b.addEventListener('pointerenter', () => o.onHover(r.id));

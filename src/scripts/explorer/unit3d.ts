@@ -425,7 +425,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     b.style.setProperty('--i', String(i));
     b.setAttribute('aria-pressed', 'false');
     b.innerHTML = '<span class="u3d-spot__dot" aria-hidden="true"></span><span class="u3d-spot__pill"></span>';
-    b.lastElementChild!.textContent = `${o.names[r.name] ?? r.name} · ${o.area(r.area)}`;
+    const name = o.names[r.name] ?? r.name;
+    b.lastElementChild!.textContent = r.area == null ? name : `${name} · ${o.area(r.area)}`; // rev 8.4: no m² when illegible
     b.addEventListener('click', () => o.onRoom(r.id));
     b.addEventListener('pointerenter', () => setHl(r.id, false));
     b.addEventListener('pointerleave', () => setHl(null, false));

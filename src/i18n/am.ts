@@ -174,6 +174,7 @@ export const am: Dict = {
     store: 'ዕቃ ማስቀመጫ',
     livingDining: 'ሳሎንና የመመገቢያ ክፍል',
     balcony: 'በረንዳ',
+    corridor: 'ኮሪደር',
   },
   location: {
     eyebrow: 'አካባቢ',

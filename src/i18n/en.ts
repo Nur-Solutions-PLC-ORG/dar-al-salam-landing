@@ -182,6 +182,7 @@ export const en = {
     store: 'Store',
     livingDining: 'Living and dining room',
     balcony: 'Balcony',
+    corridor: 'Corridor',
   },
   location: {
     eyebrow: 'Location',
