@@ -561,7 +561,7 @@ Hotspot styles:
 
 | State | Fill | Stroke | Label |
 |---|---|---|---|
-| Rest | transparent | `--input-border` 1.5 px (`vector-effect: non-scaling-stroke`) | Manrope 600, 34 px in SVG units, navy |
+| Rest | sand-100 at 0.5 | `--input-border` 1.5 px (`vector-effect: non-scaling-stroke`) | Manrope 600, 46 px in SVG units, navy |
 | Hover/focus | gold-500 at 0.28 | gold-600, 2 px | navy pill showing `BL05 · 3 bed · 169.23 m²` |
 | Selected | gold-500 at 0.45 | gold-600, 2 px | gold pill |
 | Dimmed (another unit selected) | ivory at 0.35 | — | 50% opacity |
@@ -569,7 +569,7 @@ Hotspot styles:
 - Fill transitions are CSS opacity on a duplicate polygon layer, so we never tween colour.
 - Focus ring: `outline` isn't reliable on SVG `<a>`, so use a `:focus-visible` stroke of 3 px in gold-600.
 - Hit areas are the polygons themselves. The smallest unit is about 360×400 SVG px, which is about 75×80 CSS px at mobile width, so tapping works.
-- At 34 SVG units, the in-plan labels render at about 9 px on a 360 px phone. Below a rendered plan width of 520 px, hide the `<text>` labels and rely on the unit chips, which are always visible, plus the selected-unit pill.
+- In-plan labels (rev 3, as built): 46 SVG units, shown at rest whenever the rendered plan is ≥ 260 px wide (the height-capped plan is 280–420 px, so the earlier 520 px threshold never triggered). Below 260 px, hide the `<text>` labels and rely on the unit chips, which are always visible, plus the selected-unit pill. Unit polygons have a resting fill of sand-100 at 0.5 under the gold hover layer.
 - Hotspots are server-rendered with `href="#unit-blXX"`, which points at the matching card in the homes section (`id="unit-bl05"`), so they work without JS. JS intercepts the click (`preventDefault`), updates the explorer state and writes `#explore/f7/bl05` with `history.replaceState`. The hash must never trigger a native or Lenis scroll jump.
 - On "Find on a floor" from the gallery, the target hotspot pulses twice (scale 1 → 1.03 → 1, `transform-origin` at its centroid, 0.4 s ×2).
 
