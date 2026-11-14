@@ -52,6 +52,7 @@ Assets in `brand-source/`:
     - Pilot on **BL05** first, then the other 8 types. Fallback stays the current 2D plan viewer (no WebGL, reduced motion, Save-Data).
   - **User requests, 2026-11-15:**
     - **Location: always the satellite map.** Remove the old stylised SVG diagram completely, and drop the Save-Data/slow-connection opt-in pill, so the live satellite map always loads (still lazily, near the section). If JS is off or tiles fail, show a simple card (pin glyph, place name, Get directions / Open in Google Maps), not the diagram.
+    - **Remove the "Contact us on Telegram" card** from Book a visit (and its "or send us your details" divider). The form's Telegram hand-off replaces it. The Telegram rows in the header menu and footer stay.
     - **Enquiry form → Telegram, nicely formatted.** On submit, open `https://t.me/abdulaziz_a12?text=<message>` so the visitor only has to press Send in Telegram. The message is a friendly, well-formatted multi-line note built from every field the visitor filled in (greeting with their name, phone, home type/unit, floor, message), skipping empty fields, in the page language.
   - **Building features (confirmed):** garbage chute on every floor, standby lift, underground water, parking. Basement parking is also shown on the plans. Use the wording "underground water"; don't specify borehole vs tank.
 - **Tower film:** `brand-source/video/` (rendered fly-through, 41 s, 640×352, H.264 with a music track). It's low resolution, so never show it full-bleed or stretched; see DESIGN for the treatment.
