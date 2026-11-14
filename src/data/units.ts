@@ -147,10 +147,6 @@ export const floorComposition = (floor: number): FloorComposition =>
     { twoBed: 0, threeBed: 0, tbc: 0 },
   );
 
-/** The nearest floor where `code` is confirmed; ties go to the lower floor (1–5 → 4, 7 → 6, 12–14 → 11). */
-export const nearestConfirmedFloor = (floor: number, code: UnitCode) =>
-  floorsOf(code).reduce((best, f) => (Math.abs(f - floor) < Math.abs(best - floor) ? f : best));
-
 /** Plan floors where a home type is confirmed. */
 export const floorsOf = (code: UnitCode): readonly number[] =>
   units.find((u) => u.code === code)?.confirmedOn ?? planFloors;
