@@ -147,10 +147,26 @@ function create() {
 
   /* ---------- content ---------- */
   let loadToken = 0;
+  let current: UnitData | null = null;
+  const steps = dialog.querySelectorAll<HTMLButtonElement>('[data-viewer-step]');
+
+  /** Contain-fit the whole plan with 24 px padding; this size is zoom 1× (the floor), reset returns to it. */
+  const fitImage = () => {
+    if (!current) return;
+    const W = stage.clientWidth - 48;
+    const H = stage.clientHeight - 48;
+    const k = Math.max(0.01, Math.min(W / current.w, H / current.h));
+    img.style.width = `${Math.round(current.w * k)}px`;
+    img.style.height = `${Math.round(current.h * k)}px`;
+  };
+
   const show = (i: number) => {
     idx = (i + codes.length) % codes.length;
     const u = units.find((x) => x.code === codes[idx]) ?? units[0]!;
+    current = u;
+    fitImage();
     reset(false);
+    steps.forEach((b) => (b.disabled = codes.length < 2));
     $('[data-viewer-code]').textContent = u.type;
     $('[data-viewer-title]').textContent = f(t.title ?? '', { code: u.code });
     $('[data-viewer-gross]').textContent = u.gross;
@@ -182,16 +198,15 @@ function create() {
         img.src = u.full;
         img.removeAttribute('data-blur');
         loading.hidden = true;
+        fitImage();
       });
   };
 
-  dialog.querySelectorAll<HTMLButtonElement>('[data-viewer-step]').forEach((b) =>
-    b.addEventListener('click', () => show(idx + Number(b.dataset.viewerStep))),
-  );
+  steps.forEach((b) => b.addEventListener('click', () => show(idx + Number(b.dataset.viewerStep))));
 
   dialog.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') show(idx + 1);
-    else if (e.key === 'ArrowLeft') show(idx - 1);
+    if (e.key === 'ArrowRight' && codes.length > 1) show(idx + 1);
+    else if (e.key === 'ArrowLeft' && codes.length > 1) show(idx - 1);
     else if (e.key === '+' || e.key === '=') zoomAt(s * 1.5, centre().cx, centre().cy);
     else if (e.key === '-' || e.key === '_') zoomAt(s / 1.5, centre().cx, centre().cy);
     else if (e.key === '0') reset();
@@ -222,7 +237,11 @@ function create() {
     if (form) scrollToTarget(form);
   });
 
-  window.addEventListener('resize', () => dialog.open && apply());
+  window.addEventListener('resize', () => {
+    if (!dialog.open) return;
+    fitImage();
+    apply();
+  });
 
   return {
     open(code: string, list: string[], from: HTMLElement | null) {

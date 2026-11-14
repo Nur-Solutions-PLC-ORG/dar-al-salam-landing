@@ -234,8 +234,8 @@ const filters = [
 
   .card__media {
     background: var(--sand-100);
-    padding: var(--space-5);
-    padding-top: calc(28cqi * 0.5 + var(--space-4));
+    padding: 24px;
+    padding-top: calc(28cqi * 0.5 + 24px);
   }
 
   .card__media :global(picture),
@@ -245,7 +245,9 @@ const filters = [
     object-fit: contain;
   }
 
+  /* static multiply: the white plan paper takes the sand tone of the arch frame (design QA) */
   .card__media :global(img) {
+    mix-blend-mode: multiply;
     transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 

@@ -137,22 +137,23 @@ const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFo
     cursor: grabbing;
   }
 
+  /* sand background on the transformed layer itself: will-change isolates it, so the plan's multiply
+     blend needs its backdrop here, not on the stage */
   .viewer__pan {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    padding: var(--space-5);
+    background: var(--sand-100);
     transform-origin: 0 0;
     will-change: transform;
   }
 
+  /* sized by viewer.ts (contain fit = 1×); white paper takes the sand tone */
   .viewer__img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
+    max-width: none;
     object-fit: contain;
+    mix-blend-mode: multiply;
     user-select: none;
     -webkit-user-drag: none;
   }
@@ -238,6 +239,11 @@ const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFo
   .viewer__cta {
     justify-self: start;
     white-space: normal;
+  }
+
+  .viewer__nav .viewer__btn:disabled {
+    opacity: 0.35;
+    cursor: default;
   }
 
   .viewer__nav {

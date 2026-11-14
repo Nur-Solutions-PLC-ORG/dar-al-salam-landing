@@ -164,7 +164,7 @@ export const en = {
     eyebrow: 'Why Dar Al Salam',
     pillars: {
       generous: { title: 'Generous homes', body: '158–171 m² gross, 2 and 3 bedrooms, a separate shower room per bath.' },
-      balconies: { title: 'Homes with balconies', body: 'The plans show balconies, for light and air.' },
+      balconies: { title: 'Homes with balconies', body: 'The plans show balconies.' },
       lifts: { title: 'Lift lobbies', body: 'A lift lobby with two or more lifts, and stairs, in each block.' },
       parking: { title: 'Basement parking', body: 'Plus offices below and commercial space at ground level.' },
     },
