@@ -27,17 +27,18 @@ Assets in `brand-source/`:
 
 | Code | Type | Gross m² | Net m² | Rooms |
 |---|---|---|---|---|
-| BL01 | 2 bedroom | 158.54 | 108.57 | living/dining, master bed, 1 bed, kitchen, 2 baths |
-| BL02 | 3 bedroom | 166.97 | 117.00 | living/dining, master, 1 bed, kitchen, 2 baths, store/bedroom |
+| BL01 | 2 bedroom | 158.54 | 108.57 | living/dining, 2 bedrooms (plan labels both "Bedroom"), kitchen, corridor, 2 shower rooms |
+| BL02 | 3 bedroom | 166.97 | 117.00 | living/dining, 2 bedrooms (both "Bedroom" on the plan), kitchen, corridor, 2 shower rooms, store (the brief's "store/bedroom") |
 | BL03 | 3 bedroom | 166.97 | 117.00 | living/dining, master, 2 beds, kitchen, 2 baths, store |
-| BL04 | 3 bedroom | 166.97 | 117.00 | living/dining, master, 1 bed, kitchen, 2 baths, store/bedroom |
+| BL04 | 3 bedroom | 166.97 | 117.00 | living/dining, 2 bedrooms (both "Bedroom" on the plan), kitchen, corridor, 2 shower rooms, store (the brief's "store/bedroom") |
 | BL05 | 3 bedroom | 169.23 | 119.05 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 | BL06 | 3 bedroom | 171.18 | 121.21 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 | BL07 | 3 bedroom | 169.24 | 119.27 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 | BL08 | 3 bedroom | 167.63 | 117.66 | living/dining, master, 2 beds, kitchen, 2 baths, store |
-| BL09 | 3 bedroom | 168.55 | 118.54 | living/dining, master, 2 beds, kitchen, 2 baths, store |
+| BL09 | 3 bedroom | 168.55 | 118.54 | living/dining, master, 2 beds, kitchen, 2 shower rooms, plus an unlabelled wet room (WC + shower) off the kitchen; **no store** on the plan |
 
-  Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01 and BL04 label their bedrooms and living/dining "PARQUET ff"** (BL04 shares BL01's artwork), with ceramic in the kitchen, corridor, showers and balconies.
+  Room lists corrected 2026-11-15 against the plans (review round 7). Some plan area labels don't match the drawn space (e.g. BL02's bottom balcony 2.68 m², BL03 master 15.82 m², BL03 living 26.41 m², BL02 second bedroom 13.14 m²); the site shows the labels as printed and these go to the client.
+  Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01, BL02 and BL04 label their bedrooms (and BL01/BL04 their living/dining) "PARQUET ff"** (BL04 shares BL01's artwork), with ceramic in the kitchen, corridor, showers and balconies.
 - **Update 2026-11-14 (from the client, via the user):**
   - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
   - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
