@@ -39,6 +39,11 @@ export interface Unit {
   hotspot: { points: readonly (readonly [number, number])[]; centroid: readonly [number, number] };
   /** Internal grouping only (DESIGN §9.1 rev 2): never rendered in the UI. */
   block: 'north' | 'south';
+  /**
+   * Plan floors where this home is confirmed (BRIEF update 2026-11-14). Omitted = every plan floor.
+   * On the other floors its position is `'tbc'`: shown as "to be confirmed", never as another type or missing.
+   */
+  confirmedOn?: readonly number[];
 }
 
 const twoBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedroom', 'kitchen', 'bathrooms2'];
@@ -48,8 +53,11 @@ const threeBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedrooms
 /** Source: docs/BRIEF.md. */
 type UnitBase = Omit<Unit, 'hotspot' | 'block'>;
 
+/** BRIEF update 2026-11-14: the 2-bedroom home (BL01) is confirmed only on these floors. */
+export const twoBedFloors: readonly number[] = [4, 6, 8, 10, 11];
+
 const base: readonly UnitBase[] = [
-  { code: 'BL01', id: 'bl01', bedrooms: 2, gross: 158.54, net: 108.57, rooms: twoBed, plan: bl01 },
+  { code: 'BL01', id: 'bl01', bedrooms: 2, gross: 158.54, net: 108.57, rooms: twoBed, plan: bl01, confirmedOn: twoBedFloors },
   { code: 'BL02', id: 'bl02', bedrooms: 3, gross: 166.97, net: 117.0, rooms: threeBedFlex, plan: bl02 },
   { code: 'BL03', id: 'bl03', bedrooms: 3, gross: 166.97, net: 117.0, rooms: threeBed, plan: bl03 },
   { code: 'BL04', id: 'bl04', bedrooms: 3, gross: 166.97, net: 117.0, rooms: threeBedFlex, plan: bl04 },
@@ -62,7 +70,10 @@ const base: readonly UnitBase[] = [
 
 const NORTH = new Set<UnitCode>(['BL01', 'BL02', 'BL03', 'BL04']);
 
-/** The 9 apartment types on every residential floor (assumption, DESIGN §9.1: all floors use the typical plan). */
+/**
+ * The 9 apartment types of the typical floor plan (DESIGN §9.1: plan floors 1–14 use it). BL01 is confirmed only
+ * on `twoBedFloors`; see `slotStatus()` for what a given floor holds.
+ */
 export const units: readonly Unit[] = base.map((u) => {
   const h = (hotspots.units as Record<string, { points: number[][]; centroid: number[] }>)[u.code];
   if (!h) throw new Error(`keyplan-hotspots.json: missing ${u.code}`);
@@ -81,9 +92,70 @@ export const keyplan = keyplanDuotone;
 /** DESIGN §9.3: crops the empty margin and grid bubbles. */
 export const keyplanViewBox = '100 60 1200 1840';
 
-/** Residential floors 1–14. */
-export const residentialFloors: readonly number[] = Array.from({ length: 14 }, (_, i) => i + 1);
+/**
+ * Floors the explorer shows: 1–14, the typical floors we have plans for. The tower has 16 floors
+ * (site.project.floors) with a 16th floor planned; there is no per-floor breakdown above 14 (don't invent one).
+ */
+export const PLAN_FLOORS = 14;
+export const planFloors: readonly number[] = Array.from({ length: PLAN_FLOORS }, (_, i) => i + 1);
 
+/* ---------- per-floor composition ---------- */
+
+/** 'confirmed' = this home type is on this floor; 'tbc' = what sits in this position is not confirmed yet. */
+export type SlotStatus = 'confirmed' | 'tbc';
+
+export interface FloorSlot {
+  code: UnitCode;
+  status: SlotStatus;
+  /** null when the position is to be confirmed. */
+  bedrooms: 2 | 3 | null;
+}
+
+export interface FloorComposition {
+  twoBed: number;
+  threeBed: number;
+  tbc: number;
+}
+
+const assertPlanFloor = (floor: number) => {
+  if (!Number.isInteger(floor) || floor < 1 || floor > PLAN_FLOORS) throw new Error(`No plan for floor ${floor}`);
+};
+
+export const slotStatus = (floor: number, code: UnitCode): SlotStatus => {
+  assertPlanFloor(floor);
+  const u = units.find((x) => x.code === code);
+  if (!u) throw new Error(`Unknown unit ${code}`);
+  return !u.confirmedOn || u.confirmedOn.includes(floor) ? 'confirmed' : 'tbc';
+};
+
+/** The nine positions of a plan floor, in unit order. */
+export const floorSlots = (floor: number): FloorSlot[] =>
+  units.map((u) => {
+    const status = slotStatus(floor, u.code);
+    return { code: u.code, status, bedrooms: status === 'confirmed' ? u.bedrooms : null };
+  });
+
+/** e.g. floor 4 → { twoBed: 1, threeBed: 8, tbc: 0 }; floor 3 → { twoBed: 0, threeBed: 8, tbc: 1 }. */
+export const floorComposition = (floor: number): FloorComposition =>
+  floorSlots(floor).reduce<FloorComposition>(
+    (c, s) => {
+      if (s.status === 'tbc') c.tbc++;
+      else if (s.bedrooms === 2) c.twoBed++;
+      else c.threeBed++;
+      return c;
+    },
+    { twoBed: 0, threeBed: 0, tbc: 0 },
+  );
+
+/** The nearest floor where `code` is confirmed; ties go to the lower floor (1–5 → 4, 7 → 6, 12–14 → 11). */
+export const nearestConfirmedFloor = (floor: number, code: UnitCode) =>
+  floorsOf(code).reduce((best, f) => (Math.abs(f - floor) < Math.abs(best - floor) ? f : best));
+
+/** Plan floors where a home type is confirmed. */
+export const floorsOf = (code: UnitCode): readonly number[] =>
+  units.find((u) => u.code === code)?.confirmedOn ?? planFloors;
+
+/** Number of home *layouts* (plan types) per bedroom count, for the Homes filter: 1 × 2-bed, 8 × 3-bed. */
 export const unitMix = {
   twoBed: units.filter((u) => u.bedrooms === 2).length,
   threeBed: units.filter((u) => u.bedrooms === 3).length,

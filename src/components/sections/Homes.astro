@@ -9,8 +9,8 @@ import { Picture, getImage } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
 import PlanViewer from '../explorer/PlanViewer.astro';
 import { sections } from '../../data/sections';
-import { units, unitMix, formatArea } from '../../data/units';
-import { emph, fmt, getDict, type Lang } from '../../i18n';
+import { units, unitMix, formatArea, twoBedFloors } from '../../data/units';
+import { emph, floorList, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -50,6 +50,9 @@ const filters = [
               </button>
             ))
           }
+        </div>
+        <div class="homes__filternote" aria-live="polite">
+          <p class="small muted" data-filter-note="2" hidden>{fmt(t.homes.twoBedNote, { floors: floorList(twoBedFloors, lang) })}</p>
         </div>
         <button type="button" class="sort" aria-pressed="false" data-sort>
           {t.homes.sortBySize}
@@ -95,6 +98,7 @@ const filters = [
                 {formatArea(u.gross, lang)} {t.homes.gross.toLowerCase()} · {formatArea(u.net, lang)} {t.homes.net.toLowerCase()}
               </p>
               <p class="card__rooms small muted">{u.rooms.map((r) => t.rooms[r]).join(' · ')}</p>
+              {u.confirmedOn && <p class="card__floors small">{fmt(t.homes.onFloors, { floors: floorList(u.confirmedOn, lang) })}</p>}
               <div class="card__actions">
                 <a class="link card__view" href={full[i]!.src} data-open-plan={u.code} target="_blank" rel="noopener">
                   {t.homes.viewPlan}
@@ -278,6 +282,22 @@ const filters = [
 
   .card__areas {
     font-size: var(--fs-small);
+  }
+
+  .card__floors {
+    font-weight: 600;
+    color: var(--gold-700);
+  }
+
+  /* rev 5: under the chip row while "2 bedroom" is active (aria-live wrapper always present) */
+  .homes__filternote {
+    order: 3;
+    flex-basis: 100%;
+    margin-top: calc(-1 * var(--space-4)); /* takes no room while empty; stays in the a11y tree */
+  }
+
+  .homes__filternote p {
+    padding-top: var(--space-2);
   }
 
   .card__actions {

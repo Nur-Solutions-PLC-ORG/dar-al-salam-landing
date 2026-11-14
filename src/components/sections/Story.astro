@@ -6,7 +6,8 @@ import Eyebrow from '../ui/Eyebrow.astro';
 import balconies from '../../assets/generated/story-balconies.jpg';
 import keyplan from '../../assets/plans/keyplan-duotone.png';
 import { sections } from '../../data/sections';
-import { emph, getDict, type Lang } from '../../i18n';
+import { twoBedFloors } from '../../data/units';
+import { emph, floorList, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -41,7 +42,7 @@ const t = getDict(lang);
 
     <div class="story__body prose" data-reveal>
       <p class="lead">{t.story.p1}</p>
-      <p>{t.story.p2}</p>
+      <p>{fmt(t.story.p2, { floors: floorList(twoBedFloors, lang) })}</p>
     </div>
 
     <figure class="story__keyplan" data-reveal>

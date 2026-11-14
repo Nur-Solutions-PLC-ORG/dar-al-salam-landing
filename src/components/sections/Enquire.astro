@@ -10,9 +10,9 @@ import Eyebrow from '../ui/Eyebrow.astro';
 import heroTower from '../../assets/generated/hero-tower.jpg';
 import Arch from '../ui/Arch.astro';
 import { sections } from '../../data/sections';
-import { units } from '../../data/units';
+import { planFloors, units } from '../../data/units';
 import { enquiryChannels, mailtoHref, site, telHref, telegramHref, whatsappHref } from '../../data/site';
-import { emph, fmt, getDict, type Lang } from '../../i18n';
+import { emph, floorList, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -42,7 +42,14 @@ const i18n = {
   errName: e.errors.name,
   errPhone: e.errors.phone,
   channels: channelLabel,
+  tbcHint: e.tbcHint,
+  unitTbc: e.unitTbc,
 };
+// rev 5 (DESIGN §5.8): homes confirmed only on some floors → floor hint + "(to be confirmed)" in the message
+const confirmedOn = Object.fromEntries(units.filter((u) => u.confirmedOn).map((u) => [u.code, u.confirmedOn]));
+i18n.tbcHint = Object.keys(confirmedOn).length
+  ? fmt(e.tbcHint, { floors: floorList(units.find((u) => u.confirmedOn)!.confirmedOn!, lang) })
+  : e.tbcHint;
 const config = {
   whatsapp: c.whatsapp.replace(/\D/g, ''),
   telegram: c.telegram.replace(/^@/, ''),
@@ -95,6 +102,7 @@ const config = {
       data-enquiry
       data-i18n={JSON.stringify(i18n)}
       data-config={JSON.stringify(config)}
+      data-confirmed={JSON.stringify(confirmedOn)}
       aria-describedby={channels.length ? undefined : 'enquire-unavailable'}
     >
       {
@@ -139,8 +147,9 @@ const config = {
           <label for="enq-floor">{e.floor}</label>
           <select id="enq-floor" name="floor">
             <option value="">{e.any}</option>
-            {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => <option value={n}>{n}</option>)}
+            {planFloors.map((n) => <option value={n}>{n}</option>)}
           </select>
+          <p class="field__hint small muted" id="enq-floor-hint" data-floor-hint hidden></p>
         </div>
       </div>
 

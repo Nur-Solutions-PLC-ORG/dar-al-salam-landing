@@ -13,7 +13,6 @@ import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
 import { createSvgModel } from './svg-model';
 import type { Level, ModelAdapter, ModelCallbacks } from './types';
 
-const FLOORS = 14;
 const CODES = ['BL01', 'BL02', 'BL03', 'BL04', 'BL05', 'BL06', 'BL07', 'BL08', 'BL09'] as const;
 type Code = (typeof CODES)[number];
 
@@ -28,7 +27,11 @@ type I18n = Record<
   | 'bedShort'
   | 'hintTouch'
   | 'hintPointer'
-  | 'hintHover',
+  | 'hintHover'
+  | 'tbc'
+  | 'tbcAria'
+  | 'tbcBody'
+  | 'seeOn',
   string
 >;
 
@@ -52,12 +55,27 @@ export function createExplorer(root: HTMLElement) {
   const hint = $('[data-hint]')!;
   const views = new Map($$('[data-view]').map((v) => [v.dataset.view as Level, v]));
   const floorRows = $$<HTMLButtonElement>('.floors__row');
+  // per plan floor, server-rendered on the floor list: composition text + positions still to be confirmed
+  const rowOf = (n: number) => floorRows.find((r) => Number(r.dataset.floor) === n);
+  const FLOORS = floorRows.length || 14;
+  const mixOf = (n: number) => rowOf(n)?.querySelector('.floors__mix')?.textContent?.trim() ?? '';
+  const tbcOf = (n: number) => new Set((rowOf(n)?.dataset.tbc ?? '').split(' ').filter(Boolean));
   const hotspots = $$<SVGAElement>('.hotspot');
   const chips = $$<HTMLButtonElement>('.chip');
   const cards = new Map($$('[data-unit-card]').map((c) => [c.dataset.unitCard as Code, c]));
   const keyplan = $('[data-keyplan]')!;
   const keyplanSvg = $<SVGSVGElement>('[data-keyplan-svg]');
   const pill = $('[data-keyplan-pill]')!;
+  const tbcCard = $('[data-unit-tbc]');
+  // server-rendered accessible names of the hotspots (a TBC position swaps to t.tbcAria)
+  const stdAria = new Map(hotspots.map((h) => [h.dataset.unit, h.getAttribute('aria-label') ?? '']));
+  /** Floors where `code` is confirmed, read from the floor rows' data-tbc. */
+  const confirmedFloors = (code: Code) =>
+    floorRows.map((r) => Number(r.dataset.floor)).filter((n) => !tbcOf(n).has(code)).sort((a, b) => a - b);
+  /** Nearest confirmed floor; ties go to the lower floor (DESIGN §9.2 rev 5: 1–5 → 4, 7 → 6, 12–14 → 11). */
+  const nearestFloor = (n: number, code: Code) =>
+    confirmedFloors(code).reduce<number | null>((best, f) => (best === null || Math.abs(f - n) < Math.abs(best - n) ? f : best), null) ?? n;
+  const isTbc = (code: string | null, n = state.floor) => Boolean(code && tbcOf(n).has(code));
 
   // unit facts for pills, read once from the hotspot labels the server rendered
   const unitInfo = new Map(
@@ -138,7 +156,7 @@ export function createExplorer(root: HTMLElement) {
     }
     const p = at ?? model.anchor(n);
     if (!p) return;
-    tooltip.textContent = f(t.floorTooltip, { n });
+    tooltip.textContent = f(t.floorTooltip, { n, mix: mixOf(n) });
     tooltip.style.setProperty('--tx', `${Math.min(p.x, stage.clientWidth - 140)}px`);
     tooltip.style.setProperty('--ty', `${p.y}px`);
     tooltip.hidden = false;
@@ -177,17 +195,33 @@ export function createExplorer(root: HTMLElement) {
       pill.hidden = true;
       return;
     }
-    pill.textContent = `${code} · ${unitInfo.get(code as Code) ?? ''}`;
+    pill.textContent = `${code} · ${isTbc(code) ? t.tbc : (unitInfo.get(code as Code) ?? '')}`;
     pill.style.setProperty('--x', h.style.getPropertyValue('--cx'));
     pill.style.setProperty('--y', h.style.getPropertyValue('--cy'));
     pill.toggleAttribute('data-selected', selected);
     pill.hidden = false;
   }
 
+  /** The article shown for UNIT(n, code): the TBC card on a floor where the home isn't confirmed. */
+  const activeCard = () => (isTbc(state.unit) ? tbcCard : state.unit ? cards.get(state.unit) : undefined);
+
   function renderUnit() {
     const where = state.unit ? f(t.unitOnFloor, { n: state.floor, code: state.unit }) : '';
+    const tbc = isTbc(state.unit);
+    if (tbcCard) {
+      tbcCard.hidden = !tbc;
+      if (tbc && state.unit) {
+        const code = state.unit;
+        const m = nearestFloor(state.floor, code);
+        tbcCard.querySelector('[data-unit-where]')!.textContent = where;
+        tbcCard.querySelector('[data-tbc-body]')!.textContent = f(t.tbcBody, { n: state.floor });
+        const see = tbcCard.querySelector<HTMLElement>('[data-see-confirmed]')!;
+        see.dataset.floor = String(m);
+        see.querySelectorAll('.btn__text').forEach((el) => (el.textContent = f(t.seeOn, { code, n: m })));
+      }
+    }
     cards.forEach((card, code) => {
-      const on = code === state.unit;
+      const on = code === state.unit && !tbc;
       card.hidden = !on;
       if (!on) return;
       const w = card.querySelector('[data-unit-where]');
@@ -231,7 +265,14 @@ export function createExplorer(root: HTMLElement) {
   function render(animate = true) {
     root.dataset.state = state.level;
     $('[data-floor-title]')!.textContent = f(t.floorN, { n: state.floor });
-    keyplanSvg?.setAttribute('aria-label', f(t.keyplanLabel, { n: state.floor }));
+    // rev 5: positions not confirmed on this floor (BL01 off floors 4, 6, 8, 10, 11) — in text, not only the hatch
+    hotspots.forEach((h) => {
+      const tbc = isTbc(h.dataset.unit ?? null);
+      h.toggleAttribute('data-tbc', tbc);
+      h.setAttribute('aria-label', tbc ? f(t.tbcAria, { code: h.dataset.unit ?? '', n: state.floor }) : (stdAria.get(h.dataset.unit) ?? ''));
+    });
+    chips.forEach((c) => c.toggleAttribute('data-tbc', isTbc(c.dataset.unit ?? null)));
+    keyplanSvg?.setAttribute('aria-label', f(t.keyplanLabel, { n: state.floor, mix: mixOf(state.floor) }));
     renderView(animate);
     renderStepper();
     renderHotspots();
@@ -259,7 +300,7 @@ export function createExplorer(root: HTMLElement) {
         state.level === 'floor'
           ? $('[data-floor-title]')
           : state.level === 'unit'
-            ? cards.get(state.unit!)?.querySelector<HTMLElement>('[data-unit-title]')
+            ? activeCard()?.querySelector<HTMLElement>('[data-unit-title]')
             : floorRows.find((r) => Number(r.dataset.floor) === state.floor);
       target?.focus({ preventScroll: true });
     }
@@ -341,6 +382,14 @@ export function createExplorer(root: HTMLElement) {
       go({ ...state, unit: next });
     }),
   );
+
+  // TBC card: "See BL01 on floor m" (the nearest floor where it is confirmed)
+  tbcCard?.querySelector<HTMLElement>('[data-see-confirmed]')?.addEventListener('click', (e) => {
+    const b = e.currentTarget as HTMLElement;
+    go({ level: 'unit', floor: Number(b.dataset.floor) || state.floor, unit: b.dataset.seeConfirmed as Code });
+    // same level, so go() doesn't move focus: the TBC card just hid, land on the full card's title
+    activeCard()?.querySelector<HTMLElement>('[data-unit-title]')?.focus({ preventScroll: true });
+  });
 
   // back buttons + breadcrumb
   $$<HTMLButtonElement>('[data-back]').forEach((b) =>
@@ -472,8 +521,11 @@ export function createExplorer(root: HTMLElement) {
     find(code: string, opts: { focus?: boolean } = {}) {
       const c = code.toUpperCase() as Code;
       if (!CODES.includes(c)) return;
-      // the floor view with the unit highlighted (selected) on the current floor, default floor 1
-      go({ level: 'floor', floor: state.level === 'idle' ? 1 : state.floor, unit: c }, { focus: false });
+      // the floor view with the unit highlighted (selected) on the current floor, default floor 1;
+      // a home not confirmed there (BL01) opens its first confirmed floor instead (rev 5: floor 4)
+      const current = state.level === 'idle' ? 1 : state.floor;
+      const floor = isTbc(c, current) ? (confirmedFloors(c)[0] ?? current) : current;
+      go({ level: 'floor', floor, unit: c }, { focus: false });
       const h = hotspots.find((x) => x.dataset.unit === c);
       if (h && opts.focus) h.focus({ preventScroll: true });
       if (h && !prefersReducedMotion()) {

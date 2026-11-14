@@ -16,6 +16,7 @@ interface UnitData {
   w: number;
   h: number;
   alt: string;
+  floors: string;
 }
 
 const MIN = 1;
@@ -171,6 +172,9 @@ function create() {
     $('[data-viewer-title]').textContent = f(t.title ?? '', { code: u.code });
     $('[data-viewer-gross]').textContent = u.gross;
     $('[data-viewer-net]').textContent = u.net;
+    const floors = $('[data-viewer-floors]');
+    floors.textContent = u.floors;
+    floors.hidden = !u.floors;
     const rooms = $('[data-viewer-rooms]');
     rooms.replaceChildren(...u.rooms.map((r) => Object.assign(document.createElement('li'), { textContent: r })));
     $('[data-viewer-request-text]').textContent = f(t.requestFor ?? '', { code: u.code });

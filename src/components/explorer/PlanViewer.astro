@@ -7,7 +7,7 @@
  */
 import { getImage } from 'astro:assets';
 import { units, formatArea } from '../../data/units';
-import { fmt, getDict, type Lang } from '../../i18n';
+import { floorList, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -28,6 +28,8 @@ const data = units.map((u, i) => ({
   thumb: thumbs[i]!.src,
   w: u.plan.width,
   h: u.plan.height,
+  /** rev 5: "On floors 4, 6, 8, 10 and 11" for a home that is only on some floors (BL01). */
+  floors: u.confirmedOn ? fmt(t.homes.onFloors, { floors: floorList(u.confirmedOn, lang) }) : '',
   alt: fmt(t.homes.planAlt, { code: u.code, n: u.bedrooms, rooms: u.rooms.map((r) => t.rooms[r]).join(', ') }),
 }));
 const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFor, loading: t.homes.loading };
@@ -56,6 +58,7 @@ const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFo
       </button>
     </div>
     <h2 class="h3" id="viewer-title" data-viewer-title></h2>
+    <p class="small viewer__floors" data-viewer-floors hidden></p>
     <dl class="viewer__specs tabular">
       <div><dt>{t.homes.grossArea}</dt><dd data-viewer-gross></dd></div>
       <div><dt>{t.homes.netArea}</dt><dd data-viewer-net></dd></div>
@@ -79,6 +82,12 @@ const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFo
 </dialog>
 
 <style>
+  .viewer__floors {
+    margin-top: calc(-1 * var(--space-2));
+    font-weight: 600;
+    color: var(--accent-text);
+  }
+
   .viewer {
     width: 100%;
     max-width: none;

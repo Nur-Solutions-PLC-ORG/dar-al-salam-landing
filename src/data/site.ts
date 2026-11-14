@@ -24,8 +24,10 @@ export interface SiteConfig {
     area: string;
     city: string;
     country: string;
-    residentialFloors: number;
-    apartmentsPerFloor: number;
+    /** Total floors in the tower (BRIEF update 2026-11-14). */
+    floors: number;
+    /** The client is adding a 16th floor: say "16th floor planned"; no plans or breakdown for it yet. */
+    topFloorPlanned: boolean;
     totalApartments: number;
     /** e.g. '2027-12' or 'Q4 2027'. */
     completion: string;
@@ -44,12 +46,19 @@ export interface SiteConfig {
     hours: string;
   };
   location: {
-    /** Google Maps search query; no invented coordinates. */
+    /** The client's Google Maps pin (share link). Preferred for "Open in Google Maps" / "Get directions". */
+    mapsUrl: string;
+    /** Fallback Google Maps search query when no pin is set; no invented coordinates. */
     mapsQuery: string;
     landmarks: readonly LandmarkKey[];
   };
+  /** Confirmed building features, in display order; labels in src/i18n/*.ts under `features.items`. */
+  features: readonly FeatureKey[];
   social: SocialLink[];
 }
+
+/** BRIEF update 2026-11-14 (confirmed). Wording is fixed: "underground water", never borehole/tank. */
+export type FeatureKey = 'garbageChute' | 'standbyLift' | 'undergroundWater' | 'parking';
 
 export type LandmarkKey = 'haileGarmentRoundabout' | 'garmentTaxiStation' | 'laftoSquare' | 'africaCdc';
 
@@ -64,9 +73,9 @@ export const site: SiteConfig = {
     area: 'Garment',
     city: 'Addis Ababa',
     country: 'Ethiopia',
-    residentialFloors: 14,
-    apartmentsPerFloor: 9,
-    totalApartments: 126,
+    floors: 16,
+    topFloorPlanned: true,
+    totalApartments: 126, // unchanged by the 16th floor (BRIEF update 2026-11-14)
     completion: '', // TODO(client): completion date
   },
   contact: {
@@ -78,9 +87,11 @@ export const site: SiteConfig = {
     hours: '', // TODO(client)
   },
   location: {
+    mapsUrl: 'https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9', // client's pin (BRIEF update 2026-11-14)
     mapsQuery: 'Haile Garment, Addis Ababa',
     landmarks: ['haileGarmentRoundabout', 'garmentTaxiStation', 'laftoSquare', 'africaCdc'],
   },
+  features: ['garbageChute', 'standbyLift', 'undergroundWater', 'parking'],
   social: [], // TODO(client): social links
 };
 
@@ -109,8 +120,9 @@ export const mailtoHref = (subject = '', body = '', email = site.contact.email) 
   return `mailto:${email}${qs ? `?${qs}` : ''}`;
 };
 
+/** The client's pin when set; otherwise a Maps search for `query`. Never coordinates. */
 export const mapsHref = (query = site.location.mapsQuery) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  site.location.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 
 export type EnquiryChannel = 'whatsapp' | 'telegram' | 'email';
 

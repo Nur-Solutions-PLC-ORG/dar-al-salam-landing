@@ -12,8 +12,9 @@ import Button from '../ui/Button.astro';
 import Maquette from '../explorer/Maquette.astro';
 import KeyPlan from '../explorer/KeyPlan.astro';
 import { sections } from '../../data/sections';
-import { units, residentialFloors, formatArea } from '../../data/units';
-import { emph, fmt, getDict, plain, type Lang } from '../../i18n';
+import { site } from '../../data/site';
+import { units, planFloors, floorComposition, floorSlots, twoBedFloors, formatArea, unitByCode } from '../../data/units';
+import { emph, floorList, floorMix, fmt, getDict, plain, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
@@ -21,7 +22,18 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = getDict(lang);
-const floorsDesc = [...residentialFloors].reverse();
+const floorsDesc = [...planFloors].reverse();
+const twoBedFloorsText = floorList(twoBedFloors, lang);
+/** Row mix split so the "1 to be confirmed" part can be muted (DESIGN §9.2 rev 5); text = floorMix(). */
+const mixParts = (n: number) => {
+  const c = floorComposition(n);
+  return { main: floorMix({ ...c, tbc: 0 }, t), tbc: c.tbc ? floorMix({ twoBed: 0, threeBed: 0, tbc: c.tbc }, t) : '' };
+};
+/** Homes with a to-be-confirmed position on some floors (BL01): they get a TBC chip variant. */
+const tbcCodes = new Set(planFloors.flatMap((n) => floorSlots(n).filter((s) => s.status === 'tbc').map((s) => s.code)));
+const tbcUnit = unitByCode('BL01')!;
+/** Positions still to be confirmed on a floor (row data-tbc; the controller reads it with the row's mix text). */
+const tbcOf = (n: number) => floorSlots(n).filter((s) => s.status === 'tbc').map((s) => s.code).join(' ') || undefined;
 
 /** Strings the client formats at runtime. */
 const i18n = {
@@ -36,6 +48,10 @@ const i18n = {
   hintTouch: t.explore.hintTouch,
   hintPointer: t.explore.hintPointer,
   hintHover: t.explore.hintHover,
+  tbc: t.explore.tbc,
+  tbcAria: t.explore.tbcAria,
+  tbcBody: fmt(t.explore.tbcBody, { floors: twoBedFloorsText }),
+  seeOn: t.explore.seeOn,
 };
 const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
 ---
@@ -97,14 +113,24 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
         <!-- IDLE: floor list (primary accessible control) -->
         <div class="view view--idle" data-view="idle">
           <h3 class="view__title h3">{t.explore.floorList}</h3>
-          <p class="small muted floors__summary">{t.explore.floorSummary}</p>
+          {
+            site.project.topFloorPlanned && (
+              <p class="small floors__planned">
+                <span class="floors__planned-glyph" aria-hidden="true" />
+                {t.explore.topFloorPlanned}
+              </p>
+            )
+          }
           <ol role="list" class="floors">
             {
               floorsDesc.map((n) => (
                 <li>
-                  <button type="button" class="floors__row" data-floor={n}>
+                  <button type="button" class="floors__row" data-floor={n} data-tbc={tbcOf(n)}>
                     <span class="floors__n">{fmt(t.explore.floorN, { n })}</span>
-                    <span class="floors__mix small">{t.explore.floorSummary}</span>
+                    <span class="floors__mix small">
+                      {mixParts(n).main}
+                      {mixParts(n).tbc && <span class="floors__tbc">{` · ${mixParts(n).tbc}`}</span>}
+                    </span>
                     <svg class="floors__chev" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
                       <path d="M6 3l5 5-5 5" />
                     </svg>
@@ -113,6 +139,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
               ))
             }
           </ol>
+          <p class="small muted floors__twobed">{fmt(t.explore.twoBedOn, { floors: twoBedFloorsText })}</p>
           <p class="small muted floors__legend">{t.explore.legend}</p>
         </div>
 
@@ -146,6 +173,12 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
                       )}
                     </span>
                     <span class="chip__meta tabular">{formatArea(u.gross, lang)}</span>
+                    {tbcCodes.has(u.code) && (
+                      <>
+                        <span class="chip__code chip__tbc-code">{u.code}</span>
+                        <span class="chip__meta chip__tbc-meta">{t.explore.tbc}</span>
+                      </>
+                    )}
                   </button>
                 </li>
               ))
@@ -205,6 +238,20 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
               </article>
             ))
           }
+          <!-- rev 5: BL01 on a floor where it is not confirmed (DESIGN §9.2): no plan, no type, no m² -->
+          <article class="unit unit--tbc" data-unit-tbc aria-labelledby="explore-unit-tbc" hidden>
+            <div class="unit__tbc-plan" style={`aspect-ratio: ${tbcUnit.plan.width} / ${tbcUnit.plan.height}`} aria-hidden="true">
+              <span class="tbc-chip">{t.explore.tbc}</span>
+            </div>
+            <div class="unit__body">
+              <h3 class="eyebrow unit__tbc-title" id="explore-unit-tbc" tabindex="-1" data-unit-title data-unit-where>{tbcUnit.code}</h3>
+              <p class="muted" data-tbc-body>{fmt(t.explore.tbcBody, { n: 1, floors: twoBedFloorsText })}</p>
+              <div class="unit__actions">
+                <Button href="#enquire" data-request={tbcUnit.code}>{t.explore.askAbout}</Button>
+                <Button variant="secondary" data-see-confirmed={tbcUnit.code}>{fmt(t.explore.seeOn, { code: tbcUnit.code, n: twoBedFloors[0]! })}</Button>
+              </div>
+            </div>
+          </article>
           <div class="unit__nav">
             <button type="button" class="link view__back" data-back="floor" data-back-floor-label>
               <span aria-hidden="true">‹</span> <span data-back-floor-text>{t.explore.backToTower}</span>
@@ -528,27 +575,58 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     color: var(--accent-text);
   }
 
+  /* "1 to be confirmed" is muted; the confirmed part keeps the normal text colour (rev 5) */
+  .floors__mix {
+    color: var(--text);
+  }
+
+  .floors__tbc {
+    color: var(--text-muted);
+  }
+
+  .floors__twobed,
   .floors__legend {
     margin-top: calc(-1 * var(--space-2));
   }
 
-  .floors__summary {
-    display: none;
+  .floors__twobed + .floors__legend {
+    margin-top: calc(-1 * var(--space-4));
   }
 
-  /* < 480 px the per-row mix wraps on every row: one summary line instead (design QA #12) */
-  @media (max-width: 479.98px) {
-    .floors__mix {
-      display: none;
-    }
+  /* "16th floor planned": a note, not a row (rev 5); dashed = "not drawn yet", like the TBC hatch */
+  .floors__planned {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 40px;
+    margin-bottom: calc(-1 * var(--space-3));
+    padding-inline: var(--space-2);
+    border-bottom: 1px dashed var(--line);
+    color: var(--text-muted);
+  }
 
+  .floors__planned-glyph {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border: 1px dashed currentColor;
+  }
+
+  /* < 480 px the mix moves under the floor number, so every floor keeps its own composition */
+  @media (max-width: 479.98px) {
     .floors__row {
       grid-template-columns: 1fr auto;
+      row-gap: 0;
     }
 
-    .floors__summary {
-      display: block;
-      margin-top: calc(-1 * var(--space-3));
+    .floors__mix {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .floors__chev {
+      grid-column: 2;
+      grid-row: 1 / span 2;
     }
   }
 
@@ -619,6 +697,58 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
   .chip__meta {
     font-size: 0.75rem;
     color: var(--text-muted);
+  }
+
+  /* rev 5: a to-be-confirmed position (BL01 off floors 4, 6, 8, 10, 11): dashed, muted, no type, no m² */
+  .chip__tbc-code,
+  .chip__tbc-meta,
+  .chip[data-tbc] > :not(.chip__tbc-code, .chip__tbc-meta) {
+    display: none;
+  }
+
+  .chip[data-tbc] > :is(.chip__tbc-code, .chip__tbc-meta) {
+    display: flex;
+  }
+
+  .chip[data-tbc] {
+    box-shadow: none;
+    outline: 1px dashed var(--input-border);
+    outline-offset: -1px;
+    color: var(--text-muted);
+  }
+
+  .chip[data-tbc]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .unit__tbc-plan {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    max-height: 46svh;
+    border-radius: var(--radius-s);
+    background:
+      repeating-linear-gradient(45deg, rgb(26 39 64 / 0.22) 0 1.5px, transparent 1.5px 14px),
+      var(--sand-100);
+  }
+
+  .tbc-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 var(--space-4);
+    border: 1px dashed var(--gold-700);
+    border-radius: var(--radius-pill);
+    background: var(--ivory-50);
+    color: var(--gold-700);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .unit__tbc-title {
+    margin: 0;
   }
 
   /* unit */

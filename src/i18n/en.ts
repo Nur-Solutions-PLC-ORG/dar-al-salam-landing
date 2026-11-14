@@ -8,7 +8,7 @@ export const en = {
   meta: {
     title: 'Dar Al Salam Real Estate | Garment Tower apartments in Addis Ababa',
     description:
-      '2 and 3 bedroom apartments in Garment Tower, Addis Ababa: 14 residential floors, 126 homes, 158–171 m² gross. Flexible payment plans. Book a visit.',
+      '2 and 3 bedroom apartments in Garment Tower, Addis Ababa: 16 floors, 126 homes, 158–171 m² gross. Flexible payment plans. Book a visit.',
     ogAlt: 'Render of Garment Tower by Dar Al Salam Real Estate',
   },
   a11y: {
@@ -45,13 +45,13 @@ export const en = {
     eyebrow: 'Garment · Addis Ababa',
     /** `|` = line break; the H1 is pre-split into masked lines at build time (DESIGN §7.2 rev 2). */
     title: 'A house of|*peace* in the heart|of Garment.',
-    lead: '126 two- and three-bedroom homes across 14 residential floors.',
+    lead: '126 two- and three-bedroom homes across 16 floors.',
     scroll: 'Scroll',
     imageAlt: 'Render of Garment Tower: a white high-rise with dark balconies above a tree-lined street',
   },
   facts: {
     title: 'Key facts',
-    floors: 'Residential floors',
+    floors: 'Floors',
     apartments: 'Apartments',
     typesValue: '2 & 3',
     types: 'Bedroom homes',
@@ -62,28 +62,42 @@ export const en = {
   story: {
     eyebrow: 'The tower',
     title: '*Dar Al Salam* means House of Peace. We designed it to feel that way.',
-    p1: 'Garment Tower stands in the heart of Garment, Addis Ababa: a high-rise in two blocks, with 14 residential floors above a commercial ground floor and basement parking with offices.',
-    p2: 'Each floor holds nine homes of two and three bedrooms, with balconies. Each block has a lift lobby with two or more lifts, and stairs.',
+    p1: 'Garment Tower stands in the heart of Garment, Addis Ababa: a high-rise of 16 floors in two blocks, with a commercial ground floor and basement parking with offices.',
+    /** {floors} = the 2-bedroom floors, formatted with `floorList()`. */
+    p2: 'Most homes are three-bedroom; two-bedroom homes are on floors {floors}. The plans show balconies. Each block has a lift lobby with two or more lifts, and stairs.',
     imageAlt: 'Detail of the tower’s façade: stacked balconies with dark railings',
     keyplanAlt: 'Key plan of a typical floor showing nine apartments in two blocks',
-    keyplanCaption: 'Typical floor: nine homes, two blocks',
+    keyplanCaption: 'Typical floor plan: two blocks',
   },
   explore: {
     eyebrow: 'Explore',
     title: 'Find your floor. Find your *home*.',
     tower: 'Tower',
     floorN: 'Floor {n}',
-    floorSummary: '9 homes · 1 × 2-bed · 8 × 3-bed',
-    floorHomes: '9 homes',
+    /** Per-floor composition (floorMix()): "1 × 2-bed · 8 × 3-bed" or "8 × 3-bed · 1 to be confirmed". */
+    mix2: '{n} × 2-bed',
+    mix3: '{n} × 3-bed',
+    mixTbc: '{n} to be confirmed',
+    /** Floor-list summary; {floors} via floorList(). */
+    twoBedOn: '2-bedroom homes on floors {floors}',
+    topFloorPlanned: '16th floor planned',
+    /** A home position not confirmed yet on this floor (BL01 off the 2-bedroom floors). */
+    tbc: 'To be confirmed',
+    /** Accessible name of a to-be-confirmed hotspot/chip. */
+    tbcAria: '{code}, to be confirmed on floor {n}',
+    /** UNIT view on a to-be-confirmed position (DESIGN §9.2 rev 5); {floors} via floorList(). */
+    tbcBody: 'The home in this position on floor {n} is not confirmed yet. 2-bedroom homes are on floors {floors}.',
+    askAbout: 'Ask about this home',
+    seeOn: 'See {code} on floor {n}',
     legend: 'Ground floor: commercial · Basement: parking & offices',
-    strip: 'Floors 1–14 residential · Ground floor commercial · Basement parking',
+    strip: 'Plans shown for floors 1–14 · 16th floor planned · Ground floor commercial · Basement parking',
     breadcrumb: 'You are here',
     prevFloor: 'Floor below',
     nextFloor: 'Floor above',
     viewFloor: 'View floor {n}',
     backToTower: 'Back to tower',
     backToFloor: 'Back to floor {n}',
-    keyplanLabel: 'Floor {n} key plan: 9 homes',
+    keyplanLabel: 'Floor {n} key plan: {mix}',
     prevUnit: 'Previous home',
     nextUnit: 'Next home',
     unitOnFloor: 'Floor {n} · {code}',
@@ -92,7 +106,7 @@ export const en = {
     hintPointer: 'Hover a floor · drag to turn',
     hintHover: 'Hover or tap a floor',
     bedShort: '{n} bed',
-    floorTooltip: 'Floor {n} · 9 homes',
+    floorTooltip: 'Floor {n} · {mix}',
     typicalFloor: 'Typical floor',
     openPlan: 'Open the full plan of {code}',
     selected: 'selected',
@@ -107,6 +121,10 @@ export const en = {
     filterAll: 'All',
     filter2: '2 bedroom',
     filter3: '3 bedroom',
+    /** Under a home type that is only on some floors (BL01); {floors} via floorList(). */
+    onFloors: 'On floors {floors}',
+    /** Under the filter chips while "2 bedroom" is active; {floors} via floorList(). */
+    twoBedNote: '2-bedroom homes are on floors {floors}.',
     sortBySize: 'By size',
     bedroomsN: '{n} bedroom',
     gross: 'Gross',
@@ -152,6 +170,8 @@ export const en = {
     site: 'Garment Tower',
     mapLabel: 'Diagram of Garment Tower and nearby landmarks',
     openMaps: 'Open in Google Maps',
+    /** When site.location.mapsUrl (the client's pin) is set. */
+    openExact: 'Open exact location in Google Maps',
     nearby: 'Nearby',
     landmarks: {
       haileGarmentRoundabout: 'Haile Garment roundabout',
@@ -166,7 +186,6 @@ export const en = {
       generous: { title: 'Generous homes', body: '158–171 m² gross, 2 and 3 bedrooms, a separate shower room per bath.' },
       balconies: { title: 'Homes with balconies', body: 'The plans show balconies.' },
       lifts: { title: 'Lift lobbies', body: 'A lift lobby with two or more lifts, and stairs, in each block.' },
-      parking: { title: 'Basement parking', body: 'Plus offices below and commercial space at ground level.' },
     },
     title: 'Flexible payment, at your *pace*.',
     steps: {
@@ -176,6 +195,16 @@ export const en = {
     },
     smallPrint: 'Prices on request.',
     stepsLabel: 'How payment works',
+  },
+  features: {
+    title: 'Building features',
+    /** Confirmed by the client (BRIEF update 2026-11-14); exact wordings, don't embellish. */
+    items: {
+      garbageChute: 'Garbage chute on every floor',
+      standbyLift: 'Standby lift',
+      undergroundWater: 'Underground water',
+      parking: 'Parking',
+    },
   },
   enquiry: {
     eyebrow: 'Enquire',
@@ -187,6 +216,10 @@ export const en = {
     floor: 'Floor',
     any: 'Any',
     unitOption: '{code} – {n} bedroom',
+    /** Floor-field hint when a home is chosen on a floor where it is not confirmed (a hint, never an error). */
+    tbcHint: '{code} is a 2-bedroom home on floors {floors}. On floor {n} this home is still to be confirmed.',
+    /** Unit name in the message template in that case. */
+    unitTbc: '{code} (to be confirmed)',
     replyVia: 'Reply via',
     whatsapp: 'WhatsApp',
     telegram: 'Telegram',
@@ -214,6 +247,24 @@ export const en = {
   cursor: {
     view: 'View',
     drag: 'Drag',
+    play: 'Play',
+  },
+  /** Tower film (DESIGN §5.11 rev 5). */
+  film: {
+    watch: 'Watch the film',
+    duration: '0:41',
+    /** Appended to the card link's name (visually hidden). */
+    openSr: ': the tower fly-through, 41 seconds, with music',
+    title: 'The tower film',
+    close: 'Close film',
+    pause: 'Pause preview',
+    play: 'Play preview',
+    desc: 'Rendered fly-through, 0:41, music only. It shows the tower from the street, the entrance and ground floor, and the facade up to the roof. Renders are illustrative and may change.',
+    captionsLabel: 'English',
+    music: 'Film music',
+    soundOn: 'Sound on',
+    soundOff: 'Sound off',
+    soundError: "Sound couldn't start",
   },
   footer: {
     closing: 'Come and see it for *yourself*.',

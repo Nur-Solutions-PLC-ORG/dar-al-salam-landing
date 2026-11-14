@@ -29,10 +29,29 @@ export function initEnquiry() {
   const submit = form.querySelector<HTMLButtonElement>('[data-submit]');
   if (submit) submit.disabled = !(cfg.whatsapp || cfg.telegram || cfg.email);
 
+  /* ---------- rev 5: a home not confirmed on the chosen floor (BL01 off 4, 6, 8, 10, 11): a hint, never an error ---------- */
+  const confirmed = JSON.parse(form.dataset.confirmed ?? '{}') as Record<string, number[]>;
+  const hint = form.querySelector<HTMLElement>('[data-floor-hint]');
+  const unitTbc = () => {
+    const list = confirmed[unit.value];
+    return Boolean(list && floor.value && !list.includes(Number(floor.value)));
+  };
+  const updateHint = () => {
+    if (!hint) return;
+    const on = unitTbc();
+    hint.hidden = !on;
+    hint.textContent = on ? f(t.tbcHint ?? '', { code: unit.value, n: floor.value }) : '';
+    if (on) floor.setAttribute('aria-describedby', hint.id);
+    else floor.removeAttribute('aria-describedby');
+  };
+  unit.addEventListener('change', updateHint);
+  floor.addEventListener('change', updateHint);
+
   /* ---------- prefill ---------- */
   const prefill = (u?: string | null, fl?: string | number | null, focus = false) => {
     if (u && [...unit.options].some((o) => o.value === u.toUpperCase())) unit.value = u.toUpperCase();
     if (fl && [...floor.options].some((o) => o.value === String(fl))) floor.value = String(fl);
+    updateHint();
     if (focus) name.focus({ preventScroll: true });
   };
   const q = new URLSearchParams(location.search);
@@ -83,7 +102,11 @@ export function initEnquiry() {
     const text = f(t.template ?? '', {
       name: name.value.trim(),
       phone: phone.value.trim(),
-      unit: unit.value ? unit.selectedOptions[0]!.textContent!.trim() : (t.anyUnit ?? ''),
+      unit: unit.value
+        ? unitTbc()
+          ? f(t.unitTbc ?? '', { code: unit.value })
+          : unit.selectedOptions[0]!.textContent!.trim()
+        : (t.anyUnit ?? ''),
       floor: floor.value ? f(t.floorN ?? '', { n: floor.value }) : (t.anyFloor ?? ''),
       message: message.value.trim(),
     });

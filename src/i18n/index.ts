@@ -30,3 +30,17 @@ export const emph = (s: string) => escapeHtml(s).replace(/\*([^*]+)\*/g, '<em>$1
 
 /** Strip emphasis markers for plain-text contexts (aria-label, meta). */
 export const plain = (s: string) => s.replace(/\*([^*]+)\*/g, '$1');
+
+/** "4, 6, 8, 10 and 11" / "4፣ 6፣ 8፣ 10 እና 11" (en-GB: no serial comma). */
+export const floorList = (floors: readonly number[], lang: Lang) =>
+  new Intl.ListFormat(lang === 'en' ? 'en-GB' : 'am', { type: 'conjunction' }).format(floors.map(String));
+
+/** Per-floor composition: "1 × 2-bed · 8 × 3-bed" or "8 × 3-bed · 1 to be confirmed" (zero parts omitted). */
+export const floorMix = (c: { twoBed: number; threeBed: number; tbc: number }, t: Dict) =>
+  [
+    c.twoBed && fmt(t.explore.mix2, { n: c.twoBed }),
+    c.threeBed && fmt(t.explore.mix3, { n: c.threeBed }),
+    c.tbc && fmt(t.explore.mixTbc, { n: c.tbc }),
+  ]
+    .filter(Boolean)
+    .join(' · ');

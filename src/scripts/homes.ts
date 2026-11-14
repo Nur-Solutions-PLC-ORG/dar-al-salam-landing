@@ -54,6 +54,8 @@ export function initHomes() {
     if (focus) chip.focus();
     if (filter === chip.dataset.filter) return;
     filter = chip.dataset.filter ?? 'all';
+    // rev 5: "2-bedroom homes are on floors …" only while the 2-bedroom filter is active (live region)
+    root.querySelectorAll<HTMLElement>('[data-filter-note]').forEach((n) => (n.hidden = n.dataset.filterNote !== filter));
     void apply();
   };
   chips.forEach((chip, i) => {

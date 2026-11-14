@@ -25,8 +25,10 @@ const nodes = [
   { key: 'africaCdc', x: 362, y: 214, align: 'left' },
 ] as const;
 const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
-// Maps search: the configured office address if the client supplies one, else the brief's query
+// The client's pin (site.location.mapsUrl) wins; without it, search the office address if set, else the brief's query
 const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') : site.location.mapsQuery;
+// rev 5 (DESIGN §5.6): the pin gets "Open exact location…"; the search fallback keeps "Open in Google Maps"
+const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.openMaps;
 ---
 
 <section id="location" class="section section--alt location" aria-labelledby="location-title" data-header-theme="light">
@@ -100,10 +102,13 @@ const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') 
       <ul class="location__list" role="list" data-reveal="stagger">
         {site.location.landmarks.map((k) => <li>{t.location.landmarks[k]}</li>)}
       </ul>
-      <a class="btn btn--secondary" href={mapsHref(mapsQuery)} target="_blank" rel="noopener">
+      <a class="btn btn--secondary location__maps" href={mapsHref(mapsQuery)} target="_blank" rel="noopener">
+        <svg class="location__pin" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 1.5a4.2 4.2 0 0 1 2.4 7.65L12 14.5H4l1.6-5.35A4.2 4.2 0 0 1 8 1.5Z" />
+        </svg>
         <span class="btn__inner">
-          <span class="btn__text">{t.location.openMaps}</span>
-          <span class="btn__text btn__text--dup" aria-hidden="true">{t.location.openMaps}</span>
+          <span class="btn__text">{mapsLabel}</span>
+          <span class="btn__text btn__text--dup" aria-hidden="true">{mapsLabel}</span>
         </span>
         <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M7 4h9v9M16 4 5 15"></path>
@@ -289,6 +294,23 @@ const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') 
   :global(:lang(am)) .location__nearby {
     letter-spacing: 0;
     font-size: 0.8125rem;
+  }
+
+  /* the longer pin label may wrap at 360 rather than overflow */
+  .location__maps {
+    max-width: 100%;
+    white-space: normal;
+    padding-block: 0.55rem;
+    text-align: start;
+  }
+
+  .location__pin {
+    position: relative;
+    z-index: 1;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    margin-inline-end: -0.25rem;
   }
 
   .location__list {

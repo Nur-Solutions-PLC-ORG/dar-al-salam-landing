@@ -15,7 +15,7 @@ const { lang } = Astro.props;
 const t = getDict(lang);
 
 const facts = [
-  { value: String(site.project.residentialFloors), count: String(site.project.residentialFloors), label: t.facts.floors },
+  { value: String(site.project.floors), count: String(site.project.floors), label: t.facts.floors },
   { value: String(site.project.totalApartments), count: String(site.project.totalApartments), label: t.facts.apartments },
   { value: t.facts.typesValue, label: t.facts.types },
   { value: `${grossRange.min}–${grossRange.max}`, count: `${grossRange.min},${grossRange.max}`, unit: 'm²', label: t.facts.areaLabel },
