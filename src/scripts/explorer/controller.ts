@@ -481,6 +481,11 @@ export function createExplorer(root: HTMLElement) {
       fail3d(err);
       go({ ...state }); // re-render as plan
     }
+    // review r6 #1: the default rule can switch to 3D after go() rendered (tier 2 arrives later), so once the stage
+    // has settled, the toggle and the hash follow the view actually shown
+    if (job !== viewJob) return;
+    renderToggle();
+    if (location.hash.startsWith('#explore')) history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   }
 
   /** U7: desktop stage cols 1–5 → 1–7 with a GSAP Flip; the plan image hides in 3D. */
