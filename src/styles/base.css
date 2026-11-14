@@ -115,6 +115,11 @@ h3 {
   letter-spacing: 0;
 }
 
+/* Ethiopic display sizes read heavy at 600 next to the emphasis: 500 for h1/h2, 600 from h3 down */
+:lang(am) :is(h1, h2, .h2, .display) {
+  font-weight: 500;
+}
+
 :lang(am) :is(h1, h2, h3, .display) em {
   font-style: normal;
   color: var(--accent-text);

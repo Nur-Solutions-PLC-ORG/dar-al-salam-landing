@@ -45,25 +45,30 @@ const t = getDict(lang);
     </div>
 
     <figure class="story__keyplan" data-reveal>
-      <div class="story__keyplan-frame">
+      <Arch class="story__keyplan-frame" soft>
         <Picture
           src={keyplan}
           formats={['avif', 'webp']}
           widths={[240, 360, 480]}
           width={480}
           fallbackFormat="jpg"
-          sizes="(min-width: 1024px) 220px, 180px"
+          sizes="220px"
           alt={t.story.keyplanAlt}
           loading="lazy"
           decoding="async"
         />
-      </div>
-      <figcaption class="small muted">{t.story.keyplanCaption}</figcaption>
+      </Arch>
+      <figcaption class="eyebrow">{t.story.keyplanCaption}</figcaption>
     </figure>
   </div>
 </section>
 
 <style>
+  /* room for the dusk gradient (#explore::before) below the story's last line */
+  .story {
+    padding-bottom: calc(var(--section-y) + 32svh);
+  }
+
   .story__grid {
     row-gap: var(--space-7);
     align-items: start;
@@ -114,26 +119,30 @@ const t = getDict(lang);
     color: var(--text-muted);
   }
 
+  /* design QA #11: the typical floor sits under the paragraphs, 220 px, in a thin soft arch */
   .story__keyplan {
-    display: flex;
-    align-items: center;
+    display: grid;
+    justify-items: start;
     gap: var(--space-4);
+    margin: 0;
   }
 
   .story__keyplan-frame {
-    flex: none;
-    width: 140px;
-    padding: var(--space-3);
-    background: var(--ivory-50);
-    border: 1px solid var(--line);
-    box-shadow: inset 0 0 0 4px var(--ivory-50), inset 0 0 0 5px var(--line);
-    border-radius: var(--radius-xs);
+    width: 220px;
+    aspect-ratio: 1549 / 2140;
   }
 
+  .story__keyplan-frame :global(.arch__media) {
+    padding: 28% 10% 8%;
+    background: var(--ivory-50);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  .story__keyplan-frame :global(picture),
   .story__keyplan-frame :global(img) {
     width: 100%;
-    height: auto;
-    aspect-ratio: 1549 / 1940;
+    height: 100%;
+    object-fit: contain;
   }
 
   @media (min-width: 768px) {
@@ -175,8 +184,5 @@ const t = getDict(lang);
       grid-column: 1 / 7;
     }
 
-    .story__keyplan-frame {
-      width: 180px;
-    }
   }
 </style>

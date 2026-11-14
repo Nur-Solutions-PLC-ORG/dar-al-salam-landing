@@ -14,7 +14,6 @@
  *   [data-facts-rule]        S3 hairline draw
  *   [data-hero-*]            S1 hero scrub
  *   [data-story-arch]        S7/S8 arch clip + parallax
- *   [data-dusk-veil]         S9 ivory → navy veil into #explore
  *   [data-magnetic]          §6 magnetic buttons (fine pointers)
  */
 import { gsap } from 'gsap';
@@ -347,12 +346,15 @@ function heroScrub(desktop: boolean) {
 function storyArch() {
   for (const arch of gsap.utils.toArray<HTMLElement>('[data-story-arch]')) {
     const clip = arch.querySelector('.arch__clip');
+    const outline = arch.querySelector('.arch__outline');
     const img = arch.querySelector('img');
     const par = arch.querySelector('[data-parallax-media]');
-    gsap
+    const tl = gsap
       .timeline({ scrollTrigger: { trigger: arch, start: 'top 85%', end: 'top 35%', scrub: 0.6 }, defaults: { ease: 'none' } })
       .fromTo(clip, { clipPath: 'inset(18% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)' }, 0)
       .fromTo(img, { scale: 1.2 }, { scale: 1 }, 0);
+    // the outline reveals with the media, never floating over empty sand (design QA #10)
+    if (outline) tl.fromTo(outline, { clipPath: 'inset(18% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)' }, 0);
     if (par)
       gsap.fromTo(
         par,
@@ -360,25 +362,6 @@ function storyArch() {
         { yPercent: 6, ease: 'none', scrollTrigger: { trigger: arch, start: 'top bottom', end: 'bottom top', scrub: true } },
       );
   }
-}
-
-function duskVeil() {
-  const veil = document.querySelector<HTMLElement>('[data-dusk-veil]');
-  const explore = document.querySelector('#explore');
-  if (!veil || !explore) return;
-  gsap.set(veil, { visibility: 'visible' });
-  gsap.fromTo(
-    veil,
-    { opacity: 0 },
-    { opacity: 1, ease: 'none', scrollTrigger: { trigger: explore, start: 'top 90%', end: 'top 30%', scrub: true } },
-  );
-  // once the section's own navy fills the viewport, the veil resets
-  ScrollTrigger.create({
-    trigger: explore,
-    start: 'top top',
-    onEnter: () => gsap.set(veil, { visibility: 'hidden' }),
-    onLeaveBack: () => gsap.set(veil, { visibility: 'visible' }),
-  });
 }
 
 function magnetic() {
@@ -456,7 +439,6 @@ export function initMotion() {
         guard(() => revealOnce([...cardReveals(), ...mapReveal(), ...pillarReveals(), ...formReveal()], cleanups)),
         guard(() => {
           storyArch();
-          duskVeil();
           paymentTimeline(window.matchMedia('(min-width: 768px)').matches);
         }),
         guard(() => {

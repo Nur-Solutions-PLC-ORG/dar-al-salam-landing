@@ -41,7 +41,6 @@ const heroImage = await responsiveSet(
     <Hero lang={lang} image={heroImage} />
     <Facts lang={lang} />
     <Story lang={lang} />
-    <div class="dusk-veil" aria-hidden="true" data-dusk-veil></div>
     <Explore lang={lang} />
     <Homes lang={lang} />
     <Location lang={lang} />
@@ -57,14 +56,4 @@ const heroImage = await responsiveSet(
     outline: none;
   }
 
-  /* S9: fixed navy veil scrubbed in before the explorer (opacity only; inert without JS) */
-  .dusk-veil {
-    position: fixed;
-    inset: 0;
-    background: var(--navy-900);
-    opacity: 0;
-    pointer-events: none;
-    z-index: 1;
-    visibility: hidden;
-  }
 </style>

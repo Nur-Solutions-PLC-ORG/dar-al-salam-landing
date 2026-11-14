@@ -213,7 +213,18 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
 <style>
   .explore {
     position: relative;
-    z-index: 2; /* above the dusk veil */
+  }
+
+  /* S9 (DESIGN rev 3): a static ivory → navy dusk gradient above the explorer, no JS */
+  .explore::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 32svh;
+    background: linear-gradient(to bottom, rgb(15 24 40 / 0), var(--navy-900));
+    pointer-events: none;
   }
 
   .explore__head {

@@ -65,10 +65,10 @@ const facts = [
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* grid + align-content: end → every label shares one baseline (design QA #8) */
   .facts__item {
-    display: flex;
-    flex-direction: column-reverse;
-    justify-content: flex-end;
+    display: grid;
+    align-content: end;
     gap: var(--space-2);
     padding: var(--space-5) var(--space-4);
     min-width: 0;
@@ -99,27 +99,27 @@ const facts = [
   }
 
   .facts__value {
-    display: flex;
-    align-items: baseline;
-    gap: 0.2em;
+    order: -1;
+    display: block;
+    /* one size for all four numerals; capped so "158–171 m²" fits its cell without wrapping */
     font-family: var(--font-display);
-    font-size: var(--fs-number);
+    font-size: min(var(--fs-number), 11vw);
     font-weight: 400;
     line-height: 1;
     color: var(--text);
-    flex-wrap: wrap;
     white-space: nowrap;
     min-width: 0;
   }
 
-  /* the range is the longest value: smaller so it fits a quarter/half cell from 360 px up */
-  .facts__value--range {
-    font-size: min(var(--fs-number), 10.5vw);
+  @media (min-width: 768px) {
+    .facts__value {
+      font-size: min(var(--fs-number), 5.4vw);
+    }
   }
 
-  @media (min-width: 768px) {
-    .facts__value--range {
-      font-size: min(var(--fs-number), 4.6vw);
+  @media (min-width: 1440px) {
+    .facts__value {
+      font-size: var(--fs-number);
     }
   }
 
@@ -127,8 +127,10 @@ const facts = [
     font-family: var(--font-display);
   }
 
+  /* inline suffix on the numeral's baseline */
   .facts__unit {
-    font-size: 0.4em;
+    margin-left: 0.15em;
+    font-size: 0.38em;
     font-family: var(--font-body);
     font-weight: 500;
     color: var(--text-muted);
@@ -154,7 +156,7 @@ const facts = [
 
   @media (min-width: 768px) {
     .facts__list {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: 1fr 1fr 1fr 1.35fr;
     }
 
     .facts__item:nth-child(n + 3) {

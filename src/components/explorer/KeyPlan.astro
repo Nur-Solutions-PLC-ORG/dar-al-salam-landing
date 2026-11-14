@@ -103,7 +103,7 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
 
   .hotspot__label {
     font-family: var(--font-body);
-    font-size: 40px;
+    font-size: 46px;
     font-weight: 600;
     fill: var(--navy-800);
     pointer-events: none;
@@ -158,8 +158,8 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
     }
   }
 
-  /* in-plan labels show at rest; below ~340 px rendered width they'd be < 11 px: chips + pill take over */
-  @container (max-width: 340px) {
+  /* in-plan labels show at rest; below ~260 px rendered width they'd be < 10 px: chips + pill take over */
+  @container (max-width: 260px) {
     .hotspot__label {
       display: none;
     }
