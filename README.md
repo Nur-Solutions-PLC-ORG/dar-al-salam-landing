@@ -1,6 +1,6 @@
 # Dar Al Salam Real Estate: landing page
 
-Marketing site for the Garment tower in Addis Ababa: 14 residential floors, 126 apartments, 2- and 3-bedroom homes of 158–171 m². English at `/`, Amharic at `/am/` (the Amharic copy is a draft until the client checks it).
+Marketing site for the Garment tower in Addis Ababa: 16 floors (16th floor planned), 126 apartments, 2- and 3-bedroom homes of 158–171 m². English at `/`, Amharic at `/am/` (the Amharic copy is a draft until the client checks it).
 
 ## What's on the page
 - **Hero, facts and story**: the tower render inside the logo's dome shape.
