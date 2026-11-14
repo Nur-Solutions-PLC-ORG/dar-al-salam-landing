@@ -378,7 +378,7 @@ export function createExplorer(root: HTMLElement) {
   window.addEventListener('unit3d:room', (e) => selectRoom((e as CustomEvent<{ id: string | null }>).detail.id));
   const lang = root.dataset.lang ?? 'en';
   const area = (m2: number) =>
-    `${m2.toLocaleString(lang === 'am' ? 'am-ET' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+    `${m2.toLocaleString(lang === 'am' ? 'am-ET' : 'en-US', { maximumFractionDigits: 2 })} m²`; // as the plan writes it: 5, 1.9, 15.82
 
   /** Prefetch on idle once FLOOR is reached and a has3d hotspot is hovered or focused (DESIGN §9.6.3). */
   let prefetched = false;
