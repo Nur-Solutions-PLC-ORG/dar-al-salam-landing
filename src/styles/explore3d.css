@@ -57,3 +57,50 @@
     overflow: visible;
   }
 }
+
+/* rev 9 (A3): the slab's unit hotspots (decorative; the key plan and chips are the controls) */
+.slab-spots {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease 0.3s;
+}
+
+.slab-spots.is-on {
+  opacity: 1;
+}
+
+.slab-spots[hidden] {
+  display: none;
+}
+
+.slab-spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  min-width: 44px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-pill);
+  background: rgb(251 247 242 / 0.88);
+  color: var(--navy-900);
+  font: 600 12px/1 var(--font-body);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.slab-spot:hover,
+.slab-spot.is-selected {
+  border-color: var(--gold-600);
+  background: var(--gold-300);
+}
+
+/* a position not confirmed on this floor (rev 5): dashed */
+.slab-spot[data-tbc] {
+  border-style: dashed;
+  color: var(--stone-500);
+}

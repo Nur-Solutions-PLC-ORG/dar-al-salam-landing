@@ -155,40 +155,85 @@ export function createExplorer(root: HTMLElement) {
   setHint(stage.dataset.tier === 'photo' ? (fine ? t.towerHover : t.towerTap) : fine ? t.hintHover : t.hintTouch);
 
   const loadBtn = $<HTMLButtonElement>('[data-load-3d]')!;
+  /* ---------- rev 9 (A3): the WebGL floor slab, FLOOR state onward; it owns the renderer the dollhouse borrows ---------- */
+  let gl: import('./slab').SlabAdapter | null = null;
   let scenePromise: Promise<boolean> | null = null;
-  /** Tier 2; resolves false when it can't run (the SVG model stays). */
+  /** The floor view's key-plan image (the slab's texture), loaded now if the floor view hasn't shown it yet. */
+  const keyplanImage = async () => {
+    const el = keyplan.querySelector('img');
+    if (!el) throw new Error('no key-plan image');
+    // the panel's own <img> may still be lazy in a hidden view: load its best source into a fresh image
+    el.loading = 'eager';
+    const pick = el.currentSrc || el.srcset.split(',').pop()?.trim().split(' ')[0] || el.src;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = pick;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error(`key-plan image failed: ${pick}`));
+    });
+    return img;
+  };
+  /** Tier 2; resolves false when it can't run (the photo stage stays). */
   const loadScene = () =>
     (scenePromise ??= ((loadBtn.hidden = true),
-    import('./scene')
-      .then(({ createScene }) => createScene($('[data-canvas]')!, stage, callbacks))
-      .then((scene) => {
-        model.destroy();
-        model = scene;
-        model.select(state.level === 'idle' ? null : state.floor);
-        model.setIntro?.(introProgress);
-        stage.dataset.tier = '3d';
-        if (fine) setHint(t.hintPointer);
+    Promise.all([import('./slab'), keyplanImage()])
+      .then(([{ createSlab }, texture]) =>
+        createSlab(host, stage, {
+          texture,
+          onUnit: (code) => pickUnit(code as Code, false),
+          onInteract: () => hint.setAttribute('data-done', ''),
+        }),
+      )
+      .then((slab) => {
+        gl = slab;
         ScrollTrigger.refresh();
+        syncSlab();
         void syncView(); // a unit waiting for 3D (deep link, or the default once tier 2 arrives)
         return true;
       })
       .catch((err: unknown) => {
-        console.warn('[explorer] 3D unavailable, keeping the SVG model', err);
+        console.warn('[explorer] 3D unavailable, keeping the photo stage', err);
         // review r6 #2b: no tier 2 means no unit 3D either: stop offering the toggle
         failed3d = true;
         renderToggle();
         return false;
       })));
+
+  /**
+   * The slab shows from FLOOR state on (tier 2: WebGL, no Save-Data, not a slow connection or low memory). Coming from
+   * the tower it waits for the push-in and lift (A2), then cross-fades in (0.45 s, CSS); back to the tower it goes first.
+   */
+  let slabTimer = 0;
+  let prevLevel: Level = 'idle';
+  let leftTowerAt = 0; // when the visitor left the tower view (the push-in + lift take ~1.25 s)
+  function syncSlab() {
+    const want = state.level !== 'idle';
+    if (want && !gl && webgl && !prefersLightweight()) void loadScene();
+    clearTimeout(slabTimer);
+    if (gl) {
+      gl.setTbc(new Set(CODES.filter((c) => isTbc(c))));
+      gl.setSelected(state.level === 'unit' ? state.unit : null);
+    }
+    const on = want && Boolean(gl);
+    if (on === stage.hasAttribute('data-slab')) return;
+    const apply = () => {
+      stage.toggleAttribute('data-slab', on);
+      gl?.show(on);
+    };
+    const wait = on && !prefersReducedMotion() ? 1250 - (performance.now() - leftTowerAt) : 0;
+    if (wait > 0) slabTimer = window.setTimeout(apply, wait);
+    else apply();
+  }
   // rev 9 (A1): the tower massing no longer loads for the first view (the photo stage replaces it); tier 2 now
   // loads only when the 3D unit view needs its renderer. A4 removes the massing and this button.
   loadBtn.hidden = true;
-  // context loss → back to tier 1
+  // context loss → the photo stage (pushed in on the floor) stays; no WebGL for the rest of the session
   stage.addEventListener('explorer:fallback', () => {
     fail3d();
-    model.destroy();
-    model = createSvgModel(svg, stage, callbacks);
-    model.select(state.level === 'idle' ? null : state.floor);
-    stage.dataset.tier = 'svg';
+    gl?.destroy();
+    gl = null;
+    stage.removeAttribute('data-slab');
     // the plan shows now: drop a /3d from the hash (the same rule as the first render, review r6 #4)
     if (location.hash.startsWith('#explore')) history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   });
@@ -336,6 +381,9 @@ export function createExplorer(root: HTMLElement) {
     renderToggle();
     model.select(state.level === 'idle' ? null : state.floor);
     model.preview(state.level === 'idle' ? null : state.floor);
+    if (prevLevel === 'idle' && state.level !== 'idle') leftTowerAt = performance.now();
+    syncSlab();
+    prevLevel = state.level;
     void syncView();
   }
 
@@ -350,7 +398,7 @@ export function createExplorer(root: HTMLElement) {
   const viewFor = (): View => {
     if (!can3d()) return 'plan';
     if (state.pref) return state.pref;
-    return stage.dataset.tier === '3d' && !prefersReducedMotion() && !prefersLightweight() ? '3d' : 'plan';
+    return gl && !prefersReducedMotion() && !prefersLightweight() ? '3d' : 'plan';
   };
 
   // the "3D | Plan" radiogroup, built per card on first use (it shows only when 3D can run)
@@ -437,7 +485,7 @@ export function createExplorer(root: HTMLElement) {
     rooms = null;
     dh?.destroy();
     dh = dhCode = null;
-    model.suspend?.(false);
+    gl?.suspend(false);
     host.getAnimations().forEach((a) => a.cancel());
     layoutWant = false; // a Flip still loading must not turn the 3D layout back on (review r6 #2)
     flip?.progress(1).kill(); // finishing it clears Flip's inline sizes (S10's panel transform is left alone)
@@ -457,7 +505,7 @@ export function createExplorer(root: HTMLElement) {
     await fade(0, 300);
     d.destroy();
     if (dh === d) dh = dhCode = null;
-    model.suspend?.(false);
+    gl?.suspend(false);
     await fade(1, 300);
     host.getAnimations().forEach((a) => a.cancel());
   }
@@ -465,8 +513,8 @@ export function createExplorer(root: HTMLElement) {
   async function enter3d(code: Code, job: number) {
     if (!(await loadScene())) throw new Error('tier 2 unavailable'); // review r6 #2b: → fail3d → the plan
     if (job !== viewJob) return;
-    const tier = model;
-    if (!tier.renderer || !tier.suspend) throw new Error('no tier 2 renderer');
+    const tier = gl;
+    if (!tier) throw new Error('no tier 2 renderer');
     strings ??= fetch(`/i18n/unit3d.${lang}.json`).then((r) => r.json());
     const [{ createDollhouse, loadFloorImage }, { createRoomsPanel }, { units3d }, s] = await Promise.all([
       import('./unit3d'),
@@ -476,6 +524,9 @@ export function createExplorer(root: HTMLElement) {
     ]);
     const pack = await units3d[code]!();
     const image = await loadFloorImage(code.toLowerCase());
+    if (job !== viewJob) return;
+    // A3: the camera pushes toward the unit on the slab for 0.5 s before the cross-fade
+    if (stage.hasAttribute('data-slab') && !prefersReducedMotion()) await tier.pushTo(code);
     if (job !== viewJob) return;
     await fade(0, 400);
     if (job !== viewJob) return;

@@ -361,7 +361,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     transition: opacity 0.6s var(--ease-out);
   }
 
-  .explore__stage[data-tier='3d'] :global(.maquette) {
+  .explore__stage[data-slab] :global(.maquette) {
     opacity: 0;
   }
 
@@ -373,12 +373,14 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     transition: opacity 0.6s var(--ease-out);
   }
 
-  .explore__stage[data-tier='3d'] .explore__canvas {
+  /* rev 9 (A3): the WebGL slab (and the dollhouse after it) shows from FLOOR state on; 0.45 s cross-fade */
+  .explore__stage[data-slab] .explore__canvas {
     opacity: 1;
     pointer-events: auto;
+    transition-duration: 0.45s;
   }
 
-  .explore__stage[data-tier='3d'] :global(.maquette) {
+  .explore__stage[data-slab] :global(.maquette) {
     pointer-events: none;
   }
 
@@ -416,8 +418,12 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     color: var(--mist-300);
   }
 
-  /* the photo stage gives way to a WebGL scene when one shows (until A3/A4 replace the massing) */
-  .explore__stage[data-tier='3d'] :global(.tstage) {
+  /* the photo stage gives way to the slab (and comes back on the way to the tower) */
+  .explore__stage :global(.tstage) {
+    transition: opacity 0.45s var(--ease-out);
+  }
+
+  .explore__stage[data-slab] :global(.tstage) {
     opacity: 0;
     pointer-events: none;
   }
