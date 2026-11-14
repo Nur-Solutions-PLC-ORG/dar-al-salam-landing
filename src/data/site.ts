@@ -121,9 +121,12 @@ export const whatsappHref = (text = '', number = site.contact.whatsapp) => {
   return `https://wa.me/${n}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 };
 
-/** Telegram has no reliable prefilled-text deep link to a user; text is copied by the form UI instead. */
-export const telegramHref = (username = site.contact.telegram[0] ?? '') =>
-  username ? `https://t.me/${username.replace(/^@/, '')}` : '';
+/**
+ * A chat link to a username. `text` prefills the draft (t.me/{user}?text=…, core.telegram.org/api/links); older
+ * clients ignore it, so the form also copies the message (DESIGN §5.8 rev 7).
+ */
+export const telegramHref = (username = site.contact.telegram[0] ?? '', text = '') =>
+  username ? `https://t.me/${username.replace(/^@/, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '';
 
 /** One entry per configured Telegram account: '@user' for display, the t.me link. */
 export const telegramAccounts = () =>

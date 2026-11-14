@@ -1,7 +1,9 @@
 /**
  * Enquiry form (DESIGN §5.8): validate, build the message, open the chosen channel. Never posts anywhere.
- * - WhatsApp: wa.me/{number}?text=…   - Telegram: t.me/{username} + the text copied to the clipboard + toast
- * - Email: mailto: with subject and body
+ * - WhatsApp: wa.me/{number}?text=…   - Email: mailto: with subject and body
+ * - Telegram (rev 7): t.me/{user}?text=… prefills the draft; the text is also copied (older clients ignore `text`).
+ *   window.open runs synchronously in the submit handler (an awaited copy first loses the user activation and
+ *   Safari blocks the pop-up). Then a persistent "Finish in Telegram" panel, until the form is edited.
  * Prefill: ?unit=BL05&floor=7 on load, and `enquiry:prefill` events (focus moves to Name).
  */
 import { toast } from './toast';
@@ -86,8 +88,64 @@ export function initEnquiry() {
     }),
   );
 
+  /* ---------- Telegram finish panel (rev 7) ---------- */
+  const done = form.querySelector<HTMLElement>('[data-tg-done]');
+  const again = done?.querySelector<HTMLAnchorElement>('[data-tg-again]');
+  const copyBtn = done?.querySelector<HTMLButtonElement>('[data-tg-copy]');
+  const fallback = done?.querySelector<HTMLElement>('[data-tg-fallback]');
+  const fallbackText = done?.querySelector<HTMLTextAreaElement>('[data-tg-text]');
+  const copyLabel = copyBtn?.textContent?.trim() ?? '';
+  let lastText = '';
+  let copyTimer = 0;
+
+  /** "@user" as an ltr, untranslated span, inside a translated sentence. */
+  const withHandle = (s: string, user: string) => {
+    const [before = '', after = ''] = s.split('{handle}');
+    const h = document.createElement('span');
+    h.dir = 'ltr';
+    h.lang = 'en';
+    h.translate = false;
+    h.textContent = `@${user}`;
+    return [before, h, after];
+  };
+  const showFallback = () => {
+    if (!fallback || !fallbackText) return;
+    fallback.hidden = false;
+    fallbackText.value = lastText;
+    fallbackText.style.height = 'auto';
+    fallbackText.style.height = `${fallbackText.scrollHeight + 2}px`;
+  };
+  const showDone = (copied: boolean) => {
+    if (!done) return;
+    const title = document.createElement('strong');
+    title.textContent = t.tgDoneTitle ?? '';
+    status.replaceChildren(title, ' ', ...withHandle(t.tgDoneBody ?? '', cfg.telegram));
+    done.hidden = false;
+    if (fallback) fallback.hidden = true;
+    if (!copied) showFallback();
+  };
+  const hideDone = () => {
+    if (!done || done.hidden) return;
+    done.hidden = true;
+    status.textContent = '';
+  };
+  form.addEventListener('input', (e) => e.target !== fallbackText && hideDone());
+  form.addEventListener('change', (e) => e.target !== fallbackText && hideDone());
+  copyBtn?.addEventListener('click', () => {
+    const p = navigator.clipboard?.writeText(lastText);
+    if (!p) return showFallback();
+    p.then(
+      () => {
+        copyBtn.textContent = t.copiedShort ?? '';
+        clearTimeout(copyTimer);
+        copyTimer = window.setTimeout(() => (copyBtn.textContent = copyLabel), 2000);
+      },
+      showFallback,
+    );
+  });
+
   /* ---------- submit ---------- */
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     const errs = validate();
     if (errs.length) {
@@ -96,7 +154,9 @@ export function initEnquiry() {
       return;
     }
     summary.textContent = '';
-    const channel = (form.querySelector<HTMLInputElement>('input[name="channel"]:checked')?.value ?? '') as Channel;
+    // a radio group with 2+ channels; a hidden input with exactly one
+    const picked = form.elements.namedItem('channel') as RadioNodeList | HTMLInputElement | null;
+    const channel = (picked?.value ?? '') as Channel;
     if (!channel || !cfg[channel]) return;
 
     const text = f(t.template ?? '', {
@@ -121,13 +181,24 @@ export function initEnquiry() {
     if (channel === 'whatsapp') {
       window.open(`https://wa.me/${cfg.whatsapp}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
     } else if (channel === 'telegram') {
+      // both synchronously, in this order, with no await before window.open (user activation)
+      let copy: Promise<void>;
       try {
-        await navigator.clipboard.writeText(text);
-        toast(t.copied ?? '');
-      } catch {
-        /* clipboard blocked: the user can still type the message */
+        copy = navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('no clipboard'));
+      } catch (err) {
+        copy = Promise.reject(err);
       }
-      window.open(`https://t.me/${cfg.telegram}`, '_blank', 'noopener');
+      const url = `https://t.me/${cfg.telegram}?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank', 'noopener');
+      lastText = text;
+      if (again) again.href = url;
+      copy.then(
+        () => {
+          toast(t.copied ?? '');
+          showDone(true);
+        },
+        () => showDone(false),
+      );
     } else {
       const params = new URLSearchParams({ subject: t.subject ?? '', body: text }).toString().replace(/\+/g, '%20');
       window.location.href = `mailto:${cfg.email}?${params}`;
