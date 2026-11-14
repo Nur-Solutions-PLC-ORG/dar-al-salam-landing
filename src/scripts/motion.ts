@@ -364,11 +364,17 @@ function heroScrub(desktop: boolean) {
   if (!hero || !desktop) return;
   gsap
     .timeline({ scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }, defaults: { ease: 'none' } })
-    .to('[data-hero-bg]', { scale: 1.08, yPercent: 6 }, 0)
-    .to('[data-hero-copy]', { y: -80, opacity: 0.2 }, 0);
+    // explicit starting values: these elements may still be mid CSS entrance when this runs (a plain .to()
+    // would record e.g. opacity 0 from the entrance's delay and keep the play control invisible)
+    .fromTo('[data-hero-bg]', { scale: 1, yPercent: 0 }, { scale: 1.08, yPercent: 6 }, 0)
+    .fromTo('[data-hero-copy]', { y: 0, opacity: 1 }, { y: -80, opacity: 0.2 }, 0);
   const play = hero.querySelector('[data-hero-play]');
   if (play)
-    gsap.to(play, { opacity: 0, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: '50% top', scrub: true } });
+    gsap.fromTo(
+      play,
+      { opacity: 1 },
+      { opacity: 0, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: '50% top', scrub: true } },
+    );
 }
 
 function storyArch() {

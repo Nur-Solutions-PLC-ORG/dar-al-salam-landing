@@ -78,6 +78,11 @@ const ogUrl = abs(og.src);
     <!-- Fonts: Manrope everywhere; Cormorant only on EN (the /am H1 is Noto); the Ethiopic subset only on /am/. -->
     <link rel="preload" href="/fonts/manrope-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
     {lang === 'en' && <link rel="preload" href="/fonts/cormorant-garamond-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />}
+    {
+      /* rev 6: the hero is bottom-anchored, so a late italic swap ("peace") re-wraps the H1 and shifts the whole
+         hero (CLS 0.07 in Lighthouse); preloading the 20 KB italic removes the swap */
+      lang === 'en' && <link rel="preload" href="/fonts/cormorant-garamond-italic-500-latin.woff2" as="font" type="font/woff2" crossorigin />
+    }
     {lang === 'am' && <link rel="preload" href="/fonts/noto-sans-ethiopic-subset.woff2" as="font" type="font/woff2" crossorigin />}
 
     {
