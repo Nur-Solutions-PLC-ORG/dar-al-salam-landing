@@ -97,6 +97,13 @@ const config = {
       data-config={JSON.stringify(config)}
       aria-describedby={channels.length ? undefined : 'enquire-unavailable'}
     >
+      {
+        channels.length === 0 && (
+          <p class="form__unavailable" id="enquire-unavailable">
+            {e.unavailable}
+          </p>
+        )
+      }
       <div class="form__summary" role="status" aria-live="polite" data-summary></div>
 
       <div class="field" data-field>
@@ -160,16 +167,10 @@ const config = {
         <textarea id="enq-message" name="message" rows="4"></textarea>
       </div>
 
-      {
-        channels.length === 0 && (
-          <p class="form__unavailable" id="enquire-unavailable">
-            {e.unavailable}
-          </p>
-        )
-      }
-
       <div class="form__submit">
-        <button class="btn" type="submit" disabled={channels.length === 0} data-magnetic>
+        <!-- always disabled in the HTML: without JS the form must never submit name + phone as a GET query;
+             enquiry.ts enables it when at least one channel is configured -->
+        <button class="btn" type="submit" disabled data-magnetic data-submit>
           <span class="btn__inner">
             <span class="btn__text">{e.submit}</span>
             <span class="btn__text btn__text--dup" aria-hidden="true">{e.submit}</span>

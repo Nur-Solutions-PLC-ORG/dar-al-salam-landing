@@ -25,6 +25,10 @@ export function initEnquiry() {
   const status = form.querySelector<HTMLElement>('[data-status]')!;
   const dove = form.querySelector<SVGElement>('[data-dove]');
 
+  // the server renders submit disabled; enable it only when a channel is configured
+  const submit = form.querySelector<HTMLButtonElement>('[data-submit]');
+  if (submit) submit.disabled = !(cfg.whatsapp || cfg.telegram || cfg.email);
+
   /* ---------- prefill ---------- */
   const prefill = (u?: string | null, fl?: string | number | null, focus = false) => {
     if (u && [...unit.options].some((o) => o.value === u.toUpperCase())) unit.value = u.toUpperCase();

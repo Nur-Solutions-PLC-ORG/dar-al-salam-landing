@@ -160,6 +160,8 @@ function create() {
     $('[data-viewer-request-text]').textContent = f(t.requestFor ?? '', { code: u.code });
     $<HTMLAnchorElement>('[data-viewer-request]').dataset.unit = u.code;
     $('[data-viewer-pos]').textContent = `${idx + 1} / ${codes.length}`;
+    // announce plan changes (←/→, prev/next) without moving focus
+    $('[data-viewer-live]').textContent = `${f(t.title ?? '', { code: u.code })}, ${u.type}, ${idx + 1} / ${codes.length}`;
 
     // blurred thumbnail first; the full plan (WebP q82) only now
     const token = ++loadToken;

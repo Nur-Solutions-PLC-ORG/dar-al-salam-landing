@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14 Nov 2026, rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -650,8 +650,8 @@ Floor outline (union of the units and cores, for the 3D slab):
 
 | Item | Budget (gzip/brotli) | Notes |
 |---|---|---|
-| HTML (home) | ≤ 35 KB | Includes the inline SVG maquette and key-plan markup. |
-| CSS | ≤ 25 KB total, critical inlined | Astro inlines small stylesheets automatically. |
+| HTML (home) | ≤ 40 KB | Inline CSS by choice: all CSS is inlined into the HTML, because an external stylesheet would block rendering on first visit. Also includes the inline SVG maquette and key-plan markup. (Raised from 35 KB in rev 4.) |
+| CSS | ≤ 25 KB total, all inlined (counts within the HTML budget above) | Set via Astro `build.inlineStylesheets`. |
 | JS, initial (deferred module) | **≤ 70 KB** | gsap core + ScrollTrigger (about 45 KB), Lenis (about 4 KB), SplitText + Flip (about 12 KB; may be imported on idle), app (about 10 KB). Nothing blocks render. |
 | JS, explorer tier 2 | **≤ 170 KB** | `three` imported via named ESM imports (tree-shaken) plus the scene code. Loaded only near `#explore` and only for tier 2. |
 | JS, plan viewer | ≤ 4 KB | Dynamic import on first "View plan" (or idle prefetch). |

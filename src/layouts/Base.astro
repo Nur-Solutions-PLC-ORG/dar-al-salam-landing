@@ -76,9 +76,9 @@ const ogUrl = abs(og.src);
     {Astro.site && langs.map((l) => <link rel="alternate" hreflang={htmlLang[l]} href={abs(homePath(l))} />)}
     {Astro.site && <link rel="alternate" hreflang="x-default" href={abs(homePath('en'))} />}
 
-    <!-- Fonts: Cormorant + Manrope latin everywhere; the Ethiopic subset only on /am/. -->
+    <!-- Fonts: Manrope everywhere; Cormorant only on EN (the /am H1 is Noto); the Ethiopic subset only on /am/. -->
     <link rel="preload" href="/fonts/manrope-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/cormorant-garamond-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    {lang === 'en' && <link rel="preload" href="/fonts/cormorant-garamond-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />}
     {lang === 'am' && <link rel="preload" href="/fonts/noto-sans-ethiopic-subset.woff2" as="font" type="font/woff2" crossorigin />}
 
     {
