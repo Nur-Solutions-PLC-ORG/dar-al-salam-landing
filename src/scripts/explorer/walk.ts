@@ -939,11 +939,12 @@ export function createWalk(
       camera.fov = FOV;
       apply();
       h.request();
+      o.onArrive(id); // review r8 L9: announce as the view changes, not after the fade back in
       await fade(1);
     } else await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide);
     if (my !== seq) return; // stopped (Esc / Back) or overtaken: no arrival
     void showPano(id);
-    o.onArrive(id);
+    if (!h.reduced && glide) o.onArrive(id);
   };
 
   return {
