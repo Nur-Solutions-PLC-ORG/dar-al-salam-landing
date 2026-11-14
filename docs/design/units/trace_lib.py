@@ -206,7 +206,7 @@ class Unit:
             if r['name'] in CLEAN_ROOMS: A.polygon([sh(P(p)) for p in r['poly']], fill=255)
         if self.hall_poly: A.polygon([sh(P(self.m(*p))) for p in self.hall_poly], fill=255)
         for s in self.solids:
-            if s['kind'] in ('furniture', 'counter', 'wardrobe', 'rug'):
+            if s['kind'] in ('furniture', 'counter', 'wardrobe'):  # rugs are protected exactly by self.protect; don't add them here (it changes the texture)
                 pts = [sh(P(p)) for p in s['poly']]; xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
                 A.rectangle((min(xs) - 10, min(ys) - 10, max(xs) + 10, max(ys) + 10), fill=0)
         for r in self.protect: A.rectangle((r[0] - CX, r[1] - CY, r[2] - CX, r[3] - CY), fill=0)
