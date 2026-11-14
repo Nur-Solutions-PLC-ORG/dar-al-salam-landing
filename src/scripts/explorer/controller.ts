@@ -233,6 +233,34 @@ export function createExplorer(root: HTMLElement) {
     if (wait > 0) slabTimer = window.setTimeout(apply, wait);
     else apply();
   }
+  /**
+   * Rev 10 (T1–T3): the real 3D tower over the photo stage at the tower level. Behind `?tower3d` until floor picking
+   * (T4) lands, so the live page keeps its working photo stage meanwhile. Tier 2 only; any failure keeps the photo.
+   */
+  const towerFlag = new URLSearchParams(location.search).has('tower3d');
+  let tower: import('./tower3d').TowerAdapter | null = null;
+  let towerJob: Promise<void> | null = null;
+  function syncTower() {
+    if (!towerFlag || !photo || !webgl || prefersLightweight() || stage.dataset.tier !== 'photo') return;
+    const on = state.level === 'idle';
+    towerJob ??= import('./tower3d')
+      .then((m) =>
+        m.createTower(photo, {
+          onFail: () => {
+            tower?.destroy();
+            tower = null;
+          },
+        }),
+      )
+      .then((t) => {
+        tower = t;
+        t.show(state.level === 'idle');
+        (window as unknown as { __tower?: unknown }).__tower = t; // QA (flag only)
+      })
+      .catch((err: unknown) => console.warn('[explorer] 3D tower unavailable; keeping the photo stage', err));
+    tower?.show(on);
+  }
+
   // context loss → the photo stage (pushed in on the floor) stays; no WebGL for the rest of the session
   stage.addEventListener('explorer:fallback', () => {
     fail3d();
@@ -388,6 +416,7 @@ export function createExplorer(root: HTMLElement) {
     model.preview(state.level === 'idle' ? null : state.floor);
     if (prevLevel === 'idle' && state.level !== 'idle') leftTowerAt = performance.now();
     syncSlab();
+    syncTower();
     prevLevel = state.level;
     void syncView();
   }

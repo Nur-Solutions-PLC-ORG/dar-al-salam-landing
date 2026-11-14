@@ -16,6 +16,7 @@
     "assets": "node scripts/prepare-assets.mjs",
     "assets:units": "node scripts/prepare-units3d.mjs",
     "assets:tower": "node scripts/prepare-tower-stage.mjs",
+    "assets:tower3d": "node scripts/prepare-tower3d.mjs",
     "fonts": "node scripts/fonts.mjs",
     "astro": "astro"
   },
