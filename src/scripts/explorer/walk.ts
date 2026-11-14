@@ -8,8 +8,31 @@
  * - B2 looking: drag or swipe turns the view (yaw 360°, pitch ±25°, 0.25°/px, inertia 0.9 per frame). On touch the
  *   axis locks after 8 px and a vertical swipe still scrolls the page (touch-action: pan-y). No zoom. "Look left /
  *   Look right" buttons (30°, 0.3 s) and the arrow keys; an optional "Use motion" toggle on phones (off by default).
+ * - B3 the inside look (geometry, until panoramas exist): a lit ceiling, 10 cm skirting, door frames, 5 cm glazing
+ *   jambs, a plain soft sky beyond the glass (no skyline), a warm point light at the room's centroid that moves with
+ *   the room, the camera fill at 40%, gradient "ambient occlusion" strips along wall bases and ceiling corners, and
+ *   furniture derived from the blocks (headboards and mattress steps, sofa backs, counter overhangs). A chip says
+ *   "Simplified 3D model from the floor plan". Everything here is visible only inside.
  */
-import { DoubleSide, Mesh, MeshBasicMaterial, PerspectiveCamera, Quaternion, Shape, ShapeGeometry, Vector3 } from 'three';
+import {
+  BoxGeometry,
+  BufferGeometry,
+  CanvasTexture,
+  DoubleSide,
+  ExtrudeGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshLambertMaterial,
+  PerspectiveCamera,
+  PlaneGeometry,
+  PointLight,
+  Quaternion,
+  Shape,
+  ShapeGeometry,
+  Vector3,
+} from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { WalkHost } from './unit3d';
 import type { P2 } from '../../data/units3d/types';
 
@@ -50,6 +73,7 @@ export interface Walk {
 const DEG = Math.PI / 180;
 const PITCH = 25 * DEG;
 const STEP = 30 * DEG;
+const LAMP = 6; // r187 units, tuned in a settled capture so the walls read about sand-100, not clipped and not grey
 
 export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void; strings: Record<string, string> }): Walk {
   const { camera, data, uniforms: U } = h;
@@ -58,12 +82,183 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
   // ceiling: the footprint at full storey height, fading in at the end of the fly-in
   const s = new Shape();
   data.footprint.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z)));
-  // unlit ivory for now: seen from below, a Lambert ceiling only gets the hemisphere's navy ground (B3 lights it)
-  const ceilMat = new MeshBasicMaterial({ color: '#EFE8DE', side: DoubleSide, transparent: true, opacity: 0 });
+  // B3: a Lambert ceiling, lit from below by the room's point light
+  // a little self-light: the lamp sits 0.4 m below it, so it only grazes the far corners
+  const ceilMat = new MeshLambertMaterial({ color: '#FBF7F2', emissive: '#A39B90', side: DoubleSide, transparent: true, opacity: 0 });
   const ceiling = new Mesh(new ShapeGeometry(s).rotateX(-Math.PI / 2), ceilMat);
   ceiling.position.y = h.fullH;
   ceiling.visible = false;
   h.root.add(ceiling);
+
+  /* ---------- B3: dressing (built once, shown only inside) ---------- */
+  const dress = new Group();
+  dress.visible = false;
+  h.root.add(dress);
+  const own: { dispose(): void }[] = [ceilMat, ceiling.geometry];
+  /** A box along a→b from y0 to y1, t deep, pushed `off` metres along the segment's normal. */
+  const seg = (a: P2, b: P2, y0: number, y1: number, t: number, off = 0) => {
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const len = Math.hypot(dx, dz);
+    const g = new BoxGeometry(len, y1 - y0, t).toNonIndexed();
+    g.translate(0, (y0 + y1) / 2, off);
+    g.rotateY(-Math.atan2(dz, dx));
+    g.translate((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2);
+    return g;
+  };
+  const mesh = (gs: BufferGeometry[], m: MeshLambertMaterial | MeshBasicMaterial) => {
+    if (!gs.length) return;
+    const g = mergeGeometries(gs)!;
+    gs.forEach((x) => x.dispose());
+    own.push(g, m);
+    dress.add(new Mesh(g, m));
+  };
+  // skirting, both faces of every wall
+  mesh(
+    data.walls.map((w) => seg(w.a, w.b, 0, 0.1, w.t + 0.02)),
+    new MeshLambertMaterial({ color: '#E4DACB' }),
+  );
+  // door frames (6 cm) and glazing jambs (5 cm, navy)
+  const frames: BufferGeometry[] = [];
+  const jambs: BufferGeometry[] = [];
+  for (const op of data.openings) {
+    const len = Math.hypot(op.b[0] - op.a[0], op.b[1] - op.a[1]);
+    const ux = (op.b[0] - op.a[0]) / len;
+    const uz = (op.b[1] - op.a[1]) / len;
+    const at = (d: number): P2 => [op.a[0] + ux * d, op.a[1] + uz * d];
+    const top = Math.min(op.head, h.fullH);
+    if (op.type === 'door') {
+      const w = 0.06;
+      frames.push(seg(at(0), at(w), 0, top, op.t + 0.03), seg(at(len - w), at(len), 0, top, op.t + 0.03), seg(op.a, op.b, top - w, top, op.t + 0.03));
+    } else {
+      const w = 0.05;
+      const y0 = op.type === 'window' ? op.sill : 0;
+      jambs.push(seg(at(0), at(w), y0, top, 0.05), seg(at(len - w), at(len), y0, top, 0.05));
+    }
+  }
+  mesh(frames, new MeshLambertMaterial({ color: '#D9CFC0' }));
+  mesh(jambs, new MeshBasicMaterial({ color: '#1A273F' }));
+  // fake ambient occlusion: 0.35 m gradient strips on the floor along each wall face, and in the ceiling corners
+  const ao = document.createElement('canvas');
+  ao.width = 1;
+  ao.height = 64;
+  const actx = ao.getContext('2d')!;
+  const grad = actx.createLinearGradient(0, 0, 0, 64);
+  grad.addColorStop(0, 'rgba(11,18,32,0.18)');
+  grad.addColorStop(1, 'rgba(11,18,32,0)');
+  actx.fillStyle = grad;
+  actx.fillRect(0, 0, 1, 64);
+  const aoTex = new CanvasTexture(ao);
+  own.push(aoTex);
+  const strips: BufferGeometry[] = [];
+  for (const w of data.walls) {
+    const dx = w.b[0] - w.a[0];
+    const dz = w.b[1] - w.a[1];
+    const len = Math.hypot(dx, dz);
+    for (const side of [1, -1]) {
+      for (const y of [0.012, h.fullH - 0.012]) {
+        // a plane in XZ: v = 0 at the wall face, 1 at 0.35 m out
+        const g = new PlaneGeometry(len, 0.35).toNonIndexed();
+        g.rotateX(side * (y < 1 ? -Math.PI / 2 : Math.PI / 2));
+        g.translate(0, y, side * (w.t / 2 + 0.175));
+        g.rotateY(-Math.atan2(dz, dx));
+        g.translate((w.a[0] + w.b[0]) / 2, 0, (w.a[1] + w.b[1]) / 2);
+        const uv = g.getAttribute('uv');
+        for (let i = 0; i < uv.count; i++) uv.setY(i, side > 0 === y < 1 ? 1 - uv.getY(i) : uv.getY(i));
+        strips.push(g);
+      }
+    }
+  }
+  mesh(strips, new MeshBasicMaterial({ map: aoTex, transparent: true, depthWrite: false, side: DoubleSide }));
+  // furniture at eye level: beds get a headboard and a mattress step, sofas a back, counters an overhang
+  const nearestEdge = (poly: readonly P2[]) => {
+    let best = { i: 0, d: Infinity };
+    poly.forEach((a, i) => {
+      const b = poly[(i + 1) % poly.length]!;
+      const m: P2 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      for (const w of data.walls) {
+        const wx = w.b[0] - w.a[0];
+        const wz = w.b[1] - w.a[1];
+        const t = Math.max(0, Math.min(1, ((m[0] - w.a[0]) * wx + (m[1] - w.a[1]) * wz) / (wx * wx + wz * wz)));
+        const d = Math.hypot(m[0] - (w.a[0] + wx * t), m[1] - (w.a[1] + wz * t));
+        if (d < best.d) best = { i, d };
+      }
+    });
+    return [poly[best.i]!, poly[(best.i + 1) % poly.length]!] as const;
+  };
+  const area = (poly: readonly P2[]) => Math.abs(poly.reduce((a, [x0, z0], i) => a + x0 * poly[(i + 1) % poly.length]![1] - poly[(i + 1) % poly.length]![0] * z0, 0)) / 2;
+  const toCentre = (a: P2, b: P2, poly: readonly P2[]) => {
+    // the box offset that keeps a strip along edge a→b inside the block
+    const c = centroidOf(poly);
+    const nx = -(b[1] - a[1]);
+    const nz = b[0] - a[0];
+    return (c[0] - a[0]) * nx + (c[1] - a[1]) * nz > 0 ? -1 : 1;
+  };
+  const heads: BufferGeometry[] = [];
+  const steps: BufferGeometry[] = [];
+  for (const f of data.solids) {
+    if (f.kind === 'furniture') {
+      const [a, b] = nearestEdge(f.poly);
+      const inward = toCentre(a, b, f.poly);
+      if (f.h <= 0.55 && area(f.poly) > 2.5) {
+        heads.push(seg(a, b, 0, 0.9, 0.08, inward * -0.04));
+        const s2 = new Shape();
+        const c = centroidOf(f.poly);
+        f.poly.forEach(([x, z], i) => {
+          const px = x + Math.sign(c[0] - x) * 0.03;
+          const pz = z + Math.sign(c[1] - z) * 0.03;
+          if (i) s2.lineTo(px, -pz);
+          else s2.moveTo(px, -pz);
+        });
+        const g = new ExtrudeGeometry(s2, { depth: 0.18, bevelEnabled: false }).rotateX(-Math.PI / 2);
+        g.translate(0, f.h, 0);
+        steps.push(g.toNonIndexed());
+      } else if (Math.abs(f.h - 0.8) < 0.03) heads.push(seg(a, b, 0, 0.75, 0.2, inward * -0.1));
+    } else if (f.kind === 'counter') {
+      const c = centroidOf(f.poly);
+      const s3 = new Shape();
+      f.poly.forEach(([x, z], i) => {
+        const px = x - Math.sign(c[0] - x) * 0.04;
+        const pz = z - Math.sign(c[1] - z) * 0.04;
+        if (i) s3.lineTo(px, -pz);
+        else s3.moveTo(px, -pz);
+      });
+      const g = new ExtrudeGeometry(s3, { depth: 0.03, bevelEnabled: false }).rotateX(-Math.PI / 2);
+      g.translate(0, f.h, 0);
+      steps.push(g.toNonIndexed());
+    }
+  }
+  mesh(heads, new MeshLambertMaterial({ color: '#CFC3B1' }));
+  mesh(steps, new MeshLambertMaterial({ color: '#F1ECE4' }));
+  // the room light: warm, at the room's centroid, 2.4 m up; it follows the room
+  const lamp = new PointLight('#FFE9CC', LAMP, 9, 2);
+  lamp.visible = false;
+  h.root.add(lamp);
+  // sky beyond the glass: a plain vertical gradient, horizon sand to pale blue overhead
+  const sky = document.createElement('canvas');
+  sky.width = 1;
+  sky.height = 128;
+  const sctx = sky.getContext('2d')!;
+  const sg = sctx.createLinearGradient(0, 0, 0, 128);
+  sg.addColorStop(0, '#CFE0EA');
+  sg.addColorStop(1, '#F3ECE2');
+  sctx.fillStyle = sg;
+  sctx.fillRect(0, 0, 1, 128);
+  const skyTex = new CanvasTexture(sky);
+  own.push(skyTex);
+  const fillBase = h.fill.intensity;
+  /** Inside on / off: dressing, lamp, sky, the fill at 40%, the honesty chip. */
+  const inside = (on: boolean) => {
+    dress.visible = on;
+    lamp.visible = on;
+    h.scene.background = on ? skyTex : null;
+    h.fill.intensity = on ? fillBase * 0.4 : fillBase;
+    chip.hidden = !on;
+  };
+  const moveLamp = (id: string) => {
+    const r = rooms.get(id);
+    if (r) lamp.position.copy(h.toWorld(centroidOf(r.poly), 2.4)).add(h.root.position.clone().negate());
+  };
 
   const view = { yaw: 0, pitch: 0 };
   let current: string | null = null;
@@ -141,7 +336,11 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
   );
   const toolbar = document.createElement('div');
   toolbar.className = 'walk-toolbar';
-  ui.append(toolbar);
+  const chip = document.createElement('p');
+  chip.className = 'walk-chip';
+  chip.textContent = o.strings.geometryLabel ?? '';
+  chip.hidden = true;
+  ui.append(toolbar, chip);
   h.stage.append(ui);
 
   // gyro (phones, opt-in, never with reduced motion)
@@ -300,6 +499,7 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
     view.yaw = p.yaw;
     view.pitch = 0;
     current = id;
+    moveLamp(id);
     if (h.reduced || glide === 0) {
       await fade(0);
       camera.position.copy(p.at);
@@ -319,6 +519,7 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
       h.spots.classList.add('is-walking');
       h.setDriver(driver);
       listen(true);
+      inside(true);
       if (h.reduced) {
         enclose(true, 0, 0);
         await arrive(id, 0);
@@ -347,15 +548,17 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
         await fly({ at: back.position, quat: back.quaternion, fov: 30 }, 1.0);
       }
       h.spots.classList.remove('is-walking');
+      inside(false);
       listen(false);
       h.setDriver(null);
     },
     destroy() {
       listen(false);
       ui.remove();
+      inside(false);
+      h.root.remove(dress, lamp);
+      own.forEach((x) => x.dispose());
       h.root.remove(ceiling);
-      ceiling.geometry.dispose();
-      ceilMat.dispose();
     },
   };
 }

@@ -227,3 +227,20 @@ html.is-walking .u3d-enter {
   outline: 2px solid var(--gold-300);
   outline-offset: 2px;
 }
+
+/* rev 9 (B3): the honesty chip in geometry mode, bottom-left beside the look button */
+.walk-chip {
+  position: absolute;
+  left: 64px;
+  bottom: 18px;
+  max-width: calc(100% - 128px);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(251 247 242 / 0.92);
+  color: var(--navy-900);
+  font: 600 12px/1.25 var(--font-body);
+}
+
+.walk-chip[hidden] {
+  display: none;
+}

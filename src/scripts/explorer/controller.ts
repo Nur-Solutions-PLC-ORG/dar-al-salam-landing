@@ -617,6 +617,7 @@ export function createExplorer(root: HTMLElement) {
     // breadcrumb: … › BL05 › Inside
     if (on && !insideLi) {
       insideLi = document.createElement('li');
+      insideLi.style.cssText = 'display:flex;align-items:center;gap:var(--space-2)'; // the crumbs' scoped style misses JS-made items
       insideLi.innerHTML = '<span aria-hidden="true" class="crumbs__sep">›</span><span class="crumbs__current" aria-current="location"></span>';
       $('[data-crumb-unit-li]')!.after(insideLi);
     }
