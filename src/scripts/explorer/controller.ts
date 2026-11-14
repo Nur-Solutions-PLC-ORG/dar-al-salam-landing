@@ -4,7 +4,7 @@
  *   IDLE ──hover/focus──▶ preview(n)            Back/Esc: UNIT → FLOOR → IDLE
  *     └─click/Enter/View─▶ FLOOR(n) ──hotspot/chip──▶ UNIT(n, code)
  *
- * URL: #explore · #explore/f7 · #explore/f7/bl05 via history.replaceState (shareable, never scrolls).
+ * URL: #explore · #explore/f7 · #explore/f7/bl05 (· /3d or /plan, rev 8) via history.replaceState (shareable, never scrolls).
  * The DOM is server-rendered; this module only toggles views/classes and drives a model tier
  * (tier 1 SVG always; tier 2 Three.js swapped in when available, see loadScene()).
  */
@@ -12,6 +12,7 @@ import { gsap, ScrollTrigger, prefersReducedMotion, scrollToTarget } from '../mo
 import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
 import { createSvgModel } from './svg-model';
 import type { Level, ModelAdapter, ModelCallbacks } from './types';
+import css3d from '../../styles/explore3d.css?inline';
 
 const CODES = ['BL01', 'BL02', 'BL03', 'BL04', 'BL05', 'BL06', 'BL07', 'BL08', 'BL09'] as const;
 type Code = (typeof CODES)[number];
@@ -31,9 +32,14 @@ type I18n = Record<
   | 'tbc'
   | 'tbcAria'
   | 'tbcBody'
-  | 'seeOn',
+  | 'seeOn'
+  | 'view3d'
+  | 'viewPlan'
+  | 'viewLabel',
   string
 >;
+
+type View = 'plan' | '3d';
 
 const f = (s: string, vars: Record<string, string | number>) =>
   s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
@@ -42,12 +48,17 @@ interface State {
   level: Level;
   floor: number;
   unit: Code | null;
+  /** Rev 8: the visitor's explicit "3D | Plan" choice (null = the default rule, DESIGN §9.6.2). */
+  pref?: View | null;
 }
 
 export function createExplorer(root: HTMLElement) {
   const $ = <T extends Element = HTMLElement>(sel: string) => root.querySelector<T>(sel);
   const $$ = <T extends Element = HTMLElement>(sel: string) => Array.from(root.querySelectorAll<T>(sel));
   const t = JSON.parse(root.dataset.i18n ?? '{}') as I18n;
+  const style = document.createElement('style');
+  style.textContent = css3d;
+  document.head.append(style);
 
   const stage = $('[data-stage]')!;
   const panel = $('[data-panel]')!;
@@ -114,11 +125,10 @@ export function createExplorer(root: HTMLElement) {
   setHint(fine ? t.hintHover : t.hintTouch);
 
   const loadBtn = $<HTMLButtonElement>('[data-load-3d]')!;
-  let sceneLoading = false;
-  const loadScene = () => {
-    if (sceneLoading) return;
-    sceneLoading = true;
-    loadBtn.hidden = true;
+  let scenePromise: Promise<boolean> | null = null;
+  /** Tier 2; resolves false when it can't run (the SVG model stays). */
+  const loadScene = () =>
+    (scenePromise ??= ((loadBtn.hidden = true),
     import('./scene')
       .then(({ createScene }) => createScene($('[data-canvas]')!, stage, callbacks))
       .then((scene) => {
@@ -129,11 +139,13 @@ export function createExplorer(root: HTMLElement) {
         stage.dataset.tier = '3d';
         if (fine) setHint(t.hintPointer);
         ScrollTrigger.refresh();
+        void syncView(); // a unit waiting for 3D (deep link, or the default once tier 2 arrives)
+        return true;
       })
       .catch((err: unknown) => {
         console.warn('[explorer] 3D unavailable, keeping the SVG model', err);
-      });
-  };
+        return false;
+      })));
   if (webgl && !prefersLightweight()) loadScene();
   else if (webgl) {
     loadBtn.hidden = false;
@@ -141,6 +153,7 @@ export function createExplorer(root: HTMLElement) {
   }
   // context loss → back to tier 1
   stage.addEventListener('explorer:fallback', () => {
+    fail3d();
     model.destroy();
     model = createSvgModel(svg, stage, callbacks);
     model.select(state.level === 'idle' ? null : state.floor);
@@ -278,14 +291,190 @@ export function createExplorer(root: HTMLElement) {
     renderHotspots();
     renderUnit();
     renderCrumbs();
+    renderToggle();
     model.select(state.level === 'idle' ? null : state.floor);
     model.preview(state.level === 'idle' ? null : state.floor);
+    void syncView();
+  }
+
+  /* ---------- rev 8: the unit dollhouse (DESIGN §9.6) ---------- */
+
+  const host = $('[data-canvas]')!;
+  const has3d = (code: Code | null) => Boolean(code && cards.get(code)?.hasAttribute('data-has3d'));
+  let failed3d = false; // any failure hides the toggle for the session
+  /** 3D can be offered at all for the current unit. */
+  const can3d = () => webgl && !failed3d && state.level === 'unit' && has3d(state.unit) && !isTbc(state.unit);
+  /** The view the current unit shows (the default rule unless the visitor chose). */
+  const viewFor = (): View => {
+    if (!can3d()) return 'plan';
+    if (state.pref) return state.pref;
+    return stage.dataset.tier === '3d' && !prefersReducedMotion() && !prefersLightweight() ? '3d' : 'plan';
+  };
+
+  // the "3D | Plan" radiogroup, built per card on first use (it shows only when 3D can run)
+  const toggles = new Map<Code, HTMLElement>();
+  function toggleFor(code: Code) {
+    let g = toggles.get(code);
+    if (g) return g;
+    g = document.createElement('div');
+    g.className = 'viewtoggle';
+    g.setAttribute('role', 'radiogroup');
+    g.setAttribute('aria-label', t.viewLabel);
+    for (const v of ['3d', 'plan'] as const) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'viewtoggle__btn';
+      b.setAttribute('role', 'radio');
+      b.dataset.v = v;
+      b.textContent = v === '3d' ? t.view3d : t.viewPlan;
+      b.addEventListener('click', () => choose(v, false));
+      b.addEventListener('keydown', (e) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+        e.preventDefault();
+        choose(v === '3d' ? 'plan' : '3d', true);
+      });
+      g.append(b);
+    }
+    cards.get(code)!.querySelector('.unit__body')!.prepend(g);
+    toggles.set(code, g);
+    return g;
+  }
+  function renderToggle() {
+    toggles.forEach((g) => (g.hidden = true));
+    if (!can3d() || !state.unit) return;
+    const g = toggleFor(state.unit);
+    g.hidden = false;
+    const v = viewFor();
+    g.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+      const on = b.dataset.v === v;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+  }
+  function choose(v: View, focus: boolean) {
+    go({ ...state, pref: v });
+    if (focus) toggleFor(state.unit!).querySelector<HTMLButtonElement>(`[data-v="${v}"]`)?.focus();
+  }
+
+  let dh: import('./unit3d').Dollhouse | null = null;
+  let dhCode: Code | null = null;
+  let viewJob = 0; // newest transition wins
+  let strings: Promise<{ rooms: Record<string, string> } & Record<string, string>> | null = null;
+  const lang = root.dataset.lang ?? 'en';
+  const area = (m2: number) =>
+    `${m2.toLocaleString(lang === 'am' ? 'am-ET' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+
+  /** Prefetch on idle once FLOOR is reached and a has3d hotspot is hovered or focused (DESIGN §9.6.3). */
+  let prefetched = false;
+  const prefetch3d = () => {
+    if (prefetched || !webgl || failed3d) return;
+    prefetched = true;
+    const idle = window.requestIdleCallback ?? ((f: () => void) => setTimeout(f, 200));
+    idle(() => void import('./unit3d').catch(() => undefined));
+  };
+
+  const fade = (to: number, ms: number) =>
+    host.animate([{ opacity: to ? 0 : 1 }, { opacity: to }], { duration: prefersReducedMotion() ? 200 : ms, fill: 'forwards' }).finished;
+
+  function fail3d(err?: unknown) {
+    if (err) console.warn('[explorer] unit 3D unavailable, showing the plan', err);
+    failed3d = true;
+    dh?.destroy();
+    dh = dhCode = null;
+    model.suspend?.(false);
+    host.getAnimations().forEach((a) => a.cancel());
+    root.removeAttribute('data-view3d');
+    renderToggle();
+  }
+
+  async function leave3d(job: number) {
+    if (!dh) return;
+    const d = dh;
+    await d.leave();
+    if (job !== viewJob) return;
+    await fade(0, 300);
+    d.destroy();
+    if (dh === d) dh = dhCode = null;
+    model.suspend?.(false);
+    await fade(1, 300);
+    host.getAnimations().forEach((a) => a.cancel());
+  }
+
+  async function enter3d(code: Code, job: number) {
+    if (!(await loadScene()) || job !== viewJob) return;
+    const tier = model;
+    if (!tier.renderer || !tier.suspend) throw new Error('no tier 2 renderer');
+    strings ??= fetch(`/i18n/unit3d.${lang}.json`).then((r) => r.json());
+    const [{ createDollhouse, loadFloorImage }, { units3d }, s] = await Promise.all([
+      import('./unit3d'),
+      import('../../data/units3d'),
+      strings,
+    ]);
+    const pack = await units3d[code]!();
+    const image = await loadFloorImage(code.toLowerCase());
+    if (job !== viewJob) return;
+    await fade(0, 400);
+    if (job !== viewJob) return;
+    tier.suspend(true);
+    dh = createDollhouse({
+      renderer: tier.renderer,
+      host,
+      stage,
+      data: pack.geo,
+      image,
+      names: s.rooms,
+      area,
+      reduced: prefersReducedMotion(),
+      onRoom: (id) => window.dispatchEvent(new CustomEvent('unit3d:room', { detail: { id } })),
+      onInteract: () => hint.setAttribute('data-done', ''),
+    });
+    dhCode = code;
+    const entering = dh.enter();
+    await fade(1, 200);
+    await entering;
+  }
+
+  /** Bring the stage in line with the state: tower ↔ dollhouse (U1/U2), and the desktop layout (U7). */
+  async function syncView() {
+    const want = viewFor() === '3d' ? state.unit : null;
+    if (want === dhCode && (want !== null) === root.hasAttribute('data-view3d')) return;
+    const job = ++viewJob;
+    void layout(want !== null);
+    try {
+      if (dh && dhCode !== want) await leave3d(job);
+      if (want && job === viewJob && !dh) await enter3d(want, job);
+    } catch (err) {
+      fail3d(err);
+      go({ ...state }); // re-render as plan
+    }
+  }
+
+  /** U7: desktop stage cols 1–5 → 1–7 with a GSAP Flip; the plan image hides in 3D. */
+  async function layout(on: boolean) {
+    if (on === root.hasAttribute('data-view3d')) return;
+    const desktop = window.matchMedia('(min-width: 1024px)').matches;
+    if (!desktop || prefersReducedMotion()) {
+      root.toggleAttribute('data-view3d', on);
+      return;
+    }
+    const [{ Flip }] = await Promise.all([import('gsap/Flip')]);
+    gsap.registerPlugin(Flip);
+    const targets = [$('[data-model-col]')!, panel];
+    const st = Flip.getState(targets);
+    root.toggleAttribute('data-view3d', on);
+    Flip.from(st, { duration: 0.6, ease: 'power3.inOut', scale: false });
   }
 
   /* ---------- transitions ---------- */
 
-  const hashFor = (s: State) =>
-    s.level === 'idle' ? '#explore' : `#explore/f${s.floor}${s.level === 'unit' && s.unit ? `/${s.unit.toLowerCase()}` : ''}`;
+  const hashFor = (s: State) => {
+    if (s.level === 'idle') return '#explore';
+    if (s.level !== 'unit' || !s.unit) return `#explore/f${s.floor}`;
+    // rev 8: /3d while the dollhouse shows; /plan when the visitor chose the plan of a unit that has 3D
+    const v = viewFor();
+    const suffix = v === '3d' ? '/3d' : can3d() && s.pref === 'plan' ? '/plan' : '';
+    return `#explore/f${s.floor}/${s.unit.toLowerCase()}${suffix}`;
+  };
 
   function go(next: State, opts: { focus?: boolean; scroll?: boolean; animate?: boolean } = {}) {
     const changedLevel = next.level !== state.level;
@@ -357,6 +546,7 @@ export function createExplorer(root: HTMLElement) {
     const enter = () => {
       h.classList.add('is-preview');
       showPill(code, code === state.unit);
+      if (has3d(code)) prefetch3d();
     };
     const leave = () => {
       h.classList.remove('is-preview');
@@ -445,12 +635,12 @@ export function createExplorer(root: HTMLElement) {
   /* ---------- init from the URL ---------- */
 
   const fromHash = (): State | null => {
-    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9]))?)?$/i.exec(location.hash);
+    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9])(?:\/(3d|plan))?)?)?$/i.exec(location.hash);
     if (!m) return null;
     if (!m[1]) return { level: 'idle', floor: 1, unit: null };
     const floor = clampFloor(Number(m[1]));
     const unit = (m[2]?.toUpperCase() as Code | undefined) ?? null;
-    return { level: unit ? 'unit' : 'floor', floor, unit };
+    return { level: unit ? 'unit' : 'floor', floor, unit, pref: (m[3]?.toLowerCase() as View | undefined) ?? null };
   };
 
   root.dataset.ready = '';

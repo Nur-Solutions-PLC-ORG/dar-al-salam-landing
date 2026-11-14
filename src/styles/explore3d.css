@@ -1,0 +1,53 @@
+/* Rev 8 explorer additions (DESIGN §9.6.2): the "3D | Plan" toggle and the UNIT 3D layout. Injected by the lazy
+   explorer controller, so they cost the page HTML nothing (budget 40 KB gzip). */
+.viewtoggle {
+  display: inline-flex;
+  justify-self: start;
+  padding: 2px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-pill);
+}
+
+.viewtoggle[hidden] {
+  display: none;
+}
+
+.viewtoggle__btn {
+  min-width: 64px;
+  min-height: 40px;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font: 600 var(--fs-small) / 1 var(--font-body);
+}
+
+/* 40 px pill + 2 px padding each side = a 44 px tap row */
+.viewtoggle__btn[aria-checked='true'] {
+  background: var(--navy-800);
+  color: var(--ivory-50);
+}
+
+.viewtoggle__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.explore[data-view3d] .unit__plan,
+.explore[data-view3d] .explore__hint,
+.explore[data-view3d] .explore__tooltip {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .explore[data-view3d] .explore__model {
+    grid-column: 1 / 8;
+  }
+
+  .explore[data-view3d] .explore__panel {
+    grid-column: 8 / 13;
+  }
+
+  .explore[data-view3d] .unit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

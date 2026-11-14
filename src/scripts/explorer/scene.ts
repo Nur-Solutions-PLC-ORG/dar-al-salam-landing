@@ -264,12 +264,13 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   let frame = 0;
   let visible = true;
   let destroyed = false;
+  let suspended = false; // rev 8: the unit dollhouse has the canvas
   const reduce = () => prefersReducedMotion();
   let swayT0 = performance.now();
 
   const tick = (now: number) => {
     frame = 0;
-    if (destroyed || !visible) return;
+    if (destroyed || !visible || suspended) return;
     let again = false;
     // inertia after a drag
     if (Math.abs(orbitVel) > 1e-4 && !dragging) {
@@ -368,6 +369,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   };
 
   const onPointerMove = (e: PointerEvent) => {
+    if (suspended) return;
     if (dragging) {
       const dx = e.clientX - lastX;
       lastX = e.clientX;
@@ -396,6 +398,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   };
 
   const onPointerDown = (e: PointerEvent) => {
+    if (suspended) return;
     cb.onInteract();
     dragging = true;
     downX = lastX = e.clientX;
@@ -405,7 +408,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   };
 
   const onPointerUp = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (!dragging || suspended) return;
     dragging = false;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     if (moved < 6) {
@@ -434,6 +437,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   /* ---------- lifecycle ---------- */
 
   const ro = new ResizeObserver(() => {
+    if (suspended) return; // the dollhouse sizes the shared canvas meanwhile
     fit();
     request();
   });
@@ -484,6 +488,24 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
       request();
     },
     anchor,
+    renderer,
+    suspend(on) {
+      suspended = on;
+      dragging = false;
+      if (on) {
+        if (frame) cancelAnimationFrame(frame);
+        frame = 0;
+        if (hover !== null) {
+          hover = null;
+          paint();
+          cb.onHover(null);
+        }
+      } else {
+        canvas.style.cursor = 'grab';
+        fit();
+        request();
+      }
+    },
     destroy() {
       destroyed = true;
       if (frame) cancelAnimationFrame(frame);

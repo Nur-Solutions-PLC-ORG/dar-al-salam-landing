@@ -1,0 +1,90 @@
+/* Unit dollhouse hotspots (DESIGN §9.6.4 rev 8). Injected with the unit3d chunk only. */
+.u3d-spots {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.u3d-spot {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--navy-900);
+  font: 600 13px/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.u3d-spots.is-ready .u3d-spot:not(.is-hidden) {
+  opacity: 1;
+  transition-delay: calc(var(--i) * 0.03s);
+}
+
+.u3d-spot.is-hidden {
+  pointer-events: none;
+}
+
+.u3d-spot__dot {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ivory-50);
+  border-radius: 50%;
+  background: var(--gold-500);
+  box-shadow: 0 2px 6px rgb(11 18 32 / 0.35);
+}
+
+/* the pill grows out of the dot */
+.u3d-spot__pill {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  padding: 7px 12px 7px 24px;
+  border-radius: var(--radius-pill);
+  background: var(--ivory-50);
+  white-space: nowrap;
+  box-shadow: 0 6px 14px rgb(11 18 32 / 0.3);
+  transform: translateY(-50%);
+  clip-path: inset(0 calc(100% - 16px) 0 0 round 999px);
+  opacity: 0;
+  transition:
+    clip-path 0.25s var(--ease-out),
+    opacity 0.15s ease;
+}
+
+.u3d-spot:is(:hover, :focus-visible, .is-hot, [aria-pressed='true']) .u3d-spot__pill {
+  clip-path: inset(0 0 0 0 round 999px);
+  opacity: 1;
+}
+
+.u3d-spot:focus-visible {
+  outline: none;
+}
+
+.u3d-spot:focus-visible .u3d-spot__dot {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 3px;
+}
+
+.u3d-spot[aria-pressed='true'] .u3d-spot__dot {
+  background: var(--gold-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u3d-spot__pill {
+    transition: opacity 0.15s ease;
+  }
+}

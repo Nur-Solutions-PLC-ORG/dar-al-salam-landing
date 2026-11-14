@@ -1,0 +1,656 @@
+/**
+ * The unit "dollhouse" (DESIGN §9.6.3–§9.6.4 rev 8): a Three.js cutaway of one home, built from the plan's own
+ * measurements (src/data/units3d). Imported by the controller on the first UNIT entry with `has3d`; reuses the
+ * tier 2 renderer and canvas (one WebGL context) and swaps scenes.
+ *
+ * Draw calls are kept low by merging: every wall, header, sill and column is ONE mesh. Two vertex attributes drive
+ * the shader: `aDelay` (the staggered rise of the lift, U1) and `aSide` (−1 interior, else the perimeter side 0–3).
+ * The cutaway (U3) clamps a side's vertices to `uCut[side]` (2.8 → 1.0 m) instead of scaling separate meshes, so
+ * headers and glass on a lowered façade go down with it. Raycasts (hotspot occlusion) apply the same clamp.
+ * Heights are illustrative (not on the plans) and never shown in the UI.
+ */
+import {
+  BoxGeometry,
+  BufferGeometry,
+  CanvasTexture,
+  DirectionalLight,
+  DoubleSide,
+  ExtrudeGeometry,
+  Float32BufferAttribute,
+  Group,
+  HemisphereLight,
+  Mesh,
+  MeshBasicMaterial,
+  MeshDepthMaterial,
+  MeshLambertMaterial,
+  PCFShadowMap,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Raycaster,
+  RGBADepthPacking,
+  Scene,
+  Shape,
+  ShapeGeometry,
+  SRGBColorSpace,
+  Texture,
+  Vector2,
+  Vector3,
+  type Material,
+  type WebGLRenderer,
+} from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { gsap } from '../motion';
+import { onVisibility } from '../lazy';
+import type { P2, Unit3d } from '../../data/units3d/types';
+import css from '../../styles/unit3d.css?inline';
+
+const DEG = Math.PI / 180;
+const WALL_H = 2.8;
+const CUT_H = 1.0;
+const EL = 56 * DEG;
+const AZ = -35 * DEG;
+const EL_MIN = 50 * DEG;
+const EL_MAX = 62 * DEG;
+const ORBIT = 5 * DEG; // per second
+const RESUME = 5000;
+
+export interface DollhouseOpts {
+  renderer: WebGLRenderer;
+  host: HTMLElement;
+  stage: HTMLElement;
+  data: Unit3d;
+  image: HTMLImageElement;
+  /** Room key → localised name; area formatter. */
+  names: Record<string, string>;
+  area: (m2: number) => string;
+  reduced: boolean;
+  onRoom: (id: string | null) => void;
+  onInteract: () => void;
+}
+
+export interface Dollhouse {
+  /** U1: flat top-down → 56°/−35° with walls rising; or the static angle (reduced motion). */
+  enter(): Promise<void>;
+  /** U2: walls drop flat. */
+  leave(): Promise<void>;
+  select(id: string | null): void;
+  highlight(id: string | null): void;
+  pause(on: boolean): void;
+  destroy(): void;
+}
+
+/* ---------- geometry helpers ---------- */
+
+const shape = (ring: readonly P2[]) => {
+  const s = new Shape();
+  ring.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z)));
+  return s;
+};
+const flat = (ring: readonly P2[]) => new ShapeGeometry(shape(ring)).rotateX(-Math.PI / 2).toNonIndexed();
+const prism = (ring: readonly P2[], h: number) =>
+  new ExtrudeGeometry(shape(ring), { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2);
+
+/** A box along segment a→b from y0 to y1, `t` deep. */
+function seg(a: P2, b: P2, y0: number, y1: number, t: number, plane = false) {
+  const dx = b[0] - a[0];
+  const dz = b[1] - a[1];
+  const g = (plane ? new PlaneGeometry(Math.hypot(dx, dz), y1 - y0) : new BoxGeometry(Math.hypot(dx, dz), y1 - y0, t)).toNonIndexed();
+  g.translate(0, (y0 + y1) / 2, 0);
+  g.rotateY(-Math.atan2(dz, dx));
+  g.translate((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2);
+  return g;
+}
+
+/** Tag every vertex with the lift delay and the cutaway side. */
+function tag(g: BufferGeometry, delay: number, side: number) {
+  const n = g.getAttribute('position').count;
+  g.setAttribute('aDelay', new Float32BufferAttribute(new Float32Array(n).fill(delay), 1));
+  g.setAttribute('aSide', new Float32BufferAttribute(new Float32Array(n).fill(side), 1));
+  if (!g.getAttribute('uv')) g.setAttribute('uv', new Float32BufferAttribute(new Float32Array(n * 2), 2));
+  return g;
+}
+
+const centroid = (poly: readonly P2[]): P2 => {
+  let a = 0, x = 0, z = 0;
+  poly.forEach(([x0, z0], i) => {
+    const [x1, z1] = poly[(i + 1) % poly.length]!;
+    const c = x0 * z1 - x1 * z0;
+    a += c;
+    x += (x0 + x1) * c;
+    z += (z0 + z1) * c;
+  });
+  return [x / (3 * a), z / (3 * a)];
+};
+
+const inside = ([x, z]: P2, poly: readonly P2[]) => {
+  let r = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i]!;
+    const [xj, zj] = poly[j]!;
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) r = !r;
+  }
+  return r;
+};
+
+function shadowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(256, 256, 20, 256, 256, 256);
+  g.addColorStop(0, 'rgba(11,18,32,0.6)');
+  g.addColorStop(1, 'rgba(11,18,32,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 512);
+  return new CanvasTexture(c);
+}
+
+/* ---------- the scene ---------- */
+
+export function createDollhouse(o: DollhouseOpts): Dollhouse {
+  const { renderer, host, stage, data } = o;
+  const canvas = renderer.domElement;
+  if (!document.getElementById('u3d-css')) {
+    const st = document.createElement('style');
+    st.id = 'u3d-css';
+    st.textContent = css;
+    document.head.append(st);
+  }
+
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(30, 1, 0.5, 200);
+  const root = new Group();
+  scene.add(root);
+  const [cx, cz] = centroid(data.footprint);
+  root.position.set(-cx, 0, -cz);
+  const R = Math.max(...data.footprint.map(([x, z]) => Math.hypot(x - cx, z - cz)));
+
+  const keep: { dispose(): void }[] = [];
+  const k = <T extends { dispose(): void }>(x: T) => (keep.push(x), x);
+
+  /* shader: lift (rise, staggered), leave (drop), cutaway (clamp per side) */
+  const U = {
+    uRise: { value: 99 },
+    uDrop: { value: 1 },
+    uCut: { value: [WALL_H, WALL_H, WALL_H, WALL_H] },
+  };
+  const inject = <M extends Material>(m: M, cut = true) => {
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader =
+        'attribute float aDelay;\nattribute float aSide;\nuniform float uRise;\nuniform float uDrop;\nuniform float uCut[4];\n' +
+        sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+float rp = clamp((uRise - aDelay) / 0.7, 0.0, 1.0);
+transformed.y *= max(0.01, (1.0 - pow(1.0 - rp, 3.0)) * uDrop);
+${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0.5)]);' : 'if (aSide > -0.5) transformed.y = 0.0;'}`,
+        );
+    };
+    return k(m);
+  };
+
+  const mat = {
+    wall: inject(new MeshLambertMaterial({ color: '#F3ECE2' })),
+    oak: inject(new MeshLambertMaterial({ color: '#B08A63' })),
+    counter: inject(new MeshLambertMaterial({ color: '#E4DACB' })),
+    top: inject(new MeshLambertMaterial({ color: '#B9AE9E' })),
+    glass: inject(new MeshBasicMaterial({ color: '#CFE0EA', transparent: true, opacity: 0.28, depthWrite: false, side: DoubleSide })),
+    dark: inject(new MeshBasicMaterial({ color: '#1A273F' })),
+  };
+  // shadows follow the rise; perimeter walls never cast (the cutaway would leave stale shadows)
+  const depth = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false);
+
+  /* perimeter sides: outward normal quantised to ±x / ±z */
+  const sideOf = (a: P2, b: P2) => {
+    const mx = (a[0] + b[0]) / 2 - cx;
+    const mz = (a[1] + b[1]) / 2 - cz;
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    let nx = -dz, nz = dx;
+    if (nx * mx + nz * mz < 0) (nx = -nx), (nz = -nz);
+    return Math.abs(nx) > Math.abs(nz) ? (nx > 0 ? 0 : 2) : nz > 0 ? 1 : 3;
+  };
+  const NORMALS = [new Vector2(1, 0), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(0, -1)];
+  const perimeter = data.walls.filter((w) => w.kind !== 'interior');
+  /** The perimeter side an opening sits on (collinear with a perimeter wall), else −1. */
+  const openingSide = (a: P2, b: P2) => {
+    const horiz = Math.abs(b[1] - a[1]) < Math.abs(b[0] - a[0]);
+    const w = perimeter.find((p) => {
+      const ph = Math.abs(p.b[1] - p.a[1]) < Math.abs(p.b[0] - p.a[0]);
+      return ph === horiz && (horiz ? Math.abs(p.a[1] - a[1]) < 0.1 : Math.abs(p.a[0] - a[0]) < 0.1);
+    });
+    return w ? sideOf(w.a, w.b) : -1;
+  };
+
+  /* pieces, ordered by distance from the centroid for the staggered rise */
+  type Piece = { g: BufferGeometry; m: keyof typeof mat; mid: P2; side: number; solid?: boolean };
+  const pieces: Piece[] = [];
+  const mid = (a: P2, b: P2): P2 => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  for (const w of data.walls) {
+    pieces.push({ g: seg(w.a, w.b, 0, w.h, w.t), m: 'wall', mid: mid(w.a, w.b), side: w.kind === 'interior' ? -1 : sideOf(w.a, w.b) });
+  }
+  for (const op of data.openings) {
+    const side = openingSide(op.a, op.b);
+    const m = mid(op.a, op.b);
+    pieces.push({ g: seg(op.a, op.b, op.head, WALL_H, op.t), m: 'wall', mid: m, side });
+    if (op.type === 'window') pieces.push({ g: seg(op.a, op.b, 0, op.sill, op.t), m: 'wall', mid: m, side });
+    if (op.type !== 'door') {
+      const y0 = op.type === 'window' ? op.sill : 0;
+      pieces.push({ g: seg(op.a, op.b, y0, op.head, 0, true), m: 'glass', mid: m, side });
+      // 3 cm navy frame: head and sill lines
+      pieces.push({ g: seg(op.a, op.b, op.head - 0.03, op.head, 0.04), m: 'dark', mid: m, side });
+      pieces.push({ g: seg(op.a, op.b, y0, y0 + 0.03, 0.04), m: 'dark', mid: m, side });
+    }
+  }
+  for (const r of data.railings) {
+    const m = mid(r.a, r.b);
+    pieces.push({ g: seg(r.a, r.b, 0, r.h, 0, true), m: 'glass', mid: m, side: -1 });
+    pieces.push({ g: seg(r.a, r.b, r.h - 0.04, r.h, 0.04), m: 'dark', mid: m, side: -1 });
+  }
+  for (const s of data.solids) {
+    const m = centroid(s.poly);
+    if (s.kind === 'counter') {
+      pieces.push({ g: prism(s.poly, s.h - 0.02), m: 'counter', mid: m, side: -1, solid: true });
+      const top = prism(s.poly, 0.02);
+      top.translate(0, s.h - 0.02, 0);
+      pieces.push({ g: top, m: 'top', mid: m, side: -1, solid: true });
+    } else pieces.push({ g: prism(s.poly, s.h), m: s.kind === 'wardrobe' ? 'oak' : 'wall', mid: m, side: -1, solid: true });
+  }
+  const dist = (p: Piece) => Math.hypot(p.mid[0] - cx, p.mid[1] - cz);
+  const walls = pieces.filter((p) => !p.solid).sort((a, b) => dist(a) - dist(b));
+  const solids = pieces.filter((p) => p.solid).sort((a, b) => dist(a) - dist(b));
+  walls.forEach((p, i) => tag(p.g, i * 0.012, p.side));
+  solids.forEach((p, i) => tag(p.g, 0.3 + i * 0.012, -1));
+  const riseEnd = Math.max(walls.length, solids.length + 25) * 0.012 + 0.7;
+
+  const meshes: Partial<Record<keyof typeof mat, Mesh>> = {};
+  for (const key of Object.keys(mat) as (keyof typeof mat)[]) {
+    const gs = pieces.filter((p) => p.m === key).map((p) => p.g);
+    if (!gs.length) continue;
+    const merged = k(mergeGeometries(gs)!);
+    gs.forEach((g) => g.dispose());
+    const mesh = new Mesh(merged, mat[key]);
+    if (key !== 'glass' && key !== 'dark') {
+      mesh.castShadow = true;
+      mesh.customDepthMaterial = depth;
+    }
+    meshes[key] = mesh;
+    root.add(mesh);
+  }
+  const occluders = [meshes.wall, meshes.oak, meshes.counter].filter(Boolean) as Mesh[];
+
+  /* floor (the plan texture), plinth, soft ground shadow */
+  const tex = k(new Texture(o.image));
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  tex.needsUpdate = true;
+  const { minX, minZ, maxX, maxZ } = data.texture.plane;
+  const floorGeo = k(flat(data.footprint));
+  const pos = floorGeo.getAttribute('position');
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = (pos.getX(i) - minX) / (maxX - minX);
+    uv[i * 2 + 1] = 1 - (pos.getZ(i) - minZ) / (maxZ - minZ);
+  }
+  floorGeo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex })));
+  floor.receiveShadow = true;
+  root.add(floor);
+  const plinth = new Mesh(k(prism(data.footprint, 0.35)), k(new MeshLambertMaterial({ color: '#FBF7F2' })));
+  plinth.position.y = -0.351;
+  plinth.receiveShadow = true;
+  root.add(plinth);
+  const ground = new Mesh(
+    k(new PlaneGeometry(R * 3, R * 3).rotateX(-Math.PI / 2)),
+    k(new MeshBasicMaterial({ map: k(shadowTexture()), transparent: true, depthWrite: false })),
+  );
+  ground.position.set(cx, -0.36, cz);
+  root.add(ground);
+
+  /* room highlight (U5) */
+  const hlMat = k(new MeshBasicMaterial({ color: '#B59458', transparent: true, opacity: 0, depthWrite: false }));
+  const hl = new Mesh(new BufferGeometry(), hlMat);
+  hl.position.y = 0.02;
+  root.add(hl);
+
+  /* light: warm, soft, fixed to the model → the shadow map bakes once */
+  scene.add(new HemisphereLight('#FFF4E6', '#1A273F', 3.2));
+  const sun = new DirectionalLight('#FFE3BD', 2.2);
+  sun.position.set(-6, 14, -4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.radius = 4;
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.02;
+  Object.assign(sun.shadow.camera, { left: -R - 1, right: R + 1, top: R + 1, bottom: -R - 1, near: 1, far: 40 });
+  scene.add(sun, sun.target);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+
+  /* ---------- camera ---------- */
+  const cam = { az: AZ, el: EL, x: 0, z: 0 };
+  let d = 30;
+  const fit = () => {
+    const w = host.clientWidth || 1;
+    const h = host.clientHeight || 1;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    const half = Math.atan(Math.tan((camera.fov * DEG) / 2) * Math.min(1, camera.aspect));
+    d = R / Math.sin(Math.atan(0.88 * Math.tan(half)));
+    renderer.setSize(w, h, false);
+  };
+  const place = () => {
+    const c = Math.cos(cam.el);
+    camera.position.set(cam.x + Math.cos(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z - Math.sin(cam.az) * c * d);
+    camera.lookAt(cam.x, 0.6, cam.z);
+  };
+
+  /* ---------- hotspots (HTML, projected per frame) ---------- */
+  const layer = document.createElement('div');
+  layer.className = 'u3d-spots';
+  stage.append(layer);
+  const spots = data.rooms.map((r, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'u3d-spot';
+    b.style.setProperty('--i', String(i));
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span class="u3d-spot__dot" aria-hidden="true"></span><span class="u3d-spot__pill"></span>';
+    b.lastElementChild!.textContent = `${o.names[r.name] ?? r.name} · ${o.area(r.area)}`;
+    b.addEventListener('click', () => o.onRoom(r.id));
+    b.addEventListener('pointerenter', () => setHl(r.id, false));
+    b.addEventListener('pointerleave', () => setHl(null, false));
+    b.addEventListener('focus', () => setHl(r.id, false));
+    b.addEventListener('blur', () => setHl(null, false));
+    layer.append(b);
+    return { r, b, at: new Vector3(r.label[0] - cx, 0.05, r.label[1] - cz), hidden: false };
+  });
+
+  const ray = new Raycaster();
+  const v = new Vector3();
+  const dir = new Vector3();
+  /** Hidden behind a wall or solid? Hits above a lowered side's clamp don't count. */
+  const occluded = (p: Vector3) => {
+    dir.subVectors(p, camera.position);
+    const len = dir.length();
+    ray.set(camera.position, dir.normalize());
+    ray.far = len - 0.05;
+    for (const hit of ray.intersectObjects(occluders, false)) {
+      const side = hit.object === meshes.wall ? (hit.object as Mesh).geometry.getAttribute('aSide').getX(hit.face!.a) : -1;
+      if (side < 0 || hit.point.y <= U.uCut.value[side]! + 0.01) return true;
+    }
+    return false;
+  };
+  const projectSpots = () => {
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    for (const s of spots) {
+      v.copy(s.at).project(camera);
+      s.b.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
+      const hide = !ready || occluded(s.at);
+      if (hide !== s.hidden) {
+        s.hidden = hide;
+        s.b.classList.toggle('is-hidden', hide);
+        s.b.inert = hide;
+      }
+    }
+  };
+
+  /* ---------- render on demand ---------- */
+  let frame = 0;
+  let visible = true;
+  let paused = false;
+  let destroyed = false;
+  let ready = false; // lift done: hotspots on, orbit allowed
+  let tweening = 0;
+  let selected: string | null = null;
+  let dragging = false;
+  let velAz = 0;
+  let lastT = 0;
+  let resumeAt = Infinity;
+
+  // U3: perimeter sides facing the camera go down to 1.0 m (and back up when they turn away)
+  const cutTarget = [WALL_H, WALL_H, WALL_H, WALL_H];
+  const cutaway = () => {
+    const tx = Math.cos(cam.az);
+    const tz = -Math.sin(cam.az);
+    NORMALS.forEach((n, i) => {
+      const want = n.x * tx + n.y * tz > 0.25 ? CUT_H : WALL_H;
+      if (want === cutTarget[i]) return;
+      cutTarget[i] = want;
+      const box = { h: U.uCut.value[i]! };
+      run(box, { h: want, duration: o.reduced ? 0 : 0.35, ease: 'power2.out', onUpdate: () => (U.uCut.value[i] = box.h) });
+    });
+  };
+
+  const autoOrbit = () => !o.reduced && ready && !dragging && !paused && !selected && performance.now() > resumeAt;
+
+  const tick = (now: number) => {
+    frame = 0;
+    if (destroyed || !visible) return;
+    const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
+    lastT = now;
+    let again = tweening > 0;
+    if (!dragging && Math.abs(velAz) > 1e-4) {
+      cam.az += velAz;
+      velAz *= 0.92;
+      again = true;
+    }
+    if (autoOrbit()) {
+      cam.az += ORBIT * dt;
+      again = true;
+    } else if (ready && !o.reduced && resumeAt !== Infinity && !selected && !paused) again = true; // wait to resume
+    cutaway();
+    place();
+    if (tweening > 0 && !ready) renderer.shadowMap.needsUpdate = true; // shadows follow the lift
+    renderer.render(scene, camera);
+    projectSpots();
+    if (again) request();
+    else lastT = 0;
+  };
+  const request = () => {
+    if (!frame && !destroyed) frame = requestAnimationFrame(tick);
+  };
+  const run = (target: object, vars: gsap.TweenVars) => {
+    tweening++;
+    const done = vars.onComplete as (() => void) | undefined;
+    return gsap.to(target, {
+      ...vars,
+      onUpdate() {
+        (vars.onUpdate as (() => void) | undefined)?.();
+        request();
+      },
+      onComplete() {
+        tweening--;
+        done?.();
+        request();
+      },
+    });
+  };
+
+  /* ---------- pointer: drag to turn (inertia), tap a room ---------- */
+  const ndc = new Vector2();
+  let downX = 0, downY = 0, lastX = 0, lastY = 0, moved = 0;
+  const onDown = (e: PointerEvent) => {
+    o.onInteract();
+    dragging = true;
+    downX = lastX = e.clientX;
+    downY = lastY = e.clientY;
+    moved = 0;
+    velAz = 0;
+    resumeAt = Infinity;
+    if (e.pointerType === 'mouse') canvas.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: PointerEvent) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    moved = Math.max(moved, Math.hypot(e.clientX - downX, e.clientY - downY));
+    velAz = -(dx / canvas.clientWidth) * Math.PI;
+    cam.az += velAz;
+    if (e.pointerType === 'mouse') cam.el = Math.min(EL_MAX, Math.max(EL_MIN, cam.el + (dy / canvas.clientHeight) * 0.6));
+    request();
+  };
+  const onUp = (e: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    resumeAt = performance.now() + RESUME;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    if (moved < 6 && ready) {
+      const r = canvas.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      ray.far = Infinity;
+      const hit = ray.intersectObject(floor, false)[0];
+      if (hit) {
+        const p: P2 = [hit.point.x + cx, hit.point.z + cz];
+        o.onRoom(data.rooms.find((room) => inside(p, room.poly))?.id ?? null);
+      }
+    }
+    request();
+  };
+  const onCancel = () => {
+    dragging = false;
+    resumeAt = performance.now() + RESUME;
+  };
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onCancel);
+  canvas.style.cursor = 'grab';
+
+  const ro = new ResizeObserver(() => {
+    fit();
+    request();
+  });
+  ro.observe(host);
+  const stopVis = onVisibility(stage, (vis) => {
+    visible = vis && document.visibilityState === 'visible';
+    if (visible) request();
+  });
+
+  /* ---------- rooms ---------- */
+  function setHl(id: string | null, sel: boolean) {
+    const room = data.rooms.find((r) => r.id === (id ?? selected));
+    if (room) {
+      hl.geometry.dispose();
+      hl.geometry = flat(room.poly);
+    }
+    spots.forEach((s) => s.b.classList.toggle('is-hot', s.r.id === id));
+    run(hlMat, { opacity: room ? 0.22 : 0, duration: o.reduced ? 0 : 0.3 });
+    if (!sel) return;
+    const c = room ? centroid(room.poly) : null;
+    const to = c ? { x: (c[0] - cx) * 0.35, z: (c[1] - cz) * 0.35 } : { x: 0, z: 0 };
+    run(cam, { ...to, duration: o.reduced ? 0 : 0.8, ease: 'power2.inOut' });
+  }
+
+  fit();
+  place();
+
+  return {
+    enter() {
+      return new Promise<void>((resolve) => {
+        const done = () => {
+          ready = true;
+          renderer.shadowMap.needsUpdate = true;
+          layer.classList.add('is-ready');
+          resumeAt = performance.now() + 600;
+          request();
+          resolve();
+        };
+        if (o.reduced) {
+          U.uRise.value = 99;
+          done();
+          return;
+        }
+        Object.assign(cam, { az: -90 * DEG, el: 89 * DEG });
+        U.uRise.value = 0;
+        run(cam, { az: AZ, el: EL, duration: 1.4, ease: 'power3.inOut' });
+        run(U.uRise, { value: riseEnd, duration: riseEnd, ease: 'none', onComplete: done });
+      });
+    },
+    leave() {
+      ready = false;
+      layer.classList.remove('is-ready');
+      spots.forEach((s) => (s.b.inert = true));
+      return new Promise<void>((resolve) =>
+        o.reduced ? resolve() : void run(U.uDrop, { value: 0.01, duration: 0.45, ease: 'power2.in', onComplete: resolve }),
+      );
+    },
+    select(id) {
+      selected = id;
+      spots.forEach((s) => s.b.setAttribute('aria-pressed', String(s.r.id === id)));
+      if (!id) resumeAt = performance.now() + RESUME;
+      setHl(id, true);
+    },
+    highlight(id) {
+      setHl(id, false);
+    },
+    pause(on) {
+      paused = on;
+      if (!on) resumeAt = performance.now() + RESUME;
+      request();
+    },
+    destroy() {
+      destroyed = true;
+      if (frame) cancelAnimationFrame(frame);
+      ro.disconnect();
+      stopVis();
+      gsap.killTweensOf([cam, U.uRise, U.uDrop, hlMat]);
+      canvas.removeEventListener('pointerdown', onDown);
+      canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerup', onUp);
+      canvas.removeEventListener('pointercancel', onCancel);
+      layer.remove();
+      hl.geometry.dispose();
+      keep.forEach((x) => x.dispose());
+      renderer.shadowMap.autoUpdate = true;
+    },
+  };
+}
+
+/** Load the texture image: AVIF, else the WebP fallback. */
+export function loadFloorImage(id: string) {
+  const tryLoad = (ext: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = `/units/${id}-floor.${ext}`;
+    });
+  return tryLoad('avif').catch(() => tryLoad('webp'));
+}
+
+/** The placeholder for the room card: the room's crop of the floor texture (bounding box + 0.3 m). */
+export function roomCrop(img: HTMLImageElement, data: Unit3d, id: string): Promise<Blob | null> {
+  const room = data.rooms.find((r) => r.id === id);
+  if (!room) return Promise.resolve(null);
+  const { minX, minZ, maxX, maxZ } = data.texture.plane;
+  const xs = room.poly.map((p) => p[0]);
+  const zs = room.poly.map((p) => p[1]);
+  const px = (x: number) => ((x - minX) / (maxX - minX)) * img.naturalWidth;
+  const pz = (z: number) => ((z - minZ) / (maxZ - minZ)) * img.naturalHeight;
+  const x0 = Math.max(0, px(Math.min(...xs) - 0.3));
+  const x1 = Math.min(img.naturalWidth, px(Math.max(...xs) + 0.3));
+  const z0 = Math.max(0, pz(Math.min(...zs) - 0.3));
+  const z1 = Math.min(img.naturalHeight, pz(Math.max(...zs) + 0.3));
+  // fit the crop into a 3:2 frame (letterboxed on sand), so the whole room shows
+  const W = 900, H = 600;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#F3ECE2';
+  ctx.fillRect(0, 0, W, H);
+  const s = Math.min(W / (x1 - x0), H / (z1 - z0));
+  const w = (x1 - x0) * s;
+  const h = (z1 - z0) * s;
+  ctx.drawImage(img, x0, z0, x1 - x0, z1 - z0, (W - w) / 2, (H - h) / 2, w, h);
+  return new Promise((resolve) => c.toBlob(resolve, 'image/webp', 0.85));
+}
+

@@ -17,6 +17,10 @@ export interface ModelAdapter {
   setIntro?(progress: number): void;
   /** Screen anchor for a floor's tooltip, stage-relative px. */
   anchor(floor: number): { x: number; y: number } | null;
+  /** Tier 2 only (rev 8): the shared renderer for the unit dollhouse (one WebGL context). */
+  renderer?: import('three').WebGLRenderer;
+  /** Tier 2 only (rev 8): stop rendering and ignore the pointer while the dollhouse owns the canvas. */
+  suspend?(on: boolean): void;
   destroy(): void;
 }
 

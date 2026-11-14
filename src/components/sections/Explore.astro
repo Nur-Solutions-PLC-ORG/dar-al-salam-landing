@@ -52,6 +52,10 @@ const i18n = {
   tbcAria: t.explore.tbcAria,
   tbcBody: fmt(t.explore.tbcBody, { floors: twoBedFloorsText }),
   seeOn: t.explore.seeOn,
+  // rev 8: the "3D | Plan" toggle (the rest of the 3D strings load with the dollhouse: /i18n/unit3d.{lang}.json)
+  view3d: t.unit3d.view3d,
+  viewPlan: t.unit3d.viewPlan,
+  viewLabel: t.unit3d.viewLabel,
 };
 const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
 ---
@@ -193,7 +197,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
         <div class="view view--unit" data-view="unit">
           {
             units.map((u) => (
-              <article class="unit" data-unit-card={u.code} aria-labelledby={`explore-unit-${u.id}`} hidden>
+              <article class="unit" data-unit-card={u.code} data-has3d={u.has3d ? '' : undefined} aria-labelledby={`explore-unit-${u.id}`} hidden>
                 <button type="button" class="unit__plan" data-open-plan={u.code} aria-label={fmt(t.explore.openPlan, { code: u.code })}>
                   <Picture
                     src={u.plan}
