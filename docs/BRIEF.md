@@ -22,7 +22,7 @@ Assets in `brand-source/`:
 
 ## Project facts (only these; don't invent more)
 - **Garment tower**, Garment area, Addis Ababa. Landmarks nearby: Haile Garment roundabout, Garment taxi station, Lafto square, Africa CDC headquarters.
-- High-rise residential tower, "two block layout". Basement: parking + offices. Ground floor: offices/commercial. **Residential floors 1–14, 9 apartments per floor = 126 apartments.**
+- High-rise residential tower, "two block layout". Basement: parking + offices. Ground floor: offices/commercial. **126 apartments** across the residential floors (see the 2026-11-14 update below: 16 floors, 2-bedroom floors).
 - Unit types (gross / net m²):
 
 | Code | Type | Gross m² | Net m² | Rooms |
@@ -38,6 +38,12 @@ Assets in `brand-source/`:
 | BL09 | 3 bedroom | 168.55 | 118.54 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 
   Plans show balconies, a separate shower room per bath, ceramic tile finishes, lift lobby with 2+ lifts and stairs per block.
+- **Update 2026-11-14 (from the client, via the user):**
+  - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
+  - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
+  - **Exact location:** https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9 (the client's pin; Google place id `0x164b81003f901365:0x2aba21e4438756c4`). Use this link for "Open in Google Maps" / "Get directions" instead of the "Haile Garment" search. Still no hand-typed coordinates; the location diagram stays "not to scale".
+  - **Building features (confirmed):** garbage chute on every floor, standby lift, underground water, parking. Basement parking is also shown on the plans. Use the wording "underground water"; don't specify borehole vs tank.
+- **Tower film:** `brand-source/video/` (rendered fly-through, 41 s, 640×352, H.264 with a music track). It's low resolution, so never show it full-bleed or stretched; see DESIGN for the treatment.
 - **Prices: do not publish.** Use "Request pricing". Payment is flexible (pay any amount over time until fully paid; a unit is reserved with an initial payment). It's OK to say "Flexible payment plans".
 - **Unknown (put in `src/data/site.ts` as `TODO(client)` and render gracefully):** phone, WhatsApp, Telegram, email, office address, social links, completion date, amenities beyond what the plans show.
 
@@ -46,7 +52,7 @@ English (default) + Amharic toggle (`/am` or a client-side switch). Amharic copy
 
 ## Sections (starting point; design can refine)
 1. Hero: the tower, brand, one-line promise, primary CTA (Book a visit) and secondary (Explore apartments).
-2. Key facts strip: 14 residential floors, 126 apartments, 2 & 3 bedroom homes, 158–171 m².
+2. Key facts strip: 16 floors, 126 apartments, 2 & 3 bedroom homes, 158–171 m².
 3. The tower / story: "House of Peace", calm living in the heart of Garment.
 4. **Interactive tower model** (the "creative model"): a 3D or 2.5D massing of the tower; hover/tap a floor to select it, then the floor's key plan with the 9 apartments, then the apartment's plan + specs. Must have a lightweight non-WebGL fallback.
 5. Apartment types gallery: 9 plans with filters (2 bed / 3 bed), zoomable plan viewer.
