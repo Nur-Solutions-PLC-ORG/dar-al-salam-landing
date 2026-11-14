@@ -55,7 +55,8 @@ const lines = t.hero.title.split('|');
       <!-- no JS: film.mp4 in the browser's player; with JS: the film dialog (circle reveal from the disc) -->
       <a class="hero__play" href="/video/film.mp4" aria-haspopup="dialog" data-film-open data-hero-play data-cursor="play">
         <span class="hero__play-disc" aria-hidden="true"><span class="hero__play-ring"></span></span>
-        <span class="hero__play-label">{t.film.watch} · <span class="tabular">{t.film.duration}</span></span>
+        <!-- two items: at ≥ 1024 the label is inline-flex, which trims the space before "0:41"; gap restores it -->
+        <span class="hero__play-label"><span>{t.film.watch} ·</span> <span class="tabular">{t.film.duration}</span></span>
         <span class="visually-hidden">{t.film.openSr}</span>
       </a>
     </div>
@@ -585,6 +586,7 @@ const lines = t.hero.title.split('|');
     .hero__play-label {
       display: inline-flex;
       align-items: center;
+      gap: 0.3em;
       min-height: 36px;
       padding: 0 16px;
       border-radius: var(--radius-pill);
