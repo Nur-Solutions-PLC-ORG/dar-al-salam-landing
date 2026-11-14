@@ -33,6 +33,7 @@
 }
 
 .explore[data-view3d] .unit__plan,
+.explore[data-view3d] .unit__rooms,
 .explore[data-view3d] .explore__hint,
 .explore[data-view3d] .explore__tooltip {
   display: none;

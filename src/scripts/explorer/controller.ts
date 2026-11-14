@@ -359,7 +359,18 @@ export function createExplorer(root: HTMLElement) {
   let dh: import('./unit3d').Dollhouse | null = null;
   let dhCode: Code | null = null;
   let viewJob = 0; // newest transition wins
-  let strings: Promise<{ rooms: Record<string, string> } & Record<string, string>> | null = null;
+  let strings: Promise<import('./unit3d-panel').PanelStrings> | null = null;
+  let rooms: import('./unit3d-panel').RoomsPanel | null = null;
+  let room: string | null = null;
+  /** U5: select a room (hotspot, list or a tap on its floor); the same room again, or null, deselects. */
+  const selectRoom = (id: string | null) => {
+    if (id && id === room) id = null;
+    room = id;
+    dh?.select(id);
+    rooms?.select(id);
+    if (id) rooms?.hideHint();
+  };
+  window.addEventListener('unit3d:room', (e) => selectRoom((e as CustomEvent<{ id: string | null }>).detail.id));
   const lang = root.dataset.lang ?? 'en';
   const area = (m2: number) =>
     `${m2.toLocaleString(lang === 'am' ? 'am-ET' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
@@ -379,6 +390,9 @@ export function createExplorer(root: HTMLElement) {
   function fail3d(err?: unknown) {
     if (err) console.warn('[explorer] unit 3D unavailable, showing the plan', err);
     failed3d = true;
+    room = null;
+    rooms?.destroy();
+    rooms = null;
     dh?.destroy();
     dh = dhCode = null;
     model.suspend?.(false);
@@ -390,6 +404,9 @@ export function createExplorer(root: HTMLElement) {
   async function leave3d(job: number) {
     if (!dh) return;
     const d = dh;
+    selectRoom(null);
+    rooms?.destroy();
+    rooms = null;
     await d.leave();
     if (job !== viewJob) return;
     await fade(0, 300);
@@ -405,8 +422,9 @@ export function createExplorer(root: HTMLElement) {
     const tier = model;
     if (!tier.renderer || !tier.suspend) throw new Error('no tier 2 renderer');
     strings ??= fetch(`/i18n/unit3d.${lang}.json`).then((r) => r.json());
-    const [{ createDollhouse, loadFloorImage }, { units3d }, s] = await Promise.all([
+    const [{ createDollhouse, loadFloorImage }, { createRoomsPanel }, { units3d }, s] = await Promise.all([
       import('./unit3d'),
+      import('./unit3d-panel'),
       import('../../data/units3d'),
       strings,
     ]);
@@ -426,9 +444,25 @@ export function createExplorer(root: HTMLElement) {
       area,
       reduced: prefersReducedMotion(),
       onRoom: (id) => window.dispatchEvent(new CustomEvent('unit3d:room', { detail: { id } })),
-      onInteract: () => hint.setAttribute('data-done', ''),
+      onInteract: () => {
+        hint.setAttribute('data-done', '');
+        rooms?.hideHint();
+      },
     });
     dhCode = code;
+    room = null;
+    rooms = createRoomsPanel({
+      card: cards.get(code)!,
+      code,
+      geo: pack.geo,
+      images: pack.images,
+      floorImage: image,
+      s,
+      area,
+      lang,
+      onSelect: selectRoom,
+      onHover: (id) => dh?.highlight(id),
+    });
     const entering = dh.enter();
     await fade(1, 200);
     await entering;
@@ -599,7 +633,8 @@ export function createExplorer(root: HTMLElement) {
     const active = document.activeElement;
     if (active && active !== document.body && !root.contains(active)) return;
     e.preventDefault();
-    back();
+    if (room) selectRoom(null); // rev 8: Esc first deselects the room
+    else back();
   };
   document.addEventListener('keydown', onKey);
 
