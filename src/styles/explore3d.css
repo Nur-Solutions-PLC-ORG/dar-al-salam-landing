@@ -51,4 +51,10 @@
   .explore[data-view3d] .unit {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* rev 8.1 E: the UNIT 3D panel never clips; it grows instead */
+  .explore[data-view3d] .explore__panel {
+    max-height: none;
+    overflow: visible;
+  }
 }

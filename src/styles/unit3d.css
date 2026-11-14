@@ -109,8 +109,23 @@
   text-transform: none;
 }
 
-.u3d-rooms__list li + li {
-  border-top: 1px solid var(--line);
+.u3d-rooms__list li {
+  border-bottom: 1px solid var(--line);
+}
+
+/* rev 8.1 E: two columns of 40 px rows from 1024 px (44 px where the pointer is coarse) */
+@media (min-width: 1024px) {
+  .u3d-rooms__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-5);
+  }
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  .u3d-room {
+    min-height: 40px;
+  }
 }
 
 .u3d-room {

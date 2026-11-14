@@ -1,7 +1,9 @@
 /**
  * UNIT 3D panel (DESIGN §9.6.4–§9.6.5 rev 8): the Rooms list (the accessible path into the model), the hint, and the
  * room card. Loaded with the dollhouse; everything it adds is removed again on leave.
- * - Room card: inside the panel under the specs (clip-path reveal) from 768 px; below that a bottom-sheet <dialog>
+ * - Order (rev 8.1 E): toggle → eyebrow → type → areas → actions → hint → [room card] → rooms, so Request pricing and
+ *   Book a visit stay in view; the rooms list is 2 columns from 1024 px.
+ * - Room card: in the panel above the rooms list (clip-path reveal) from 768 px; below that a bottom-sheet <dialog>
  *   (Esc, close button or a swipe down closes it; focus returns to whatever opened it).
  * - Image rule: an AI interior only when `approved`, always labelled "Artist's impression; finishes may vary.";
  *   until then the room's own crop of the floor plan, labelled "From the floor plan".
@@ -81,13 +83,13 @@ export function createRoomsPanel(o: {
     return { id: r.id, b };
   });
   rooms.append(h, ul);
-  specs.after(rooms);
   added.push(rooms);
 
   const hint = document.createElement('p');
   hint.className = 'small muted u3d-hint';
   hint.textContent = s.hint;
   actions.after(hint);
+  hint.after(rooms);
   added.push(hint);
 
   /* ---------- room card ---------- */
@@ -174,7 +176,7 @@ export function createRoomsPanel(o: {
     }
     if (!was) {
       opener = document.activeElement as HTMLElement | null;
-      specs.after(fig);
+      rooms.before(fig);
       fig.animate(
         reduce() ? [{ opacity: 0 }, { opacity: 1 }] : [{ clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0)' }],
         { duration: reduce() ? 200 : 500, easing: EASE },
