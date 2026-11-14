@@ -1,6 +1,6 @@
 /**
  * Build-time axonometric SVG maquette of the tower (DESIGN §9.4 tier 0). Pure data → SVG strings;
- * rendered by src/components/explorer/Maquette.astro. Zero client JS; tier 1 wires hover/click on top.
+ * served as a static SVG by src/pages/explorer/maquette.svg.ts (rev 9: fetched only when the tower render fails).
  *
  * Projection: rotate the plan by AZIMUTH, then an elevation-only axonometric:
  *   X = xr,  Y = yr·sin(ELEV) − z·cos(ELEV)   (yr grows toward the viewer)

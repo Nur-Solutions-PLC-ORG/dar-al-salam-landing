@@ -103,7 +103,6 @@ export const am: Dict = {
     typicalFloor: 'መደበኛ ወለል',
     openPlan: 'የ{code}ን ሙሉ ፕላን ይክፈቱ',
     selected: 'ተመርጧል',
-    load3d: 'ባለ 3D ሞዴሉን ይጫኑ',
     floorList: 'የመኖሪያ ወለሎች',
     unitList: 'በዚህ ወለል ያሉ ቤቶች',
   },

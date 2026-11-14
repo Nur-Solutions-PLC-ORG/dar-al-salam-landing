@@ -1,50 +1,13 @@
----
 /**
- * Tier 0 / tier 1 tower maquette (DESIGN §9.4): build-time axonometric SVG, zero JS.
- * Decorative for assistive tech (aria-hidden): the floor list, stepper and hotspots are the controls.
- * Tier 1 (src/scripts/explorer/svg-model.ts) wires hover/click on [data-floor] groups.
+ * The tower maquette as a static SVG (DESIGN §9.7 A4, rev 9.1): the fallback stage when the tower render fails to load.
+ * Fetched and injected inline by the explorer only in that case, so it costs the page HTML nothing (40 KB budget). Its
+ * styles are embedded; inline, it inherits the page's CSS custom properties. Decorative (aria-hidden): the floor list
+ * and stepper are the controls; src/scripts/explorer/svg-model.ts wires hover/click on its [data-floor] groups.
  */
+import type { APIRoute } from 'astro';
 import { buildMaquette, PULL_OUT } from '../../lib/maquette';
 
-const m = buildMaquette();
----
-
-<svg
-  class="maquette"
-  viewBox={m.viewBox}
-  aria-hidden="true"
-  focusable="false"
-  data-maquette
-  style={`--pull-x: ${PULL_OUT.x}px; --pull-y: ${PULL_OUT.y}px`}
->
-  <defs>
-    <radialGradient id="maquette-shadow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#0b1220" stop-opacity="0.7"></stop>
-      <stop offset="0.5" stop-color="#0b1220" stop-opacity="0.35"></stop>
-      <stop offset="1" stop-color="#0b1220" stop-opacity="0"></stop>
-    </radialGradient>
-  </defs>
-  <path class="maquette__ground" d={m.ground}></path>
-  <polygon class="maquette__basement" points={m.basement}></polygon>
-  <g class="maquette__podium">
-    {m.podium.faces.map((f) => <polygon class={f.kind} points={f.points} />)}
-  </g>
-  {
-    m.floors.map((f) => (
-      <g class="slab" data-floor={f.n} data-ax={f.prism.anchor[0].toFixed(1)} data-ay={f.prism.anchor[1].toFixed(1)}>
-        {f.prism.faces.map((face) => (
-          <polygon class={face.kind} points={face.points} />
-        ))}
-      </g>
-    ))
-  }
-  <g class="maquette__parapet">
-    {m.parapet.faces.map((f) => <polygon class={f.kind} points={f.points} />)}
-  </g>
-</svg>
-
-<style>
-  .maquette {
+const CSS = `.maquette {
     width: 100%;
     height: 100%;
     overflow: visible;
@@ -140,7 +103,24 @@ const m = buildMaquette();
     fill: #e9e2d6;
   }
 
-  :global(html.js) .maquette[data-interactive] .slab {
+  .maquette[data-interactive] .slab {
     cursor: pointer;
-  }
-</style>
+  }`;
+
+export const GET: APIRoute = () => {
+  const m = buildMaquette();
+  const poly = (f: { kind: string; points: string }) => `<polygon class="${f.kind}" points="${f.points}"/>`;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" class="maquette" viewBox="${m.viewBox}" aria-hidden="true" focusable="false" data-maquette style="--pull-x: ${PULL_OUT.x}px; --pull-y: ${PULL_OUT.y}px">` +
+    `<style>${CSS}</style>` +
+    '<defs><radialGradient id="maquette-shadow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#0b1220" stop-opacity="0.7"/><stop offset="0.5" stop-color="#0b1220" stop-opacity="0.35"/><stop offset="1" stop-color="#0b1220" stop-opacity="0"/></radialGradient></defs>' +
+    `<path class="maquette__ground" d="${m.ground}"/>` +
+    `<polygon class="maquette__basement" points="${m.basement}"/>` +
+    `<g class="maquette__podium">${m.podium.faces.map(poly).join('')}</g>` +
+    m.floors
+      .map((f) => `<g class="slab" data-floor="${f.n}" data-ax="${f.prism.anchor[0].toFixed(1)}" data-ay="${f.prism.anchor[1].toFixed(1)}">${f.prism.faces.map(poly).join('')}</g>`)
+      .join('') +
+    `<g class="maquette__parapet">${m.parapet.faces.map(poly).join('')}</g>` +
+    '</svg>';
+  return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml; charset=utf-8' } });
+};

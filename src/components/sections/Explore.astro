@@ -9,7 +9,6 @@
 import { Picture } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
 import Button from '../ui/Button.astro';
-import Maquette from '../explorer/Maquette.astro';
 import KeyPlan from '../explorer/KeyPlan.astro';
 import TowerStage from '../explorer/TowerStage.astro';
 import { sections } from '../../data/sections';
@@ -98,12 +97,10 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     <div class="explore__grid" data-explore-grid>
       <div class="explore__model" data-model-col>
         <div class="explore__stage" data-stage>
-          <Maquette />
           <TowerStage lang={lang} />
           <div class="explore__canvas" data-canvas aria-hidden="true"></div>
           <div class="explore__tooltip" data-tooltip aria-hidden="true" hidden></div>
           <p class="explore__hint" data-hint aria-hidden="true" hidden></p>
-          <button type="button" class="explore__load3d" data-load-3d hidden>{t.explore.load3d}</button>
         </div>
 
         <div class="explore__stepper" data-model-stepper>
@@ -445,18 +442,6 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
 
   .explore__hint[data-done] {
     opacity: 0;
-  }
-
-  .explore__load3d {
-    position: absolute;
-    top: var(--space-2);
-    right: 0;
-    min-height: var(--tap-min);
-    padding-inline: var(--space-4);
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--btn2-border);
-    font-size: var(--fs-small);
-    font-weight: 600;
   }
 
   .explore__stepper {

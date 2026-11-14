@@ -109,7 +109,6 @@ export const en = {
     typicalFloor: 'Typical floor',
     openPlan: 'Open the full plan of {code}',
     selected: 'selected',
-    load3d: 'Load 3D model',
     floorList: 'Residential floors',
     unitList: 'Homes on this floor',
   },

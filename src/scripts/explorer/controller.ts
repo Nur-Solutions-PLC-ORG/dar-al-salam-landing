@@ -6,7 +6,8 @@
  *
  * URL: #explore · #explore/f7 · #explore/f7/bl05 (· /3d or /plan, rev 8) via history.replaceState (shareable, never scrolls).
  * The DOM is server-rendered; this module only toggles views/classes and drives a model tier
- * (tier 1 SVG always; tier 2 Three.js swapped in when available, see loadScene()).
+ * (rev 9: the photoreal tower stage first; from FLOOR state the WebGL slab when available, see loadScene();
+ * the SVG maquette is fetched only if the render fails).
  */
 import { gsap, ScrollTrigger, prefersReducedMotion, scrollToTarget } from '../motion';
 import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
@@ -115,9 +116,8 @@ export function createExplorer(root: HTMLElement) {
     onInteract: () => hint.setAttribute('data-done', ''),
   };
 
-  const svg = $<SVGSVGElement>('[data-maquette]')!;
-  // rev 9 (A1): the photoreal tower stage is the first view on every tier; the SVG maquette under it is the fallback
-  // when the render fails to load
+  // rev 9: the photoreal tower stage is the first view on every tier. If the render fails to load, the SVG maquette is
+  // fetched (/explorer/maquette.svg, A4: not in the page HTML) and wired as the stage instead.
   const photo = $('[data-tstage]');
   const photoImg = photo?.querySelector('img');
   const ground = (at: Anchor | null) => {
@@ -130,21 +130,29 @@ export function createExplorer(root: HTMLElement) {
     placeTooltip(at);
   };
   const usePhoto = () => Boolean(photo && photoImg && !(photoImg.complete && photoImg.naturalWidth === 0));
-  let model: ModelAdapter = usePhoto() ? createPhotoModel(photo!, stage, { ...callbacks, onGround: ground }) : createSvgModel(svg, stage, callbacks);
+  /** A model that does nothing (no visual stage): the floor list and stepper keep working. */
+  const noModel: ModelAdapter = { preview() {}, select() {}, anchor: () => null, destroy() {} };
+  let model: ModelAdapter = usePhoto() ? createPhotoModel(photo!, stage, { ...callbacks, onGround: ground }) : noModel;
   stage.dataset.tier = usePhoto() ? 'photo' : 'svg';
-  if (photo && !usePhoto()) photo.hidden = true; // the render already failed: the maquette under it shows
-  photoImg?.addEventListener(
-    'error',
-    () => {
-      if (stage.dataset.tier !== 'photo') return;
-      model.destroy();
-      photo!.hidden = true;
-      model = createSvgModel(svg, stage, callbacks);
-      model.select(state.level === 'idle' ? null : state.floor);
-      stage.dataset.tier = 'svg';
-    },
-    { once: true },
-  );
+  const useMaquette = () => {
+    model.destroy();
+    model = noModel;
+    if (photo) photo.hidden = true;
+    stage.dataset.tier = 'svg';
+    fetch('/explorer/maquette.svg')
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`maquette ${r.status}`))))
+      .then((text) => {
+        stage.insertAdjacentHTML('afterbegin', text);
+        const svg = stage.querySelector<SVGSVGElement>('[data-maquette]');
+        if (!svg || model !== noModel) return;
+        model = createSvgModel(svg, stage, callbacks);
+        model.select(state.level === 'idle' ? null : state.floor);
+      })
+      .catch((err: unknown) => console.warn('[explorer] no tower visual; the floor list stays the control', err));
+  };
+  if (photo && !usePhoto()) useMaquette(); // the render already failed
+  else if (!photo) useMaquette();
+  photoImg?.addEventListener('error', () => stage.dataset.tier === 'photo' && useMaquette(), { once: true });
 
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const webgl = supportsWebGL();
@@ -154,7 +162,6 @@ export function createExplorer(root: HTMLElement) {
   };
   setHint(stage.dataset.tier === 'photo' ? (fine ? t.towerHover : t.towerTap) : fine ? t.hintHover : t.hintTouch);
 
-  const loadBtn = $<HTMLButtonElement>('[data-load-3d]')!;
   /* ---------- rev 9 (A3): the WebGL floor slab, FLOOR state onward; it owns the renderer the dollhouse borrows ---------- */
   let gl: import('./slab').SlabAdapter | null = null;
   let scenePromise: Promise<boolean> | null = null;
@@ -176,8 +183,7 @@ export function createExplorer(root: HTMLElement) {
   };
   /** Tier 2; resolves false when it can't run (the photo stage stays). */
   const loadScene = () =>
-    (scenePromise ??= ((loadBtn.hidden = true),
-    Promise.all([import('./slab'), keyplanImage()])
+    (scenePromise ??= (Promise.all([import('./slab'), keyplanImage()])
       .then(([{ createSlab }, texture]) =>
         createSlab(host, stage, {
           texture,
@@ -225,9 +231,6 @@ export function createExplorer(root: HTMLElement) {
     if (wait > 0) slabTimer = window.setTimeout(apply, wait);
     else apply();
   }
-  // rev 9 (A1): the tower massing no longer loads for the first view (the photo stage replaces it); tier 2 now
-  // loads only when the 3D unit view needs its renderer. A4 removes the massing and this button.
-  loadBtn.hidden = true;
   // context loss → the photo stage (pushed in on the floor) stays; no WebGL for the rest of the session
   stage.addEventListener('explorer:fallback', () => {
     fail3d();
@@ -834,12 +837,9 @@ export function createExplorer(root: HTMLElement) {
       });
       introProgress = tl.progress();
       // the panel only slides (no fade): visitors arriving via the nav land at progress 0 and must read it
-      tl.fromTo(panel, { x: 40 }, { x: 0 }, 0).fromTo(
-        svg,
-        { scale: 0.94, y: 30, transformOrigin: '50% 100%' },
-        { scale: 1, y: 0 },
-        0,
-      );
+      tl.fromTo(panel, { x: 40 }, { x: 0 }, 0);
+      // rev 9: the photo stage takes the maquette's place in the intro
+      if (photo) tl.fromTo(photo, { scale: 0.94, y: 30, transformOrigin: '50% 100%' }, { scale: 1, y: 0 }, 0);
       ScrollTrigger.refresh();
     } else {
       gsap.from(modelCol, {

@@ -1,5 +1,5 @@
 /**
- * Tower massing constants shared by the build-time SVG maquette (tier 0/1) and the Three.js scene (tier 2).
+ * Tower massing constants for the SVG maquette (rev 9: fetched only as the fallback when the tower render fails).
  * Heights are ILLUSTRATIVE (DESIGN §9.4): used for the model only, never shown in the UI.
  */
 import hotspots from './keyplan-hotspots.json';
