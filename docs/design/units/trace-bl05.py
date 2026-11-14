@@ -90,6 +90,17 @@ solids=[
  {'id':'k-right','kind':'counter','poly':[m(1515,130),m(1598,130),m(1598,385),m(1515,385)],'h':0.9},
  {'id':'k-island','kind':'counter','poly':[m(1040,300),m(1375,300),m(1375,385),m(1040,385)],'h':0.9},
 ]
+# rev 8.1: furniture as low extrusions. The top face reuses the floor texture (planar UV), so the plan's own
+# furniture artwork becomes the top of each block; sides take `side`. Footprints follow the plan drawing.
+def F(id,r,h,side):
+    x0,y0,x1,y1=r; solids.append({'id':id,'kind':'furniture','poly':[m(x0,y0),m(x1,y0),m(x1,y1),m(x0,y1)],'h':h,'side':side})
+F('f-bed1',(232,180,525,410),0.5,'#E8E1D6'); F('f-bed1-ns1',(232,125,292,190),0.55,'#6E4E33'); F('f-bed1-ns2',(232,400,292,465),0.55,'#6E4E33')
+F('f-mbed',(232,885,520,1110),0.5,'#E8E1D6'); F('f-mbed-ns1',(232,830,292,890),0.55,'#6E4E33'); F('f-mbed-ns2',(232,1105,292,1170),0.55,'#6E4E33')
+F('f-bed2',(718,960,1005,1190),0.5,'#E8E1D6'); F('f-bed2-ns1',(718,905,778,965),0.55,'#6E4E33'); F('f-bed2-ns2',(718,1185,778,1245),0.55,'#6E4E33')
+F('f-dining',(1415,600,1540,795),0.75,'#4A3A2C'); F('f-chairs-w',(1340,595,1415,770),0.45,'#B79B74'); F('f-chairs-e',(1540,595,1615,770),0.45,'#B79B74'); F('f-chair-s',(1435,785,1515,860),0.45,'#B79B74')
+F('f-sofa-e',(1605,975,1725,1310),0.8,'#CFC3B1'); F('f-sofa-s',(1380,1320,1595,1440),0.8,'#CFC3B1')
+F('f-tv',(1098,915,1165,1335),0.5,'#5C4636'); F('f-side',(1625,1335,1710,1410),0.55,'#5C4636')
+
 def R(id,name,area,poly,label_px):
     return {'id':id,'name':name,'area':area,'poly':[m(*p) for p in poly],'label':m(*label_px)}
 rooms=[
@@ -115,7 +126,7 @@ data={
  'texture':{'src':'bl05-floor','cropPx':list(crop),
             'plane':{'minX':m(crop[0],crop[1])[0],'minZ':m(crop[0],crop[1])[1],'maxX':m(crop[2],crop[3])[0],'maxZ':m(crop[2],crop[3])[1]},
             'note':'UV = ((x-minX)/(maxX-minX), 1-(z-minZ)/(maxZ-minZ)); the texture is the crop resized to 1024 px wide'},
- 'defaults':{'wallH':2.8,'cutawayH':1.0,'doorHead':2.1,'note':'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
+ 'defaults':{'wallH':2.8,'modelCutH':2.4,'cutawayH':1.0,'doorHead':2.1,'note':'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
  'footprint':footprint,'walls':walls,'openings':openings,'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
 }
 s=json.dumps(data,separators=(',',':'),ensure_ascii=False)
@@ -128,7 +139,7 @@ P=lambda p:(p[0]*SX+OX,p[1]*SY+OY)
 for r in rooms: d.polygon([P(p) for p in r['poly']],fill=(0,160,255,50),outline=(0,120,255,255))
 d.polygon([P(p) for p in hall['poly']],fill=(255,200,0,40),outline=(200,150,0,255))
 d.line([P(p) for p in footprint+[footprint[0]]],fill=(0,0,0,255),width=3)
-for s_ in solids: d.polygon([P(p) for p in s_['poly']],fill=(140,0,255,90))
+for s_ in solids: d.polygon([P(p) for p in s_['poly']],fill=(255,0,200,90) if s_['kind']=='furniture' else (140,0,255,90))
 import math
 def seg(a,b,t,col):
     ax,ay=P(a);bx,by=P(b);dx,dy=bx-ax,by-ay;L=math.hypot(dx,dy) or 1
