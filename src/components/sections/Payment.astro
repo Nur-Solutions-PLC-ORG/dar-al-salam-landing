@@ -1,6 +1,10 @@
 ---
-/** Payment (DESIGN §5.7). M1 stub: heading only; built in M3. */
+/**
+ * Why Dar Al Salam + flexible payment (DESIGN §5.7 rev 2). Navy. Only what the plans and brief support;
+ * no numbers or percentages for payment. Part A has a visually-hidden H2 so the heading order stays valid.
+ */
 import Eyebrow from '../ui/Eyebrow.astro';
+import Button from '../ui/Button.astro';
 import { sections } from '../../data/sections';
 import { emph, getDict, type Lang } from '../../i18n';
 
@@ -9,18 +13,201 @@ interface Props {
 }
 const { lang } = Astro.props;
 const t = getDict(lang);
+const p = t.payment;
+
+// 32 px line icons, 1.25 px stroke (drawn on a 32 grid)
+const icons = {
+  generous: 'M5 5h22v22H5zM5 15h10v12M15 5v6M21 15h6M15 21h4',
+  balconies: 'M6 4h20v14H6zM16 4v14M3 18h26M5 18v10M27 18v10M9 22v6M13 22v6M19 22v6M23 22v6M3 28h26',
+  lifts: 'M7 4h18v24H7zM16 4v24M10 13l2.5-3 2.5 3M17 19l2.5 3 2.5-3',
+  parking: 'M4 26h24M6 26V12l10-6 10 6v14M12 22v-9h5a3 3 0 0 1 0 6h-5',
+} as const;
+const pillars = (['generous', 'balconies', 'lifts', 'parking'] as const).map((k) => ({ k, ...p.pillars[k], d: icons[k] }));
+const steps = [p.steps.reserve, p.steps.overTime, p.steps.paid];
 ---
 
-<section id="payment" class:list={['section', 'theme-dusk']} aria-labelledby="payment-title" data-header-theme="dark">
+<section id="payment" class="section theme-dusk payment" aria-labelledby="payment-why" data-header-theme="dark">
   <div class="container">
-    <Eyebrow n={sections.payment.n} label={t.payment.eyebrow} />
-    <h2 id="payment-title" class="h2 stub__title" data-split set:html={emph(t.payment.title)} />
+    <Eyebrow n={sections.payment.n} label={p.eyebrow} />
+    <h2 id="payment-why" class="visually-hidden">{p.eyebrow}</h2>
+    <ul role="list" class="pillars" data-pillars>
+      {
+        pillars.map((x) => (
+          <li class="pillar">
+            <svg class="pillar__icon" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
+              <path d={x.d} />
+            </svg>
+            <h3 class="pillar__title">{x.title}</h3>
+            <p class="small muted">{x.body}</p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="plan">
+      <h2 class="h2 plan__title" data-split set:html={emph(p.title)} />
+      <div class="steps" data-steps>
+        <span class="steps__line" aria-hidden="true"><span data-steps-line></span></span>
+        <ol class="steps__list" aria-label={p.stepsLabel}>
+        {
+          steps.map((s, i) => (
+            <li class="step">
+              <span class="step__dot" aria-hidden="true" data-step-dot>
+                <span />
+              </span>
+              <span class="step__n tabular" aria-hidden="true">
+                0{i + 1}
+              </span>
+              <h3 class="step__title">{s.title}</h3>
+              <p class="small muted">{s.body}</p>
+            </li>
+          ))
+        }
+        </ol>
+      </div>
+      <div class="plan__cta">
+        <Button href="#enquire" magnetic>{t.cta.requestPricing}</Button>
+        <p class="small muted">{p.smallPrint}</p>
+      </div>
+    </div>
   </div>
 </section>
 
 <style>
-  .stub__title {
-    margin-top: var(--space-5);
-    max-width: 18ch;
+  .pillars {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: var(--space-7) var(--gutter);
+    margin-top: var(--space-7);
+    padding-bottom: var(--space-9);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .pillar {
+    display: grid;
+    gap: var(--space-3);
+    align-content: start;
+  }
+
+  .pillar__icon {
+    width: 32px;
+    height: 32px;
+    color: var(--gold-500);
+  }
+
+  .pillar__title {
+    font-size: var(--fs-h3);
+  }
+
+  .plan {
+    display: grid;
+    gap: var(--space-7);
+    padding-top: var(--space-9);
+  }
+
+  .plan__title {
+    max-width: 14ch;
+  }
+
+  /* steps: vertical on mobile, horizontal hairline timeline from 768 */
+  .steps {
+    position: relative;
+    padding: 0 0 0 var(--space-7);
+  }
+
+  .steps__list {
+    display: grid;
+    gap: var(--space-6);
+    list-style: none;
+    padding: 0;
+  }
+
+  .steps__line {
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--line);
+  }
+
+  .steps__line span {
+    position: absolute;
+    inset: 0;
+    background: var(--gold-500);
+    transform-origin: top;
+  }
+
+  .step {
+    position: relative;
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .step__dot {
+    position: absolute;
+    left: calc(-1 * var(--space-7));
+    top: 2px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-500);
+    background: var(--bg);
+    display: grid;
+    place-items: center;
+  }
+
+  .step__dot span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold-500);
+  }
+
+  .step__n {
+    font-size: var(--fs-eyebrow);
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: var(--accent-text);
+  }
+
+  .step__title {
+    font-size: var(--fs-h3);
+  }
+
+  .plan__cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  @media (min-width: 768px) {
+    .steps {
+      padding: var(--space-7) 0 0;
+    }
+
+    .steps__list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--gutter);
+    }
+
+    .steps__line {
+      left: 0;
+      right: 0;
+      top: 7px;
+      bottom: auto;
+      width: auto;
+      height: 1px;
+    }
+
+    .steps__line span {
+      transform-origin: left;
+    }
+
+    .step__dot {
+      left: 0;
+      top: calc(-1 * var(--space-7));
+    }
   }
 </style>

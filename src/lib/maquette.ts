@@ -26,7 +26,7 @@ const AZIMUTH = (-35 * Math.PI) / 180;
 const ELEV = (24 * Math.PI) / 180;
 const SIMPLIFY_EPS = 1.1; // metres (RDP); ~8 vertices per face (review: HTML budget)
 /** Selected slab slides out toward the viewer (screen units = metres). */
-export const PULL_OUT = { x: 2.2, y: 1.6 } as const;
+export const PULL_OUT = { x: 3.2, y: 2.3 } as const; // ≈ 4.5 m, matches the 3D pull (design QA #2)
 
 /* ---------- geometry helpers ---------- */
 

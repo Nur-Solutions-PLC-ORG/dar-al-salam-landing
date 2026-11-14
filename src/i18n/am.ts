@@ -130,6 +130,9 @@ export const am: Dict = {
     },
     disclaimer: 'ምስሎቹና ፕላኖቹ ለማሳያ ብቻ ሲሆኑ ሊለወጡ ይችላሉ።',
     price: 'ዋጋ በጥያቄ',
+    carousel: 'የአፓርትመንት ዓይነቶች',
+    sorted: 'በስፋት ተደርድሯል',
+    loading: 'ሙሉ ፕላኑ በመጫን ላይ…',
   },
   rooms: {
     livingDining: 'ሳሎንና የመመገቢያ ክፍል',
@@ -149,6 +152,7 @@ export const am: Dict = {
     site: 'ጋርመንት ታወር',
     mapLabel: 'የጋርመንት ታወርና በአቅራቢያው ያሉ ምልክቶች ሥዕላዊ መግለጫ',
     openMaps: 'በጎግል ካርታ ይክፈቱ',
+    nearby: 'በአቅራቢያ',
     landmarks: {
       haileGarmentRoundabout: 'ኃይሌ ጋርመንት አደባባይ',
       garmentTaxiStation: 'ጋርመንት ታክሲ ተራ',
@@ -160,17 +164,18 @@ export const am: Dict = {
     eyebrow: 'ለምን ዳር አል ሰላም',
     pillars: {
       generous: { title: 'ሰፋፊ ቤቶች', body: '158–171 m² ጠቅላላ ስፋት፣ ባለ 2 እና ባለ 3 መኝታ፣ ለእያንዳንዱ መታጠቢያ የተለየ ሻወር ክፍል።' },
-      balconies: { title: 'በረንዳ ያላቸው ቤቶች', body: 'ከራስዎ በረንዳ ብርሃንና ንጹሕ አየር።' },
-      lifts: { title: 'በእያንዳንዱ ብሎክ ሊፍትና ደረጃ', body: 'በእያንዳንዱ ብሎክ ሁለት ወይም ከዚያ በላይ ሊፍቶች ያሉት የሊፍት ሎቢና ደረጃዎች።' },
+      balconies: { title: 'በረንዳ ያላቸው ቤቶች', body: 'ፕላኖቹ ለብርሃንና ለንጹሕ አየር በረንዳዎችን ያሳያሉ።' },
+      lifts: { title: 'የሊፍት ሎቢዎች', body: 'በእያንዳንዱ ብሎክ ሁለት ወይም ከዚያ በላይ ሊፍቶች ያሉት የሊፍት ሎቢና ደረጃዎች።' },
       parking: { title: 'የምድር ቤት የመኪና ማቆሚያ', body: 'ከታች ቢሮዎች፣ በመሬት ወለል ደግሞ የንግድ ቦታዎች።' },
     },
     title: 'ተለዋዋጭ ክፍያ፣ በእርስዎ *ፍጥነት*።',
     steps: {
       reserve: { title: 'ያስይዙ', body: 'በመጀመሪያ ክፍያ ቤትዎን ያስይዙ።' },
-      overTime: { title: 'በጊዜ ሂደት ይክፈሉ', body: 'የፈለጉትን መጠን በጊዜ ሂደት ይክፈሉ።' },
+      overTime: { title: 'የፈለጉትን መጠን በጊዜ ሂደት ይክፈሉ', body: 'ቤትዎ ሙሉ በሙሉ እስኪከፈል ድረስ።' },
       paid: { title: 'ሙሉ ክፍያ', body: 'ቤቱ የእርስዎ ነው።' },
     },
     smallPrint: 'ዋጋ በጥያቄ።',
+    stepsLabel: 'ክፍያው እንዴት እንደሚሠራ',
   },
   enquiry: {
     eyebrow: 'ያግኙን',
@@ -202,6 +207,13 @@ export const am: Dict = {
     anyFloor: 'ማንኛውም ወለል',
     subject: 'የጋርመንት ታወር ጥያቄ',
     contactLines: 'አድራሻ',
+    required: 'የግድ',
+    noscript: 'እባክዎ በዚህ ገጽ ላይ ያሉትን የመገኛ መረጃዎች ይጠቀሙ።',
+    imageAlt: 'የጋርመንት ታወር ምስል',
+  },
+  cursor: {
+    view: 'ይመልከቱ',
+    drag: 'ይጎትቱ',
   },
   footer: {
     closing: 'መጥተው *ራስዎ* ይመልከቱ።',

@@ -42,8 +42,8 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
           aria-label={`${u.code}, ${fmt(t.homes.bedroomsN, { n: u.bedrooms })}, ${formatArea(u.gross, lang)} ${t.homes.gross.toLowerCase()}`}
           style={`--cx: ${(((u.hotspot.centroid[0] - vx) / vw) * 100).toFixed(2)}%; --cy: ${(((u.hotspot.centroid[1] - vy) / vh) * 100).toFixed(2)}%`}
         >
-          <polygon class="hotspot__fill" points={u.hotspot.points.map((p) => p.join(',')).join(' ')} />
           <polygon class="hotspot__shape" points={u.hotspot.points.map((p) => p.join(',')).join(' ')} />
+          <polygon class="hotspot__fill" points={u.hotspot.points.map((p) => p.join(',')).join(' ')} />
           <text class="hotspot__label" x={u.hotspot.centroid[0]} y={u.hotspot.centroid[1]} text-anchor="middle" dominant-baseline="middle">
             {u.code}
           </text>
@@ -60,14 +60,10 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
     container-type: inline-size;
     aspect-ratio: 1200 / 1840;
     width: 100%;
-    max-height: 70svh;
+    --_max-h: var(--kp-max-h, min(62svh, 640px));
+    max-height: var(--_max-h);
+    width: min(100%, calc(var(--_max-h) * 1200 / 1840));
     margin-inline: auto;
-  }
-
-  @supports (aspect-ratio: 1) {
-    .keyplan {
-      width: min(100%, calc(70svh * 1200 / 1840));
-    }
   }
 
   .keyplan :global(picture),
@@ -96,8 +92,9 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
     transition: opacity 0.25s var(--ease-out);
   }
 
+  /* faint resting fill on homes only, so they separate from the core and corridors (design QA #6) */
   .hotspot__shape {
-    fill: transparent;
+    fill: rgb(243 236 226 / 0.5);
     stroke: var(--input-border);
     stroke-width: 1.5;
     vector-effect: non-scaling-stroke;
@@ -106,7 +103,7 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
 
   .hotspot__label {
     font-family: var(--font-body);
-    font-size: 34px;
+    font-size: 40px;
     font-weight: 600;
     fill: var(--navy-800);
     pointer-events: none;
@@ -161,8 +158,8 @@ const [vx = 0, vy = 0, vw = 1, vh = 1] = keyplanViewBox.split(' ').map(Number);
     }
   }
 
-  /* in-plan labels become illegible below ~520 px rendered width: chips + pill take over */
-  @container (max-width: 520px) {
+  /* in-plan labels show at rest; below ~340 px rendered width they'd be < 11 px: chips + pill take over */
+  @container (max-width: 340px) {
     .hotspot__label {
       display: none;
     }

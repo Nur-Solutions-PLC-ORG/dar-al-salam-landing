@@ -130,6 +130,9 @@ export const en = {
     },
     disclaimer: 'Renders and plans are illustrative and may change.',
     price: 'Prices on request',
+    carousel: 'Apartment types',
+    sorted: 'Sorted by size',
+    loading: 'Loading the full plan…',
   },
   rooms: {
     livingDining: 'living and dining room',
@@ -149,6 +152,7 @@ export const en = {
     site: 'Garment Tower',
     mapLabel: 'Diagram of Garment Tower and nearby landmarks',
     openMaps: 'Open in Google Maps',
+    nearby: 'Nearby',
     landmarks: {
       haileGarmentRoundabout: 'Haile Garment roundabout',
       garmentTaxiStation: 'Garment taxi station',
@@ -160,17 +164,18 @@ export const en = {
     eyebrow: 'Why Dar Al Salam',
     pillars: {
       generous: { title: 'Generous homes', body: '158–171 m² gross, 2 and 3 bedrooms, a separate shower room per bath.' },
-      balconies: { title: 'Homes with balconies', body: 'Light and air from your own balcony.' },
-      lifts: { title: 'Lifts and stairs in each block', body: 'A lift lobby with two or more lifts, and stairs, in each block.' },
+      balconies: { title: 'Homes with balconies', body: 'The plans show balconies, for light and air.' },
+      lifts: { title: 'Lift lobbies', body: 'A lift lobby with two or more lifts, and stairs, in each block.' },
       parking: { title: 'Basement parking', body: 'Plus offices below and commercial space at ground level.' },
     },
     title: 'Flexible payment, at your *pace*.',
     steps: {
       reserve: { title: 'Reserve', body: 'Secure your home with an initial payment.' },
-      overTime: { title: 'Pay over time', body: 'Pay any amount over time.' },
+      overTime: { title: 'Pay any amount over time', body: 'Until your home is fully paid.' },
       paid: { title: 'Fully paid', body: 'The home is yours.' },
     },
     smallPrint: 'Prices on request.',
+    stepsLabel: 'How payment works',
   },
   enquiry: {
     eyebrow: 'Enquire',
@@ -202,6 +207,13 @@ export const en = {
     anyFloor: 'any floor',
     subject: 'Garment Tower enquiry',
     contactLines: 'Contact',
+    required: 'required',
+    noscript: 'Please use the contact details on this page to reach us.',
+    imageAlt: 'Garment Tower render',
+  },
+  cursor: {
+    view: 'View',
+    drag: 'Drag',
   },
   footer: {
     closing: 'Come and see it for *yourself*.',

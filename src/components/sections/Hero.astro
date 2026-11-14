@@ -40,10 +40,6 @@ const lines = t.hero.title.split('|');
         <Button href="#enquire" magnetic>{t.cta.bookVisit}</Button>
         <Button href="#explore" variant="secondary" icon="down">{t.cta.explore}</Button>
       </div>
-      <div class="hero__cue" aria-hidden="true">
-        <span class="hero__cue-line"></span>
-        <span>{t.hero.scroll}</span>
-      </div>
     </div>
 
     <Arch class="hero__arch" outline data-hero-arch>
@@ -64,6 +60,10 @@ const lines = t.hero.title.split('|');
         </picture>
       </div>
     </Arch>
+  </div>
+  <div class="hero__cue" aria-hidden="true">
+    <span class="hero__cue-line"></span>
+    <span>{t.hero.scroll}</span>
   </div>
 </section>
 
@@ -126,6 +126,11 @@ const lines = t.hero.title.split('|');
   :global(:lang(am)) .hero__title {
     line-height: 1.15;
     max-width: 16ch;
+    letter-spacing: 0; /* design QA #12: no display tracking on Ethiopic */
+  }
+
+  :global(:lang(am)) .hero__cue {
+    letter-spacing: 0;
   }
 
   .hero__title .line {
@@ -162,9 +167,14 @@ const lines = t.hero.title.split('|');
   }
 
   @media (min-width: 1024px) {
+    /* design QA #7: the hero is exactly one viewport; arch + text centred, cue 32 px from the bottom */
     .hero {
       min-height: 100svh;
-      padding-block: calc(var(--header-h) + 24px) var(--space-6);
+      padding-block: calc(var(--header-h) + 24px) 48px;
+    }
+
+    .hero__grid {
+      align-items: center;
     }
 
     .hero__copy {
@@ -178,8 +188,8 @@ const lines = t.hero.title.split('|');
       grid-column: 7 / 13;
       order: 2;
       justify-self: end;
-      align-self: start;
-      --arch-h: calc(100svh - var(--header-h) - 48px);
+      align-self: center;
+      --arch-h: calc(100svh - var(--header-h) - 72px);
       max-height: 980px;
     }
 
@@ -188,10 +198,12 @@ const lines = t.hero.title.split('|');
     }
 
     .hero__cue {
+      position: absolute;
+      bottom: 32px;
+      left: max(var(--margin), calc((100% - var(--container)) / 2));
       display: inline-flex;
       align-items: center;
       gap: var(--space-3);
-      margin-top: var(--space-7);
       font-size: var(--fs-eyebrow);
       font-weight: 600;
       letter-spacing: 0.22em;
@@ -202,7 +214,7 @@ const lines = t.hero.title.split('|');
     .hero__cue-line {
       display: block;
       width: 1px;
-      height: 48px;
+      height: 40px;
       background: var(--accent);
       transform-origin: top;
     }

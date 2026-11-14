@@ -68,6 +68,7 @@ export function createSvgModel(svg: SVGSVGElement, stage: HTMLElement, cb: Model
     },
     select(floor) {
       selected = floor;
+      svg.toggleAttribute('data-has-selected', floor !== null);
       paint();
     },
     anchor,
@@ -76,6 +77,7 @@ export function createSvgModel(svg: SVGSVGElement, stage: HTMLElement, cb: Model
       svg.removeEventListener('pointerleave', onLeave);
       svg.removeEventListener('click', onClick);
       delete svg.dataset.interactive;
+      svg.removeAttribute('data-has-selected');
       slabs.forEach((g) => g.classList.remove('is-hover', 'is-selected'));
     },
   };

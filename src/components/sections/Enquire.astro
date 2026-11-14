@@ -1,26 +1,429 @@
 ---
-/** Enquire (DESIGN §5.8). M1 stub: heading only; built in M3. */
+/**
+ * Enquiry (DESIGN §5.8). Never posts anywhere: builds a message and opens WhatsApp / Telegram / mailto,
+ * offering only channels configured in src/data/site.ts. With none configured (all TODO(client)), the
+ * radio group is hidden and submit is disabled with a "being set up" note.
+ * Prefill: ?unit=BL05&floor=7 on load, and the `enquiry:prefill` event (explorer, plan viewer).
+ */
+import { Picture } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
+import heroTower from '../../assets/generated/hero-tower.jpg';
+import Arch from '../ui/Arch.astro';
 import { sections } from '../../data/sections';
-import { emph, getDict, type Lang } from '../../i18n';
+import { units } from '../../data/units';
+import { enquiryChannels, mailtoHref, site, telHref, telegramHref, whatsappHref } from '../../data/site';
+import { emph, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
 }
 const { lang } = Astro.props;
 const t = getDict(lang);
+const e = t.enquiry;
+const channels = enquiryChannels();
+const channelLabel = { whatsapp: e.whatsapp, telegram: e.telegram, email: e.email } as const;
+const c = site.contact;
+const contactRows = [
+  c.phone && { label: c.phone, href: telHref() },
+  c.whatsapp && { label: e.whatsapp, href: whatsappHref(), external: true },
+  c.telegram && { label: e.telegram, href: telegramHref(), external: true },
+  c.email && { label: c.email, href: mailtoHref() },
+].filter((r): r is { label: string; href: string; external?: boolean } => Boolean(r));
+
+const i18n = {
+  template: e.template,
+  anyUnit: e.anyUnit,
+  anyFloor: e.anyFloor,
+  floorN: t.explore.floorN,
+  opening: e.opening,
+  copied: e.copied,
+  subject: e.subject,
+  summary: e.errors.summary,
+  errName: e.errors.name,
+  errPhone: e.errors.phone,
+  channels: channelLabel,
+};
+const config = {
+  whatsapp: c.whatsapp.replace(/\D/g, ''),
+  telegram: c.telegram.replace(/^@/, ''),
+  email: c.email,
+};
 ---
 
-<section id="enquire" class:list={['section', '']} aria-labelledby="enquire-title" data-header-theme="light">
-  <div class="container">
-    <Eyebrow n={sections.enquire.n} label={t.enquiry.eyebrow} />
-    <h2 id="enquire-title" class="h2 stub__title" data-split set:html={emph(t.enquiry.title)} />
+<section id="enquire" class="section enquire" aria-labelledby="enquire-title" data-header-theme="light">
+  <div class="container grid enquire__grid">
+    <div class="enquire__intro">
+      <Eyebrow n={sections.enquire.n} label={e.eyebrow} />
+      <h2 id="enquire-title" class="h2 enquire__title" data-split set:html={emph(e.title)} />
+      <Arch class="enquire__arch" outline aspect="4 / 5" data-story-arch>
+        <div class="story-par" data-parallax-media>
+          <Picture
+            src={heroTower}
+            formats={['avif', 'webp']}
+            widths={[240, 360, 480]}
+            width={360}
+            fallbackFormat="jpg"
+            sizes="(min-width: 1024px) 240px, 40vw"
+            alt={e.imageAlt}
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </Arch>
+      {
+        contactRows.length > 0 && (
+          <div class="enquire__contact">
+            <h3 class="enquire__label">{e.contactLines}</h3>
+            <ul role="list">
+              {contactRows.map((r) => (
+                <li>
+                  <a class="link" href={r.href} {...(r.external ? { target: '_blank', rel: 'noopener' } : {})}>
+                    {r.label}
+                    {r.external && <span class="visually-hidden"> {t.a11y.newTab}</span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </div>
+
+    <form
+      class="form"
+      novalidate
+      data-enquiry
+      data-i18n={JSON.stringify(i18n)}
+      data-config={JSON.stringify(config)}
+      aria-describedby={channels.length ? undefined : 'enquire-unavailable'}
+    >
+      <div class="form__summary" role="status" aria-live="polite" data-summary></div>
+
+      <div class="field" data-field>
+        <label for="enq-name">{e.name} <span class="field__req" aria-hidden="true">*</span></label>
+        <input id="enq-name" name="name" type="text" autocomplete="name" required aria-describedby="enq-name-err" />
+        <p class="field__error" id="enq-name-err" data-error hidden></p>
+      </div>
+
+      <div class="field" data-field>
+        <label for="enq-phone">{e.phone} <span class="field__req" aria-hidden="true">*</span></label>
+        <input
+          id="enq-phone"
+          name="phone"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel"
+          placeholder={e.phonePlaceholder}
+          required
+          aria-describedby="enq-phone-err"
+        />
+        <p class="field__error" id="enq-phone-err" data-error hidden></p>
+      </div>
+
+      <div class="form__row">
+        <div class="field">
+          <label for="enq-unit">{e.unit}</label>
+          <select id="enq-unit" name="unit">
+            <option value="">{e.any}</option>
+            {units.map((u) => <option value={u.code}>{fmt(e.unitOption, { code: u.code, n: u.bedrooms })}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="enq-floor">{e.floor}</label>
+          <select id="enq-floor" name="floor">
+            <option value="">{e.any}</option>
+            {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => <option value={n}>{n}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {
+        channels.length > 0 && (
+          <fieldset class="field field--radios">
+            <legend>{e.replyVia}</legend>
+            <div class="radios">
+              {channels.map((ch, i) => (
+                <label class="radio">
+                  <input type="radio" name="channel" value={ch} checked={i === 0} />
+                  <span>{channelLabel[ch]}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )
+      }
+
+      <div class="field">
+        <label for="enq-message">
+          {e.message} <span class="muted">{e.optional}</span>
+        </label>
+        <textarea id="enq-message" name="message" rows="4"></textarea>
+      </div>
+
+      {
+        channels.length === 0 && (
+          <p class="form__unavailable" id="enquire-unavailable">
+            {e.unavailable}
+          </p>
+        )
+      }
+
+      <div class="form__submit">
+        <button class="btn" type="submit" disabled={channels.length === 0} data-magnetic>
+          <span class="btn__inner">
+            <span class="btn__text">{e.submit}</span>
+            <span class="btn__text btn__text--dup" aria-hidden="true">{e.submit}</span>
+          </span>
+          <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 10h12M11 5l5 5-5 5"></path>
+          </svg>
+        </button>
+        <svg class="form__dove" viewBox="257 4 156 202" aria-hidden="true" data-dove>
+          <use href="/mark-sprite.svg#mark-dove" width="415" height="319"></use>
+        </svg>
+        <p class="small form__status" role="status" data-status></p>
+      </div>
+      {channels.length > 0 && <noscript><p class="small muted">{e.noscript}</p></noscript>}
+    </form>
   </div>
 </section>
 
 <style>
-  .stub__title {
+  .enquire__grid {
+    row-gap: var(--space-7);
+    align-items: start;
+  }
+
+  .enquire__intro,
+  .form {
+    grid-column: 1 / -1;
+  }
+
+  .enquire__intro {
+    display: grid;
+    gap: var(--space-5);
+    justify-items: start;
+  }
+
+  .enquire__title {
+    max-width: 16ch;
+  }
+
+  .enquire__arch {
+    display: none;
+    width: 240px;
     margin-top: var(--space-5);
-    max-width: 18ch;
+  }
+
+  .story-par {
+    height: 100%;
+  }
+
+  .story-par :global(img) {
+    width: 100%;
+    height: 112%;
+    margin-top: -6%;
+    object-fit: cover;
+  }
+
+  .enquire__label,
+  legend {
+    font-family: var(--font-body);
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .form {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .form__summary:empty {
+    display: none;
+  }
+
+  .form__summary {
+    padding: var(--space-3) var(--space-4);
+    border-inline-start: 3px solid var(--danger-600);
+    background: color-mix(in srgb, var(--danger-600) 8%, var(--bg));
+    color: var(--danger-600);
+    font-weight: 600;
+    font-size: var(--fs-small);
+  }
+
+  .form__row {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .field label,
+  .field legend {
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .field__req {
+    color: var(--danger-600);
+  }
+
+  .field input:not([type='radio']),
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 52px;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-xs);
+    background: var(--ivory-50);
+    color: var(--navy-800);
+    font-size: max(16px, var(--fs-input));
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 7.5rem;
+  }
+
+  .field :is(input, select, textarea):focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .field [aria-invalid='true'] {
+    border-color: var(--danger-600);
+    border-width: 2px;
+  }
+
+  .field__error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-small);
+    color: var(--danger-600);
+  }
+
+  .field__error::before {
+    content: '!';
+    display: inline-grid;
+    place-items: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: var(--danger-600);
+    color: var(--ivory-50);
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex: none;
+  }
+
+  .field--radios {
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+  }
+
+  .radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    font-size: var(--fs-body);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .radio input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--navy-800);
+  }
+
+  .form__unavailable {
+    padding: var(--space-4);
+    background: var(--bg-alt);
+    border-radius: var(--radius-s);
+    color: var(--text);
+  }
+
+  .form__submit {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .form__dove {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    width: 56px;
+    height: auto;
+    aspect-ratio: 156 / 202;
+    color: var(--gold-500);
+    fill: currentColor;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .form__dove[data-fly] {
+    animation: dove-fly 1.4s var(--ease-out);
+  }
+
+  @keyframes dove-fly {
+    0% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    25% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-24px);
+    }
+  }
+
+  .form__status:empty {
+    display: none;
+  }
+
+  @media (min-width: 640px) {
+    .form__row {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .enquire__intro {
+      grid-column: 1 / 6;
+      position: sticky;
+      top: calc(var(--header-h) + var(--space-6));
+    }
+
+    .enquire__arch {
+      display: block;
+    }
+
+    .form {
+      grid-column: 7 / 13;
+    }
   }
 </style>
+
+<script>
+  import { initEnquiry } from '../../scripts/enquiry';
+  initEnquiry();
+</script>

@@ -1,7 +1,13 @@
 ---
-/** Location (DESIGN §5.6). M1 stub: heading only; built in M3. */
+/**
+ * Location (DESIGN §5.6). A stylised diagram, not a real map: positions are schematic, from the relative
+ * layout of the brochure map (site west; taxi station north-east of the site; roundabout east; Lafto square
+ * beside the roundabout; Africa CDC east past the ring road). No coordinates, distances or travel times.
+ * Labels are HTML over the SVG (crisp at every width); the list below is the accessible version.
+ */
 import Eyebrow from '../ui/Eyebrow.astro';
 import { sections } from '../../data/sections';
+import { mapsHref, site } from '../../data/site';
 import { emph, getDict, type Lang } from '../../i18n';
 
 interface Props {
@@ -9,18 +15,327 @@ interface Props {
 }
 const { lang } = Astro.props;
 const t = getDict(lang);
+
+// diagram space 400 × 500 (4:5)
+const SITE = { x: 112, y: 286 };
+const nodes = [
+  { key: 'garmentTaxiStation', x: 214, y: 150, align: 'right' },
+  { key: 'haileGarmentRoundabout', x: 270, y: 280, align: 'below' },
+  { key: 'laftoSquare', x: 262, y: 384, align: 'right' },
+  { key: 'africaCdc', x: 362, y: 214, align: 'left' },
+] as const;
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
+// Maps search: the configured office address if the client supplies one, else the brief's query
+const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') : site.location.mapsQuery;
 ---
 
-<section id="location" class:list={['section', 'section--alt']} aria-labelledby="location-title" data-header-theme="light">
-  <div class="container">
-    <Eyebrow n={sections.location.n} label={t.location.eyebrow} />
-    <h2 id="location-title" class="h2 stub__title" data-split set:html={emph(t.location.title)} />
+<section id="location" class="section section--alt location" aria-labelledby="location-title" data-header-theme="light">
+  <div class="container grid location__grid">
+    <div class="location__text">
+      <Eyebrow n={sections.location.n} label={t.location.eyebrow} />
+      <h2 id="location-title" class="h2 location__title" data-split set:html={emph(t.location.title)} />
+      <p class="lead" data-reveal>{t.location.lead}</p>
+    </div>
+
+    <figure class="location__map arch arch--soft" data-map>
+      <div class="arch__media location__media">
+        <div class="map" role="img" aria-label={t.location.mapLabel}>
+          <svg class="map__svg" viewBox="0 0 400 500" aria-hidden="true" focusable="false">
+            <g class="map__roads" data-map-roads>
+              <!-- main road: site → roundabout -->
+              <path d="M-10 296 C 60 292, 150 288, 244 282" />
+              <!-- roundabout → north (taxi station) -->
+              <path d="M262 256 C 248 210, 232 176, 208 120 S 170 30, 160 -10" />
+              <!-- roundabout → south (Lafto) -->
+              <path d="M276 306 C 274 350, 266 400, 258 510" />
+              <!-- ring road, east -->
+              <path d="M330 -10 C 312 120, 312 200, 322 260 S 360 420, 372 510" />
+              <!-- roundabout → east -->
+              <path d="M296 278 C 320 274, 360 266, 410 258" />
+              <!-- local streets -->
+              <path class="map__minor" d="M70 -10 C 82 120, 96 210, 104 300 S 116 440, 120 510" />
+              <path class="map__minor" d="M-10 420 C 100 410, 180 400, 262 392" />
+              <path class="map__minor" d="M120 180 C 160 170, 190 160, 214 150" />
+              <circle class="map__ring" cx="270" cy="280" r="26" />
+            </g>
+            <g class="map__pins">
+              {
+                nodes.map((n) => (
+                  <g class="map__pin" data-map-pin transform={`translate(${n.x} ${n.y})`}>
+                    <circle r="6" />
+                  </g>
+                ))
+              }
+            </g>
+            <g class="map__site" transform={`translate(${SITE.x} ${SITE.y})`}>
+              <circle class="map__pulse" r="16" data-map-pulse />
+              <circle class="map__site-dot" r="16" />
+              <!-- keyhole -->
+              <path class="map__keyhole" d="M0-8a4.6 4.6 0 0 1 2.6 8.4L4.4 8h-8.8l1.8-7.6A4.6 4.6 0 0 1 0-8Z" />
+            </g>
+          </svg>
+          <div class="map__labels" aria-hidden="true">
+            <span class="map__label map__label--site" style={`left:${pct(SITE.x, 400)};top:${pct(SITE.y + 30, 500)}`} data-map-label>
+              {t.location.site}
+            </span>
+            {
+              nodes.map((n) => (
+                <span
+                  class={`map__label map__label--${n.align}`}
+                  style={`left:${pct(n.x, 400)};top:${pct(n.y, 500)}`}
+                  data-map-label
+                >
+                  {t.location.landmarks[n.key]}
+                </span>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+      <figcaption class="small muted location__caption">{t.location.caption}</figcaption>
+    </figure>
+
+    <div class="location__aside">
+      <h3 class="location__nearby">{t.location.nearby}</h3>
+      <ul class="location__list" role="list" data-reveal="stagger">
+        {site.location.landmarks.map((k) => <li>{t.location.landmarks[k]}</li>)}
+      </ul>
+      <a class="btn btn--secondary" href={mapsHref(mapsQuery)} target="_blank" rel="noopener">
+        <span class="btn__inner">
+          <span class="btn__text">{t.location.openMaps}</span>
+          <span class="btn__text btn__text--dup" aria-hidden="true">{t.location.openMaps}</span>
+        </span>
+        <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M7 4h9v9M16 4 5 15"></path>
+        </svg>
+        <span class="visually-hidden">{t.a11y.newTab}</span>
+      </a>
+    </div>
   </div>
 </section>
 
 <style>
-  .stub__title {
-    margin-top: var(--space-5);
-    max-width: 18ch;
+  .location__grid {
+    row-gap: var(--space-7);
+    align-items: start;
+  }
+
+  .location__text,
+  .location__map,
+  .location__aside {
+    grid-column: 1 / -1;
+  }
+
+  .location__text {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .location__title {
+    max-width: 14ch;
+  }
+
+  .location__map {
+    margin: 0;
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
+  }
+
+  .location__media {
+    aspect-ratio: 4 / 5;
+    background: var(--ivory-50);
+    height: auto;
+  }
+
+  .map {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .map__svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .map__roads path {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+  }
+
+  .map__roads .map__minor {
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+  }
+
+  .map__ring {
+    fill: none;
+    stroke: var(--navy-800);
+    stroke-opacity: 0.4;
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .map__pin circle {
+    fill: var(--navy-800);
+    stroke: var(--ivory-50);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .map__site-dot {
+    fill: var(--gold-500);
+  }
+
+  .map__keyhole {
+    fill: var(--navy-900);
+  }
+
+  .map__pulse {
+    fill: var(--gold-500);
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .map__pulse {
+      animation: pulse 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+      animation-play-state: paused;
+    }
+
+    .map[data-onscreen] .map__pulse {
+      animation-play-state: running;
+    }
+  }
+
+  @keyframes pulse {
+    from {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(2.2);
+    }
+  }
+
+  .map__labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .map__label {
+    position: absolute;
+    width: max-content; /* labels near the edge must not shrink-to-fit into a sliver */
+    max-width: 9.5rem;
+    font-size: clamp(0.6875rem, 0.6rem + 0.35vw, 0.8125rem);
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--navy-800);
+    background: rgb(251 247 242 / 0.85);
+    padding: 0.15em 0.4em;
+    border-radius: var(--radius-xs);
+    transform: translate(10px, -50%);
+  }
+
+  .map__label--left {
+    transform: translate(calc(-100% - 10px), -50%);
+    text-align: end;
+  }
+
+  .map__label--below {
+    transform: translate(-50%, 34px);
+    text-align: center;
+  }
+
+  .map__label--site {
+    transform: translate(-50%, 0);
+    font-family: var(--font-display);
+    font-size: clamp(0.95rem, 0.85rem + 0.4vw, 1.15rem);
+    color: var(--gold-700);
+    background: none;
+  }
+
+  :global(:lang(am)) .map__label--site {
+    font-family: var(--font-body);
+  }
+
+  .location__caption {
+    margin-top: var(--space-3);
+    text-align: center;
+  }
+
+  .location__aside {
+    display: grid;
+    gap: var(--space-5);
+    justify-items: start;
+  }
+
+  .location__nearby {
+    font-family: var(--font-body);
+    font-size: var(--fs-eyebrow);
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+  }
+
+  :global(:lang(am)) .location__nearby {
+    letter-spacing: 0;
+    font-size: 0.8125rem;
+  }
+
+  .location__list {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* keyhole bullets (DESIGN §3.4 motif) */
+  .location__list li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+
+  .location__list li::before {
+    content: '';
+    flex: none;
+    width: 9px;
+    height: 13px;
+    background: var(--accent);
+    clip-path: path('M4.5 0a3.6 3.6 0 0 1 2 6.6L8.3 13H.7l1.8-6.4A3.6 3.6 0 0 1 4.5 0Z');
+    transform: translateY(1px);
+  }
+
+  @media (min-width: 1024px) {
+    .location__text {
+      grid-column: 9 / 13;
+      grid-row: 1;
+    }
+
+    .location__map {
+      grid-column: 1 / 8;
+      grid-row: 1 / span 2;
+      max-width: none;
+    }
+
+    .location__aside {
+      grid-column: 9 / 13;
+      grid-row: 2;
+    }
   }
 </style>
+
+<script>
+  // S14: the site pulse runs only while the map is on screen
+  const map = document.querySelector<HTMLElement>('.map');
+  if (map && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => map.toggleAttribute('data-onscreen', Boolean(e?.isIntersecting))).observe(map);
+  }
+</script>

@@ -533,3 +533,124 @@ html.lenis body {
 html.intro {
   --t0: 0.85s;
 }
+
+/* ---------- Toast (src/scripts/toast.ts) ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-6) + 64px + env(safe-area-inset-bottom));
+  z-index: calc(var(--z-dialog) + 1);
+  max-width: min(92vw, 28rem);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--navy-800);
+  color: var(--ivory-50);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 0.3s var(--ease-out),
+    transform 0.3s var(--ease-out);
+}
+
+.toast[data-show] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (min-width: 768px) {
+  .toast {
+    bottom: var(--space-6);
+  }
+}
+
+/* ---------- Custom cursor (motion.ts; fine pointers + motion only, native cursor stays) ---------- */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: calc(var(--z-dialog) + 2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+html.has-cursor:not(.has-dialog) :is(.cursor-dot, .cursor-ring) {
+  opacity: 1;
+}
+
+.cursor-dot {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--gold-500);
+}
+
+.cursor-ring {
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+}
+
+/* the ring's look lives on ::before so its scale never fights GSAP's x/y transform */
+.cursor-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--gold-500);
+  transition: transform 0.35s var(--ease-out), opacity 0.35s var(--ease-out);
+}
+
+.cursor-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--navy-800);
+  transform: scale(0);
+  transition: transform 0.35s var(--ease-out);
+}
+
+.cursor-ring span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  color: var(--ivory-50);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.cursor-ring[data-mode='link']::before {
+  transform: scale(1.6);
+}
+
+html.has-cursor .cursor-ring[data-mode='link'] ~ .cursor-dot,
+html.has-cursor .cursor-ring[data-mode='view'] ~ .cursor-dot,
+html.has-cursor .cursor-ring[data-mode='drag'] ~ .cursor-dot {
+  opacity: 0;
+}
+
+.cursor-ring:is([data-mode='view'], [data-mode='drag'])::before {
+  opacity: 0;
+}
+
+.cursor-ring:is([data-mode='view'], [data-mode='drag'])::after {
+  transform: scale(2);
+}
+
+.cursor-ring:is([data-mode='view'], [data-mode='drag']) span {
+  opacity: 1;
+}

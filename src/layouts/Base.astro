@@ -117,7 +117,7 @@ const ogUrl = abs(og.src);
 
     <slot name="head" />
   </head>
-  <body>
+  <body data-cursor-labels={JSON.stringify(t.cursor)}>
     <a class="skip-link" href="#main">{t.a11y.skipToContent}</a>
     <slot />
     {

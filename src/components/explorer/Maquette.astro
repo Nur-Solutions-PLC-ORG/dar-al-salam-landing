@@ -48,8 +48,10 @@ const m = buildMaquette();
     vector-effect: non-scaling-stroke;
   }
 
+  /* ground = section background with a faint lift, so it reads as a shadow, not a saucer (design QA #4) */
   .maquette__ground {
     fill: var(--navy-800);
+    opacity: 0.55;
   }
 
   .maquette__basement {
@@ -64,7 +66,7 @@ const m = buildMaquette();
   .maquette .top {
     fill: var(--sand-100);
     stroke: var(--gold-500);
-    stroke-opacity: 0.55;
+    stroke-opacity: 0.7;
     stroke-width: 1;
   }
 
@@ -90,8 +92,7 @@ const m = buildMaquette();
   }
 
   .maquette .glaze {
-    fill: var(--navy-600);
-    opacity: 0.85;
+    fill: #abb0bc;
   }
 
   .maquette__podium .side-l,
@@ -126,6 +127,11 @@ const m = buildMaquette();
 
   .slab.is-selected {
     transform: translate(var(--pull-x), var(--pull-y));
+  }
+
+  /* while a floor is selected, the others step back so the gold slab stands out */
+  .maquette[data-has-selected] .slab:not(.is-selected, .is-hover) :is(.top, .side-l, .side-m) {
+    fill: #e9e2d6;
   }
 
   :global(html.js) .maquette[data-interactive] .slab {

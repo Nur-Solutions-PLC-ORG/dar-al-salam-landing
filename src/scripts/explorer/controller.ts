@@ -192,9 +192,8 @@ export function createExplorer(root: HTMLElement) {
       if (!on) return;
       const w = card.querySelector('[data-unit-where]');
       if (w) w.textContent = where;
-      card.querySelectorAll('[data-request] .btn__text').forEach((el) => {
-        el.textContent = f(t.requestFor, { n: state.floor, code });
-      });
+      // visible label stays "Request pricing"; the full "…for Floor 7 · BL05" is the accessible name
+      card.querySelector('[data-request]')?.setAttribute('aria-label', f(t.requestFor, { n: state.floor, code }));
     });
     $$('[data-back-floor-text]').forEach((el) => (el.textContent = f(t.backToFloor, { n: state.floor })));
   }
@@ -223,8 +222,9 @@ export function createExplorer(root: HTMLElement) {
     const reduce = prefersReducedMotion();
     gsap.fromTo(
       next,
-      { autoAlpha: 0, x: reduce ? 0 : 24 },
-      { autoAlpha: 1, x: 0, duration: reduce ? 0.2 : 0.5, ease: 'power3.out', clearProps: 'all' },
+      // opacity only (never visibility): the focus() that follows must land inside this view (review M2-H1)
+      { opacity: 0, x: reduce ? 0 : 24 },
+      { opacity: 1, x: 0, duration: reduce ? 0.2 : 0.5, ease: 'power3.out', clearProps: 'opacity,transform' },
     );
   }
 
@@ -415,14 +415,32 @@ export function createExplorer(root: HTMLElement) {
 
   /* ---------- S10 intro (desktop, motion allowed) ---------- */
 
+  // Every ScrollTrigger.refresh() re-parents the pinned grid in/out of its pin-spacer, which blurs anything
+  // focused inside it (resize, browser zoom, fonts, scene mount). Save and restore focus around it (review M2).
+  let savedFocus: HTMLElement | null = null;
+  const saveFocus = () => {
+    const a = document.activeElement as HTMLElement | null;
+    savedFocus = a && root.contains(a) ? a : null;
+  };
+  const restoreFocus = () => {
+    if (savedFocus?.isConnected && document.activeElement !== savedFocus) savedFocus.focus({ preventScroll: true });
+    savedFocus = null;
+  };
+  ScrollTrigger.addEventListener('refreshInit', saveFocus);
+  ScrollTrigger.addEventListener('refresh', restoreFocus);
+
   const mm = gsap.matchMedia();
   mm.add({ desktop: '(min-width: 1024px)', motion: '(prefers-reduced-motion: no-preference)' }, (ctx) => {
     const { desktop, motion } = ctx.conditions as { desktop: boolean; motion: boolean };
     if (!motion) return;
     const modelCol = $('[data-model-col]');
-    if (desktop && state.level === 'idle') {
+    const grid = $('[data-explore-grid]')!;
+    const headerH = document.querySelector<HTMLElement>('.site-header')?.offsetHeight ?? 72;
+    // Pin only the model+panel grid, and only if it fits under the header (review M2-M1); else S10m.
+    const fits = grid.offsetHeight <= window.innerHeight - headerH;
+    if (desktop && state.level === 'idle' && fits) {
       const tl = gsap.timeline({
-        scrollTrigger: { trigger: root, start: 'top top', end: '+=60%', pin: true, scrub: 0.8, anticipatePin: 1 },
+        scrollTrigger: { trigger: grid, start: `top top+=${headerH}`, end: '+=60%', pin: true, scrub: 0.8, anticipatePin: 1 },
         defaults: { ease: 'none' },
         onUpdate: () => {
           introProgress = tl.progress();
@@ -438,9 +456,9 @@ export function createExplorer(root: HTMLElement) {
         0,
       );
       ScrollTrigger.refresh();
-    } else if (!desktop) {
+    } else {
       gsap.from(modelCol, {
-        autoAlpha: 0,
+        opacity: 0,
         y: 40,
         duration: 1,
         ease: 'power3.out',
@@ -451,12 +469,13 @@ export function createExplorer(root: HTMLElement) {
 
   return {
     /** "Find on a floor" from the homes gallery: current floor (default 1), unit highlighted + pulse. */
-    find(code: string) {
+    find(code: string, opts: { focus?: boolean } = {}) {
       const c = code.toUpperCase() as Code;
       if (!CODES.includes(c)) return;
       // the floor view with the unit highlighted (selected) on the current floor, default floor 1
       go({ level: 'floor', floor: state.level === 'idle' ? 1 : state.floor, unit: c }, { focus: false });
       const h = hotspots.find((x) => x.dataset.unit === c);
+      if (h && opts.focus) h.focus({ preventScroll: true });
       if (h && !prefersReducedMotion()) {
         h.classList.remove('is-pulse');
         void h.getBoundingClientRect();
@@ -465,6 +484,8 @@ export function createExplorer(root: HTMLElement) {
     },
     destroy() {
       document.removeEventListener('keydown', onKey);
+      ScrollTrigger.removeEventListener('refreshInit', saveFocus);
+      ScrollTrigger.removeEventListener('refresh', restoreFocus);
       stopVis();
       mm.revert();
       model.destroy();

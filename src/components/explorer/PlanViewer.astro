@@ -1,0 +1,269 @@
+---
+/**
+ * Plan viewer (DESIGN §5.5): one native <dialog> shared by the gallery and the explorer.
+ * Full-screen < 1024, otherwise 92vw × 88vh. Pan/zoom is our own transform-only module
+ * (src/scripts/viewer.ts, imported on first open). The high-res WebP (q82) loads only on open,
+ * over a blurred 360w thumbnail.
+ */
+import { getImage } from 'astro:assets';
+import { units, formatArea } from '../../data/units';
+import { fmt, getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+  full: string[];
+}
+
+const { lang, full } = Astro.props;
+const t = getDict(lang);
+const thumbs = await Promise.all(units.map((u) => getImage({ src: u.plan, width: 360, format: 'webp', quality: 55 })));
+const data = units.map((u, i) => ({
+  code: u.code,
+  beds: u.bedrooms,
+  type: fmt(t.homes.bedroomsN, { n: u.bedrooms }),
+  gross: formatArea(u.gross, lang),
+  net: formatArea(u.net, lang),
+  rooms: u.rooms.map((r) => t.rooms[r]),
+  full: full[i],
+  thumb: thumbs[i]!.src,
+  w: u.plan.width,
+  h: u.plan.height,
+  alt: fmt(t.homes.planAlt, { code: u.code, n: u.bedrooms, rooms: u.rooms.map((r) => t.rooms[r]).join(', ') }),
+}));
+const i18n = { title: t.homes.viewer.title, requestFor: t.homes.viewer.requestFor, loading: t.homes.loading };
+---
+
+<dialog class="viewer theme-paper" aria-labelledby="viewer-title" data-viewer data-units={JSON.stringify(data)} data-i18n={JSON.stringify(i18n)}>
+  <div class="viewer__stage" data-viewer-stage data-lenis-prevent>
+    <div class="viewer__pan" data-viewer-pan>
+      <img class="viewer__img" alt="" data-viewer-img draggable="false" />
+    </div>
+    <div class="viewer__zoom">
+      <button type="button" class="viewer__btn" data-zoom="in" aria-label={t.homes.viewer.zoomIn}>+</button>
+      <button type="button" class="viewer__btn" data-zoom="out" aria-label={t.homes.viewer.zoomOut}>−</button>
+      <button type="button" class="viewer__btn" data-zoom="reset" aria-label={t.homes.viewer.reset}>
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.5 2.5v2.8h2.8"></path></svg>
+      </button>
+    </div>
+    <p class="viewer__loading small" data-viewer-loading hidden>{t.homes.loading}</p>
+  </div>
+
+  <div class="viewer__sheet">
+    <div class="viewer__top">
+      <p class="eyebrow" data-viewer-code></p>
+      <button type="button" class="viewer__btn viewer__close" data-viewer-close aria-label={t.homes.viewer.close}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+    <h2 class="h3" id="viewer-title" data-viewer-title></h2>
+    <dl class="viewer__specs tabular">
+      <div><dt>{t.homes.grossArea}</dt><dd data-viewer-gross></dd></div>
+      <div><dt>{t.homes.netArea}</dt><dd data-viewer-net></dd></div>
+    </dl>
+    <div>
+      <h3 class="viewer__label">{t.homes.rooms}</h3>
+      <ul class="viewer__rooms small" data-viewer-rooms></ul>
+    </div>
+    <p class="small muted">{t.homes.features}</p>
+    <a class="btn viewer__cta" href="#enquire" data-viewer-request>
+      <span class="btn__inner"><span class="btn__text" data-viewer-request-text></span></span>
+    </a>
+    <div class="viewer__nav">
+      <button type="button" class="viewer__btn" data-viewer-step="-1" aria-label={t.homes.viewer.prev}>‹</button>
+      <span class="small muted tabular" data-viewer-pos></span>
+      <button type="button" class="viewer__btn" data-viewer-step="1" aria-label={t.homes.viewer.next}>›</button>
+    </div>
+    <p class="small muted">{t.homes.disclaimer}</p>
+  </div>
+</dialog>
+
+<style>
+  .viewer {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    display: none;
+    overflow: hidden;
+    z-index: var(--z-dialog);
+  }
+
+  .viewer[open] {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .viewer::backdrop {
+    background: rgb(11 18 32 / 0.72);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .viewer[open] {
+      animation: viewer-in 0.45s var(--ease-out);
+    }
+
+    .viewer[open]::backdrop {
+      animation: fade-in 0.45s var(--ease-out);
+    }
+  }
+
+  @keyframes viewer-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .viewer__stage {
+    position: relative;
+    overflow: hidden;
+    background: var(--sand-100);
+    touch-action: none;
+    cursor: grab;
+    min-height: 0;
+  }
+
+  .viewer__stage:active {
+    cursor: grabbing;
+  }
+
+  .viewer__pan {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: var(--space-5);
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  .viewer__img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .viewer__img[data-blur] {
+    filter: blur(8px);
+  }
+
+  .viewer__zoom {
+    position: absolute;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .viewer__btn {
+    display: inline-grid;
+    place-items: center;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    border-radius: 50%;
+    background: var(--ivory-50);
+    box-shadow: inset 0 0 0 1px var(--input-border);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .viewer__btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .viewer__loading {
+    position: absolute;
+    left: var(--space-3);
+    bottom: var(--space-3);
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius-pill);
+    background: var(--ivory-50);
+  }
+
+  .viewer__sheet {
+    display: grid;
+    gap: var(--space-3);
+    align-content: start;
+    padding: var(--space-5) var(--margin) max(var(--space-5), env(safe-area-inset-bottom));
+    max-height: 46svh;
+    overflow-y: auto;
+    border-top: 1px solid var(--line);
+  }
+
+  .viewer__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .viewer__specs {
+    display: flex;
+    gap: var(--space-6);
+  }
+
+  .viewer__specs dt,
+  .viewer__label {
+    font-family: var(--font-body);
+    font-size: var(--fs-small);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .viewer__specs dd {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    line-height: 1.1;
+  }
+
+  .viewer__rooms {
+    padding-inline-start: 1.1em;
+    columns: 2;
+  }
+
+  .viewer__cta {
+    justify-self: start;
+    white-space: normal;
+  }
+
+  .viewer__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 1024px) {
+    .viewer {
+      width: 92vw;
+      height: 88vh;
+      margin: auto;
+      border-radius: var(--radius-s);
+      box-shadow: var(--shadow-2);
+    }
+
+    .viewer[open] {
+      grid-template-rows: none;
+      grid-template-columns: minmax(0, 1fr) 360px;
+    }
+
+    .viewer__sheet {
+      max-height: none;
+      border-top: 0;
+      border-left: 1px solid var(--line);
+      padding: var(--space-6);
+    }
+  }
+</style>

@@ -56,15 +56,16 @@ const DEG = Math.PI / 180;
 const AZIMUTH = -35 * DEG;
 const ELEVATION = 18 * DEG;
 const ORBIT_LIMIT = 40 * DEG;
-const PULL = 3; // metres toward the camera
+const PULL = 4.5; // metres toward the camera (design QA: 3 m barely read at these distances)
 
 const COLORS = {
   ivory: new Color('#F3ECE2'),
   hover: new Color('#E6D3A8'), // gold-300
   gold: new Color('#B59458'),
-  glaze: new Color('#34466A'), // navy-600
+  glaze: new Color('#ABB0BC'), // light glazing band (design QA #4)
+  dimmed: new Color('#E9E2D6'), // non-selected floors while one is selected
   podium: new Color('#24344F'),
-  ground: new Color('#1A273F'),
+  ground: new Color('#0F1828'), // = section background: only the radial shadow reads
 };
 
 type P2 = readonly [number, number];
@@ -126,7 +127,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   /* ---------- geometry ---------- */
 
   // ground disc + soft shadow
-  const ground = new Mesh(keep(new CircleGeometry(36, 64)), keep(new MeshBasicMaterial({ color: COLORS.ground })));
+  const ground = new Mesh(keep(new CircleGeometry(30, 64)), keep(new MeshBasicMaterial({ color: COLORS.ground })));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;
   scene.add(ground);
@@ -176,7 +177,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
     slab.userData.floor = n;
     const band = new Mesh(bandGeo, bandMat);
     band.position.y = bodyDepth;
-    const edges = keep(new LineBasicMaterial({ color: COLORS.gold, transparent: true, opacity: 0.55 }));
+    const edges = keep(new LineBasicMaterial({ color: COLORS.gold, transparent: true, opacity: 0.7 }));
     group.add(slab, band, new LineSegments(edgeGeo, edges));
     tower.add(group);
     floors.push({ n, group, mat, edges, slab });
@@ -194,18 +195,56 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   let orbit = 0; // user drag offset (rad)
   let orbitVel = 0;
   let sway = 0;
-  const look = { y: H * 0.5 };
-  let dist = 140;
+  let baseLookY = 0.415 * H; // centres the projected box at 18° elevation (design QA #1)
+  const look = { y: baseLookY };
+  let dist = 170;
+  /** Selecting a floor nudges the framing a little toward it; it never drives it (design QA #2). */
+  const lookFor = (n: number | null) => (n ? baseLookY + (floorBase(n) + SLAB_DEPTH / 2 - H / 2) * 0.35 : baseLookY);
+
+  // Fit the tower's projected bounding box (base + top outline corners) at the default azimuth and at the
+  // orbit limits: ≤ 80 % of canvas height, ≤ 84 % of width; then centre it vertically (DESIGN §9.4 rev 3).
+  const probe = new PerspectiveCamera(28, 1, 1, 2000);
+  const corners = floorOutlineM.flatMap(([x, z]) => [new Vector3(x, 0, z), new Vector3(x, H, z)]);
+  const v = new Vector3();
+  const box = (d: number, ly: number, az: number) => {
+    probe.position.set(Math.sin(az) * Math.cos(ELEVATION) * d, ly + Math.sin(ELEVATION) * d, Math.cos(az) * Math.cos(ELEVATION) * d);
+    probe.lookAt(0, ly, 0);
+    probe.updateMatrixWorld();
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const c of corners) {
+      v.copy(c).project(probe);
+      minX = Math.min(minX, v.x);
+      maxX = Math.max(maxX, v.x);
+      minY = Math.min(minY, v.y);
+      maxY = Math.max(maxY, v.y);
+    }
+    return { minX, maxX, minY, maxY };
+  };
 
   const fit = () => {
     const w = host.clientWidth || 1;
     const h = host.clientHeight || 1;
-    camera.aspect = w / h;
-    const vfov = camera.fov * DEG;
-    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
-    const byHeight = H / 0.85 / (2 * Math.tan(vfov / 2));
-    const byWidth = 74 / 0.95 / (2 * Math.tan(hfov / 2)); // ground disc (Ø72 m) fits the frame
-    dist = Math.max(byHeight, byWidth) + 20;
+    camera.aspect = probe.aspect = w / h;
+    probe.updateProjectionMatrix();
+    const azs = [AZIMUTH - ORBIT_LIMIT, AZIMUTH, AZIMUTH + ORBIT_LIMIT];
+    let ly = 0.415 * H;
+    let d = 60;
+    for (; d < 800; d += 0.5) {
+      if (azs.every((az) => {
+        const b = box(d, ly, az);
+        return b.maxY - b.minY <= 1.6 && b.maxX - b.minX <= 1.68;
+      })) break;
+    }
+    const halfH = d * Math.tan((camera.fov * DEG) / 2);
+    for (let i = 0; i < 8; i++) {
+      const b = box(d, ly, AZIMUTH);
+      const c = (b.maxY + b.minY) / 2;
+      if (Math.abs(c) < 0.04) break;
+      ly += c * halfH;
+    }
+    dist = d;
+    baseLookY = ly;
+    look.y = lookFor(selected);
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
   };
@@ -282,9 +321,9 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
     const h = hover ?? external;
     for (const f of floors) {
       const on = f.n === h || f.n === selected;
-      f.mat.color.copy(on ? COLORS.hover : COLORS.ivory);
+      f.mat.color.copy(on ? COLORS.hover : selected !== null ? COLORS.dimmed : COLORS.ivory);
       f.mat.emissive.copy(on ? COLORS.gold : new Color(0x000000)).multiplyScalar(on ? 0.15 : 0);
-      f.edges.opacity = on ? 1 : 0.55;
+      f.edges.opacity = on ? 1 : 0.7;
     }
     request();
   };
@@ -437,7 +476,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
         tween(f.group.position, { x: out ? toward.x : 0, z: out ? toward.z : 0, duration: 0.6, ease: 'power3.out' });
       }
       selected = n;
-      tween(look, { y: n ? floorBase(n) + SLAB_DEPTH / 2 : H * 0.5, duration: 0.9, ease: 'power2.inOut' });
+      tween(look, { y: lookFor(n), duration: 0.9, ease: 'power2.inOut' });
       paint();
     },
     setIntro(p) {

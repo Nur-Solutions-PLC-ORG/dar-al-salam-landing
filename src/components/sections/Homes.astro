@@ -1,26 +1,333 @@
 ---
-/** Homes (DESIGN §5.5). M1 stub: heading only; built in M3. */
+/**
+ * Apartment types gallery (DESIGN §5.5). Cards are server-rendered with id="unit-blXX" (the explorer's
+ * no-JS hotspot targets). Filters (radiogroup) + sort use GSAP Flip, imported on first use.
+ * "View plan" opens the shared plan viewer (PlanViewer.astro; its script is imported on first open).
+ * No JS: every card shows; filters are hidden; "View plan" links to the full-size image.
+ */
+import { Picture, getImage } from 'astro:assets';
 import Eyebrow from '../ui/Eyebrow.astro';
+import PlanViewer from '../explorer/PlanViewer.astro';
 import { sections } from '../../data/sections';
-import { emph, getDict, type Lang } from '../../i18n';
+import { units, unitMix, formatArea } from '../../data/units';
+import { emph, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
   lang: Lang;
 }
+
 const { lang } = Astro.props;
 const t = getDict(lang);
+const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
+const full = await Promise.all(units.map((u) => getImage({ src: u.plan, format: 'webp', quality: 82 })));
+const filters = [
+  { key: 'all', label: t.homes.filterAll, n: units.length },
+  { key: '2', label: t.homes.filter2, n: unitMix.twoBed },
+  { key: '3', label: t.homes.filter3, n: unitMix.threeBed },
+];
 ---
 
-<section id="homes" class:list={['section', '']} aria-labelledby="homes-title" data-header-theme="light">
+<section id="homes" class="section homes" aria-labelledby="homes-title" data-header-theme="light" data-homes>
   <div class="container">
-    <Eyebrow n={sections.homes.n} label={t.homes.eyebrow} />
-    <h2 id="homes-title" class="h2 stub__title" data-split set:html={emph(t.homes.title)} />
+    <div class="homes__head">
+      <div>
+        <Eyebrow n={sections.homes.n} label={t.homes.eyebrow} />
+        <h2 id="homes-title" class="h2 homes__title" data-split set:html={emph(t.homes.title)} />
+      </div>
+      <div class="homes__controls" data-homes-controls>
+        <div class="filters" role="radiogroup" aria-label={t.homes.filterLabel}>
+          {
+            filters.map((f, i) => (
+              <button
+                type="button"
+                class="filters__chip"
+                role="radio"
+                aria-checked={i === 0 ? 'true' : 'false'}
+                tabindex={i === 0 ? 0 : -1}
+                data-filter={f.key}
+              >
+                {f.label} <span class="filters__n tabular">{f.n}</span>
+              </button>
+            ))
+          }
+        </div>
+        <button type="button" class="sort" aria-pressed="false" data-sort>
+          {t.homes.sortBySize}
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M5 3v10M2.5 10.5 5 13l2.5-2.5M11 13V3M8.5 5.5 11 3l2.5 2.5"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <ul role="list" class="cards" aria-label={t.homes.carousel} data-cards>
+      {
+        units.map((u, i) => (
+          <li
+            class="card"
+            id={`unit-${u.id}`}
+            data-card
+            data-code={u.code}
+            data-beds={u.bedrooms}
+            data-gross={u.gross}
+            data-index={i}
+            data-cursor="view"
+          >
+            <div class="card__frame arch arch--soft">
+              <div class="arch__media card__media">
+                <Picture
+                  src={u.plan}
+                  formats={['avif', 'webp']}
+                  widths={[360, 540, 720]}
+                  width={540}
+                  fallbackFormat="jpg"
+                  sizes="(min-width: 1024px) 28vw, (min-width: 640px) 44vw, 78vw"
+                  alt={fmt(t.homes.planAlt, { code: u.code, n: u.bedrooms, rooms: roomList(u) })}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            </div>
+            <div class="card__body">
+              <p class="eyebrow">{u.code}</p>
+              <h3 class="card__title">{fmt(t.homes.bedroomsN, { n: u.bedrooms })}</h3>
+              <p class="card__areas tabular">
+                {formatArea(u.gross, lang)} {t.homes.gross.toLowerCase()} · {formatArea(u.net, lang)} {t.homes.net.toLowerCase()}
+              </p>
+              <p class="card__rooms small muted">{u.rooms.map((r) => t.rooms[r]).join(' · ')}</p>
+              <div class="card__actions">
+                <a class="link card__view" href={full[i]!.src} data-open-plan={u.code} target="_blank" rel="noopener">
+                  {t.homes.viewPlan}
+                  <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4">
+                    <path d="M3 8h10M9 4l4 4-4 4" />
+                  </svg>
+                </a>
+                <a class="link" href="#explore" data-find={u.code}>
+                  {t.homes.findOnFloor}
+                </a>
+              </div>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="cards__progress" aria-hidden="true"><span data-cards-progress></span></div>
+    <p class="small muted homes__note">{t.homes.price} · {t.homes.disclaimer}</p>
   </div>
+
+  <PlanViewer lang={lang} full={full.map((f) => f.src)} />
 </section>
 
 <style>
-  .stub__title {
+  .homes__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-6);
+    margin-bottom: var(--space-7);
+  }
+
+  .homes__title {
     margin-top: var(--space-5);
-    max-width: 18ch;
+    max-width: 16ch;
+  }
+
+  .homes__controls {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  :global(html.js) .homes__controls {
+    display: flex;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .filters__chip,
+  .sort {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap-min);
+    padding-inline: var(--space-3);
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .filters__chip::after {
+    content: '';
+    position: absolute;
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: 6px;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  .filters__chip[aria-checked='true'] {
+    color: var(--text);
+  }
+
+  .filters__chip[aria-checked='true']::after {
+    transform: scaleX(1);
+  }
+
+  .filters__n {
+    font-weight: 500;
+    color: var(--accent-text);
+  }
+
+  .sort svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sort[aria-pressed='true'] {
+    color: var(--text);
+  }
+
+  /* cards: carousel < 640, grid above */
+  .cards {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 82%;
+    gap: var(--gutter);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--margin));
+    padding-inline: var(--margin);
+    scroll-padding-inline: var(--margin);
+  }
+
+  .cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .card.is-out {
+    display: none;
+  }
+
+  .card {
+    scroll-snap-align: start;
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+  }
+
+  .card__frame {
+    aspect-ratio: 4 / 4.2;
+  }
+
+  .card__media {
+    background: var(--sand-100);
+    padding: var(--space-5);
+    padding-top: calc(28cqi * 0.5 + var(--space-4));
+  }
+
+  .card__media :global(picture),
+  .card__media :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card__media :global(img) {
+    transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  @media (hover: hover) {
+    .card:hover .card__media :global(img) {
+      transform: scale(1.04);
+    }
+
+    .card:hover .card__view svg {
+      transform: translateX(4px);
+    }
+  }
+
+  .card__view svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.4s var(--ease-out);
+  }
+
+  .card__body {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .card__title {
+    font-size: var(--fs-h3);
+  }
+
+  .card__areas {
+    font-size: var(--fs-small);
+  }
+
+  .card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-5);
+    font-size: var(--fs-small);
+  }
+
+  .cards__progress {
+    height: 1px;
+    margin-top: var(--space-5);
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .cards__progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    transform: scaleX(var(--p, 0.12));
+  }
+
+  .homes__note {
+    margin-top: var(--space-5);
+  }
+
+  @media (min-width: 640px) {
+    .cards {
+      grid-auto-flow: row;
+      grid-auto-columns: auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      row-gap: var(--space-8);
+      overflow: visible;
+      margin-inline: 0;
+      padding-inline: 0;
+    }
+
+    .cards__progress {
+      display: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 </style>
+
+<script>
+  import { initHomes } from '../../scripts/homes';
+  initHomes();
+</script>
