@@ -14,12 +14,14 @@ export interface Unit3d {
   grossM2: number;
   netM2: number;
   texture: { src: string; plane: { minX: number; minZ: number; maxX: number; maxZ: number } };
-  defaults: { wallH: number; cutawayH: number; doorHead: number };
+  /** modelCutH (rev 8.1): the model is cut there like a section model (walls, columns, headers, glazing). */
+  defaults: { wallH: number; modelCutH?: number; cutawayH: number; doorHead: number };
   footprint: P2[];
   walls: { id: string; a: P2; b: P2; t: number; h: number; kind: WallKind }[];
   openings: { id: string; type: 'door' | 'glazed-door' | 'window'; a: P2; b: P2; t: number; sill: number; head: number }[];
   railings: { id: string; a: P2; b: P2; h: number }[];
-  solids: { id: string; kind: 'column' | 'shaft' | 'wardrobe' | 'counter'; poly: P2[]; h: number }[];
+  /** `furniture` (rev 8.1): blocks traced over the plan's furniture; the lid reuses the floor texture, `side` colours the sides. */
+  solids: { id: string; kind: 'column' | 'shaft' | 'wardrobe' | 'counter' | 'furniture'; poly: P2[]; h: number; side?: string }[];
   /** `area` is exactly the plan's label; never compute one from the polygon. `label` is the hotspot anchor. */
   rooms: { id: string; name: Room3dKey; area: number; poly: P2[]; label: P2 }[];
 }

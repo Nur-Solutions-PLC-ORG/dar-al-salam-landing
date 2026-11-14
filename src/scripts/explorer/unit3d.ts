@@ -15,6 +15,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   CanvasTexture,
+  Color,
   DirectionalLight,
   DoubleSide,
   ExtrudeGeometry,
@@ -178,7 +179,7 @@ export function createDollhouse(o: DollhouseOpts): Dollhouse {
     uDrop: { value: 1 },
     uCut: { value: [WALL_H, WALL_H, WALL_H, WALL_H] },
   };
-  const inject = <M extends Material>(m: M, cut = true) => {
+  const inject = <M extends Material>(m: M, cut = true, dur = 0.7) => {
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U);
       sh.vertexShader =
@@ -186,7 +187,7 @@ export function createDollhouse(o: DollhouseOpts): Dollhouse {
         sh.vertexShader.replace(
           '#include <begin_vertex>',
           `#include <begin_vertex>
-float rp = clamp((uRise - aDelay) / 0.7, 0.0, 1.0);
+float rp = clamp((uRise - aDelay) / ${dur.toFixed(2)}, 0.0, 1.0);
 transformed.y *= max(0.01, (1.0 - pow(1.0 - rp, 3.0)) * uDrop);
 ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0.5)]);' : 'if (aSide > -0.5) transformed.y = 0.0;'}`,
         );
@@ -254,6 +255,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     pieces.push({ g: seg(r.a, r.b, r.h - 0.04, r.h, 0.04), m: 'dark', mid: m, side: -1 });
   }
   for (const s of data.solids) {
+    if (s.kind === 'furniture') continue; // below: textured blocks (rev 8.1 D)
     const m = centroid(s.poly);
     if (s.kind === 'counter') {
       pieces.push({ g: prism(s.poly, s.h - 0.02), m: 'counter', mid: m, side: -1, solid: true });
@@ -262,12 +264,16 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
       pieces.push({ g: top, m: 'top', mid: m, side: -1, solid: true });
     } else pieces.push({ g: prism(s.poly, cut(s.h)), m: s.kind === 'wardrobe' ? 'oak' : 'wall', mid: m, side: -1, solid: true });
   }
-  const dist = (p: Piece) => Math.hypot(p.mid[0] - cx, p.mid[1] - cz);
+  const sub = ([x, z]: P2): [number, number] => [x - cx, z - cz];
+  const dist = (p: Piece) => Math.hypot(...sub(p.mid));
   const walls = pieces.filter((p) => !p.solid).sort((a, b) => dist(a) - dist(b));
   const solids = pieces.filter((p) => p.solid).sort((a, b) => dist(a) - dist(b));
   walls.forEach((p, i) => tag(p.g, i * 0.012, p.side));
   solids.forEach((p, i) => tag(p.g, 0.3 + i * 0.012, -1));
-  const riseEnd = Math.max(walls.length, solids.length + 25) * 0.012 + 0.7;
+  const furniture = data.solids
+    .filter((x) => x.kind === 'furniture')
+    .sort((a, b) => Math.hypot(...sub(centroid(a.poly))) - Math.hypot(...sub(centroid(b.poly))));
+  const riseEnd = Math.max(walls.length * 0.012 + 0.7, 0.3 + solids.length * 0.012 + 0.7, 0.45 + furniture.length * 0.012 + 0.5);
 
   const meshes: Partial<Record<keyof typeof mat, Mesh>> = {};
   for (const key of Object.keys(mat) as (keyof typeof mat)[]) {
@@ -291,14 +297,60 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   tex.needsUpdate = true;
   const { minX, minZ, maxX, maxZ } = data.texture.plane;
-  const floorGeo = k(flat(data.footprint));
-  const pos = floorGeo.getAttribute('position');
-  const uv = new Float32Array(pos.count * 2);
-  for (let i = 0; i < pos.count; i++) {
-    uv[i * 2] = (pos.getX(i) - minX) / (maxX - minX);
-    uv[i * 2 + 1] = 1 - (pos.getZ(i) - minZ) / (maxZ - minZ);
+  /** Planar plan UVs from x/z, so anything at any height samples the plan where it stands. */
+  const planUV = (g: BufferGeometry) => {
+    const pos = g.getAttribute('position');
+    const uv = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) {
+      uv[i * 2] = (pos.getX(i) - minX) / (maxX - minX);
+      uv[i * 2 + 1] = 1 - (pos.getZ(i) - minZ) / (maxZ - minZ);
+    }
+    g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+    return g;
+  };
+  const floorGeo = k(planUV(flat(data.footprint)));
+
+  /* rev 8.1 D: furniture blocks. Lids reuse the floor texture (the plan's own furniture art becomes the lid), sides
+     take `side`; one geometry with two groups. They rise after the walls (+0.45 s, 0.5 s). */
+  if (furniture.length) {
+    const slice = (g: BufferGeometry, gi: number) => {
+      const { start, count } = g.groups[gi]!;
+      const out = new BufferGeometry();
+      for (const name of ['position', 'normal', 'uv'] as const) {
+        const a = g.getAttribute(name);
+        out.setAttribute(name, new Float32BufferAttribute((a.array as Float32Array).slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize));
+      }
+      return out;
+    };
+    const colour = (g: BufferGeometry, hex: string) => {
+      const c = new Color(hex);
+      const n = g.getAttribute('position').count;
+      const arr = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) arr.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute('color', new Float32BufferAttribute(arr, 3));
+      return g;
+    };
+    const lids: BufferGeometry[] = [];
+    const sides: BufferGeometry[] = [];
+    furniture.forEach((f, i) => {
+      const g = prism(f.poly, f.h); // ExtrudeGeometry groups: 0 = caps, 1 = sides
+      const delay = 0.45 + i * 0.012;
+      lids.push(tag(colour(planUV(slice(g, 0)), '#ffffff'), delay, -1));
+      sides.push(tag(colour(slice(g, 1), f.side ?? '#E4DACB'), delay, -1));
+      g.dispose();
+    });
+    const L = mergeGeometries(lids)!;
+    const S = mergeGeometries(sides)!;
+    const geo = k(mergeGeometries([L, S], true)!);
+    [...lids, ...sides, L, S].forEach((g) => g.dispose());
+    const mesh = new Mesh(geo, [
+      inject(new MeshLambertMaterial({ map: tex }), true, 0.5),
+      inject(new MeshLambertMaterial({ vertexColors: true }), true, 0.5),
+    ]);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.customDepthMaterial = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
+    root.add(mesh);
   }
-  floorGeo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
   const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex })));
   floor.receiveShadow = true;
   root.add(floor);
