@@ -49,9 +49,12 @@ export interface Unit {
   has3d: boolean;
 }
 
-const twoBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedroom', 'kitchen', 'bathrooms2'];
+// Room lists corrected 2026-11-15 against the plans (BRIEF c40602f, review round 7): BL01, BL02 and BL04 label both
+// bedrooms "Bedroom" (no master); BL09 has no store (its unlabelled wet room is not listed).
+const twoBed: readonly RoomKey[] = ['livingDining', 'bedrooms2', 'kitchen', 'bathrooms2'];
 const threeBedFlex: readonly RoomKey[] = [...twoBed, 'storeOrBedroom'];
 const threeBed: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedrooms2', 'kitchen', 'bathrooms2', 'store'];
+const threeBedNoStore: readonly RoomKey[] = ['livingDining', 'masterBedroom', 'bedrooms2', 'kitchen', 'bathrooms2'];
 
 /** Source: docs/BRIEF.md. */
 type UnitBase = Omit<Unit, 'hotspot' | 'block' | 'has3d'>;
@@ -68,7 +71,7 @@ const base: readonly UnitBase[] = [
   { code: 'BL06', id: 'bl06', bedrooms: 3, gross: 171.18, net: 121.21, rooms: threeBed, plan: bl06 },
   { code: 'BL07', id: 'bl07', bedrooms: 3, gross: 169.24, net: 119.27, rooms: threeBed, plan: bl07 },
   { code: 'BL08', id: 'bl08', bedrooms: 3, gross: 167.63, net: 117.66, rooms: threeBed, plan: bl08 },
-  { code: 'BL09', id: 'bl09', bedrooms: 3, gross: 168.55, net: 118.54, rooms: threeBed, plan: bl09 },
+  { code: 'BL09', id: 'bl09', bedrooms: 3, gross: 168.55, net: 118.54, rooms: threeBedNoStore, plan: bl09 },
 ];
 
 const NORTH = new Set<UnitCode>(['BL01', 'BL02', 'BL03', 'BL04']);
