@@ -153,6 +153,14 @@ export const am: Dict = {
     store: 'ዕቃ ማስቀመጫ',
     storeOrBedroom: 'ዕቃ ማስቀመጫ ወይም መኝታ ክፍል',
   },
+  // rev 9 strings: DESIGN §11 drafts; `ground` reuses the legend's wording (መሬት ወለል፦ ንግድ) so the ground floor
+  // isn't named two ways
+  tower: {
+    alt: 'የጋርመንት ታወር ምስል፣ ከመንገዱ ጥግ እንደሚታይ።',
+    hintHover: 'ወለል ላይ ያንዣብቡ',
+    hintTap: 'ወለል ይንኩ',
+    ground: 'መሬት ወለል፦ ንግድ',
+  },
   // rev 8 strings: drafts from DESIGN §11, for the client to check (kitchen and living/dining reuse `rooms`)
   unit3d: {
     view3d: '3D',

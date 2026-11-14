@@ -1,7 +1,10 @@
-/** Shared contract between the explorer state machine and its model tiers (SVG / Three.js). */
+/** Shared contract between the explorer state machine and its model tiers (photo stage / SVG / Three.js). */
+/** A chip anchor in stage px: at its left edge, or centred on x when `center` (rev 9: phones, under the band). */
+export type Anchor = { x: number; y: number; center?: boolean };
+
 export interface ModelCallbacks {
   /** Pointer hovers a floor (null = none). `at` = tooltip anchor in stage-relative CSS px. */
-  onHover: (floor: number | null, at?: { x: number; y: number }) => void;
+  onHover: (floor: number | null, at?: Anchor) => void;
   /** Pointer picks a floor. */
   onPick: (floor: number) => void;
   /** First user interaction with the model (hides the hint chip). */
@@ -16,7 +19,7 @@ export interface ModelAdapter {
   /** S10 intro progress 0 → 1 (desktop scrub). */
   setIntro?(progress: number): void;
   /** Screen anchor for a floor's tooltip, stage-relative px. */
-  anchor(floor: number): { x: number; y: number } | null;
+  anchor(floor: number): Anchor | null;
   /** Tier 2 only (rev 8): the shared renderer for the unit dollhouse (one WebGL context). */
   renderer?: import('three').WebGLRenderer;
   /** Tier 2 only (rev 8): stop rendering and ignore the pointer while the dollhouse owns the canvas. */

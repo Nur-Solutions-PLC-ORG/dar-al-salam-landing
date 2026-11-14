@@ -161,6 +161,13 @@ export const en = {
     store: 'store',
     storeOrBedroom: 'store or bedroom',
   },
+  /** Rev 9 photoreal tower stage (DESIGN §9.7, §11). */
+  tower: {
+    alt: 'Rendering of Garment Tower from the street corner.',
+    hintHover: 'Hover a floor',
+    hintTap: 'Tap a floor',
+    ground: 'Ground floor: commercial',
+  },
   /** Rev 8 3D apartments (DESIGN §9.6, §11). Room names in sentence case; alt strings lower-case {room}. */
   unit3d: {
     view3d: '3D',

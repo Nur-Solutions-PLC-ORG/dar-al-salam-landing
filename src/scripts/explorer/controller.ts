@@ -11,7 +11,8 @@
 import { gsap, ScrollTrigger, prefersReducedMotion, scrollToTarget } from '../motion';
 import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
 import { createSvgModel } from './svg-model';
-import type { Level, ModelAdapter, ModelCallbacks } from './types';
+import { createPhotoModel } from './photo-model';
+import type { Anchor, Level, ModelAdapter, ModelCallbacks } from './types';
 import css3d from '../../styles/explore3d.css?inline';
 
 const CODES = ['BL01', 'BL02', 'BL03', 'BL04', 'BL05', 'BL06', 'BL07', 'BL08', 'BL09'] as const;
@@ -35,7 +36,9 @@ type I18n = Record<
   | 'seeOn'
   | 'view3d'
   | 'viewPlan'
-  | 'viewLabel',
+  | 'viewLabel'
+  | 'towerHover'
+  | 'towerTap',
   string
 >;
 
@@ -113,8 +116,35 @@ export function createExplorer(root: HTMLElement) {
   };
 
   const svg = $<SVGSVGElement>('[data-maquette]')!;
-  let model: ModelAdapter = createSvgModel(svg, stage, callbacks);
-  stage.dataset.tier = 'svg';
+  // rev 9 (A1): the photoreal tower stage is the first view on every tier; the SVG maquette under it is the fallback
+  // when the render fails to load
+  const photo = $('[data-tstage]');
+  const photoImg = photo?.querySelector('img');
+  const ground = (at: Anchor | null) => {
+    if (!at) {
+      if (tooltip.hasAttribute('data-muted')) tooltip.hidden = true;
+      return;
+    }
+    tooltip.textContent = photo?.dataset.groundLabel ?? "";
+    tooltip.setAttribute('data-muted', '');
+    placeTooltip(at);
+  };
+  const usePhoto = () => Boolean(photo && photoImg && !(photoImg.complete && photoImg.naturalWidth === 0));
+  let model: ModelAdapter = usePhoto() ? createPhotoModel(photo!, stage, { ...callbacks, onGround: ground }) : createSvgModel(svg, stage, callbacks);
+  stage.dataset.tier = usePhoto() ? 'photo' : 'svg';
+  if (photo && !usePhoto()) photo.hidden = true; // the render already failed: the maquette under it shows
+  photoImg?.addEventListener(
+    'error',
+    () => {
+      if (stage.dataset.tier !== 'photo') return;
+      model.destroy();
+      photo!.hidden = true;
+      model = createSvgModel(svg, stage, callbacks);
+      model.select(state.level === 'idle' ? null : state.floor);
+      stage.dataset.tier = 'svg';
+    },
+    { once: true },
+  );
 
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const webgl = supportsWebGL();
@@ -122,7 +152,7 @@ export function createExplorer(root: HTMLElement) {
     hint.textContent = text;
     hint.hidden = false;
   };
-  setHint(fine ? t.hintHover : t.hintTouch);
+  setHint(stage.dataset.tier === 'photo' ? (fine ? t.towerHover : t.towerTap) : fine ? t.hintHover : t.hintTouch);
 
   const loadBtn = $<HTMLButtonElement>('[data-load-3d]')!;
   let scenePromise: Promise<boolean> | null = null;
@@ -149,11 +179,9 @@ export function createExplorer(root: HTMLElement) {
         renderToggle();
         return false;
       })));
-  if (webgl && !prefersLightweight()) loadScene();
-  else if (webgl) {
-    loadBtn.hidden = false;
-    loadBtn.addEventListener('click', loadScene, { once: true });
-  }
+  // rev 9 (A1): the tower massing no longer loads for the first view (the photo stage replaces it); tier 2 now
+  // loads only when the 3D unit view needs its renderer. A4 removes the massing and this button.
+  loadBtn.hidden = true;
   // context loss → back to tier 1
   stage.addEventListener('explorer:fallback', () => {
     fail3d();
@@ -167,17 +195,26 @@ export function createExplorer(root: HTMLElement) {
 
   /* ---------- tooltip / preview ---------- */
 
-  function showTooltip(n: number | null, at?: { x: number; y: number }) {
+  function placeTooltip(p: Anchor) {
+    // a centred chip (phones, under the band) stays inside the stage; a left-anchored one keeps 140 px of room
+    const w = stage.clientWidth;
+    const x = p.center ? Math.min(Math.max(p.x, 90), w - 90) : Math.min(p.x, w - 140);
+    tooltip.toggleAttribute('data-center', Boolean(p.center));
+    tooltip.style.setProperty('--tx', `${x}px`);
+    tooltip.style.setProperty('--ty', `${p.y}px`);
+    tooltip.hidden = false;
+  }
+
+  function showTooltip(n: number | null, at?: Anchor) {
     if (!n) {
       tooltip.hidden = true;
       return;
     }
     const p = at ?? model.anchor(n);
     if (!p) return;
+    tooltip.removeAttribute('data-muted');
     tooltip.textContent = f(t.floorTooltip, { n, mix: mixOf(n) });
-    tooltip.style.setProperty('--tx', `${Math.min(p.x, stage.clientWidth - 140)}px`);
-    tooltip.style.setProperty('--ty', `${p.y}px`);
-    tooltip.hidden = false;
+    placeTooltip(p);
   }
 
   function setPreview(n: number | null, fromList: boolean) {

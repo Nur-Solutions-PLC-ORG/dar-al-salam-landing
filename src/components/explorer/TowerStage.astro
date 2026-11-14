@@ -1,0 +1,148 @@
+---
+/**
+ * Photoreal tower stage (DESIGN §9.7 A1, rev 9): the tower render with one SVG band per floor. Image + SVG + CSS, so it
+ * works on every tier and, with no JS, the bands still light on hover. The floor list and stepper stay the accessible
+ * controls; the bands are aria-hidden and have no tab stop (src/scripts/explorer/photo-model.ts wires them).
+ *
+ * The render draws 13 storeys; tower-floors.json splits the façade's height into the explorer's 14 floors, so a band
+ * can sit up to half a storey off the balconies. It is a soft selection highlight, not a storey trace (by design).
+ * Positioning: .tstage__frame is a cover-fit box at object-position 50% 40% (container-query units), and both the image
+ * and the SVG (viewBox = the crop) fill it, so the bands stay on the façade at every stage size.
+ */
+import { Picture } from 'astro:assets';
+import towerStage from '../../assets/generated/tower-stage.jpg';
+import bands from '../../data/tower-floors.json';
+import { getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+const [x0 = 0, y0 = 0] = bands.cropPx as number[];
+const pts = (poly: number[][]) => poly.map(([x = 0, y = 0]) => `${x - x0},${y - y0}`).join(' ');
+---
+
+<div class="tstage" data-tstage data-ground-label={t.tower.ground}>
+  <div class="tstage__frame">
+    <div class="tstage__zoom" data-tstage-zoom>
+      <Picture
+        src={towerStage}
+        formats={['avif', 'webp']}
+        widths={[600, 900, 1200, 1600]}
+        width={1200}
+        quality={60}
+        fallbackFormat="webp"
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        alt={t.tower.alt}
+        loading="lazy"
+        decoding="async"
+        class="tstage__img"
+        data-tstage-img
+      />
+      <svg class="tstage__svg" viewBox="0 0 1350 1850" aria-hidden="true" focusable="false" data-tstage-svg>
+        <defs>
+          <filter id="tband-feather" x="-5%" y="-30%" width="110%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="soft"></feGaussianBlur>
+            <feMerge><feMergeNode in="soft"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+          </filter>
+        </defs>
+        {bands.floors.map((f) => <polygon class="tband" data-floor={f.floor} points={pts(f.poly)} />)}
+        <polygon class="tband tband--ground" data-ground points={pts(bands.ground.poly)} />
+      </svg>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tstage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    container-type: size;
+    /* the collage sky clashes with the navy section: the photo melts into it, no hard rectangle. (The spec's
+       120% × 100% radii leave the box edges fully opaque; 60% × 55% radii put them in the fade.) */
+    -webkit-mask-image: radial-gradient(60% 55% at 50% 45%, #000 62%, transparent 100%);
+    mask-image: radial-gradient(60% 55% at 50% 45%, #000 62%, transparent 100%);
+  }
+
+  .tstage[hidden] {
+    display: none;
+  }
+
+  /* cover fit at 50% 40% (object-position), for the image and the overlay alike */
+  .tstage__frame {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    width: max(100cqw, 100cqh * 1350 / 1850);
+    aspect-ratio: 1350 / 1850;
+    transform: translate(-50%, -40%);
+  }
+
+  .tstage__zoom {
+    position: absolute;
+    inset: 0;
+  }
+
+  .tstage__zoom :global(picture),
+  .tstage__zoom :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .tstage__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .tband {
+    fill: var(--gold-500);
+    fill-opacity: 0;
+    stroke: var(--gold-300);
+    stroke-width: 1.5;
+    stroke-opacity: 0;
+    vector-effect: non-scaling-stroke;
+    /* normal blending: the spec's `screen` turns gold-on-white into white, so the band vanished on this façade */
+    filter: url(#tband-feather);
+    cursor: pointer;
+    transition:
+      fill-opacity 0.2s ease,
+      stroke-opacity 0.2s ease;
+  }
+
+  /* hover works with no JS; JS adds .is-hover (list / stepper / touch preview) and .is-selected */
+  .tband:hover,
+  .tband.is-hover {
+    fill-opacity: 0.38;
+    stroke-opacity: 1;
+  }
+
+  .tband.is-selected {
+    fill-opacity: 0.5;
+    stroke-opacity: 1;
+  }
+
+  /* the ground storey only explains itself (muted, not selectable) */
+  .tband--ground {
+    fill: var(--mist-300);
+    stroke: var(--mist-300);
+    cursor: default;
+  }
+
+  .tband--ground:hover,
+  .tband--ground.is-hover {
+    fill-opacity: 0.18;
+    stroke-opacity: 0.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tband {
+      transition: none;
+    }
+  }
+</style>

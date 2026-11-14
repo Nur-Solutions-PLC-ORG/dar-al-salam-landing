@@ -11,6 +11,7 @@ import Eyebrow from '../ui/Eyebrow.astro';
 import Button from '../ui/Button.astro';
 import Maquette from '../explorer/Maquette.astro';
 import KeyPlan from '../explorer/KeyPlan.astro';
+import TowerStage from '../explorer/TowerStage.astro';
 import { sections } from '../../data/sections';
 import { site } from '../../data/site';
 import { units, planFloors, floorComposition, floorSlots, twoBedFloors, formatArea, unitByCode } from '../../data/units';
@@ -56,6 +57,9 @@ const i18n = {
   view3d: t.unit3d.view3d,
   viewPlan: t.unit3d.viewPlan,
   viewLabel: t.unit3d.viewLabel,
+  // rev 9 (A1): the photo stage's hint
+  towerHover: t.tower.hintHover,
+  towerTap: t.tower.hintTap,
 };
 const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
 ---
@@ -95,6 +99,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
       <div class="explore__model" data-model-col>
         <div class="explore__stage" data-stage>
           <Maquette />
+          <TowerStage lang={lang} />
           <div class="explore__canvas" data-canvas aria-hidden="true"></div>
           <div class="explore__tooltip" data-tooltip aria-hidden="true" hidden></div>
           <p class="explore__hint" data-hint aria-hidden="true" hidden></p>
@@ -389,6 +394,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     left: 0;
     top: 0;
     transform: translate(var(--tx, 0), var(--ty, 0)) translateY(-50%);
+    z-index: 3;
     padding: 0.35rem 0.8rem;
     border-radius: var(--radius-pill);
     background: var(--ivory-50);
@@ -398,7 +404,22 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     white-space: nowrap;
     pointer-events: none;
     box-shadow: var(--shadow-2);
-    z-index: 2;
+  }
+
+  /* rev 9: centred under the band on phones; the ground storey's chip is muted */
+  .explore__tooltip[data-center] {
+    transform: translate(var(--tx, 0), var(--ty, 0)) translate(-50%, -50%);
+  }
+
+  .explore__tooltip[data-muted] {
+    background: var(--navy-800);
+    color: var(--mist-300);
+  }
+
+  /* the photo stage gives way to a WebGL scene when one shows (until A3/A4 replace the massing) */
+  .explore__stage[data-tier='3d'] :global(.tstage) {
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* top-left: the top of the frame is empty now that the tower fills it (design QA follow-up) */
