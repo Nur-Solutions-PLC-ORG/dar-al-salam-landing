@@ -119,6 +119,11 @@ rooms=[
 ]
 hall={'id':'hall','name':None,'area':None,'poly':[m(*p) for p in [(809,47),(995,47),(995,405),(1000,405),(1000,565),(1089,565),(1089,745),(540,745),(457,655),(460,555),(809,555)]]}
 footprint=[m(*p) for p in [(197,17),(1617,17),(1617,390),(1772,390),(1772,1525),(1765,1660),(888,1690),(888,1580),(476,1580),(476,1483),(197,1483)]]
+import sys; sys.path.insert(0, os.path.dirname(__file__))
+from trace_lib import stand_point
+for r_ in rooms:
+    sp=stand_point(r_['poly'],solids)
+    if sp: r_['stand']=sp[:2]; r_['standClearance']=sp[2]
 crop=(180,0,1800,1765)
 data={
  'unit':'BL05','type':'3 bedroom','grossM2':169.23,'netM2':119.05,
@@ -150,5 +155,8 @@ def seg(a,b,t,col):
 for w in walls: seg(w['a'],w['b'],w['t'],(255,0,0,150))
 for o in openings: seg(o['a'],o['b'],o['t'],(0,230,230,220) if o['type']=='open' else (0,200,0,200) if o['basis']=='plan' else (255,140,0,200))
 for r in railings: seg(r['a'],r['b'],0.05,(0,0,255,255))
+for r_ in rooms:
+    if 'stand' in r_:
+        x,y=P(r_['stand']); d.ellipse((x-9,y-9,x+9,y+9),fill=(255,255,255,255),outline=(0,0,0,255),width=3)
 out=Image.alpha_composite(im.convert('RGBA'),ov).convert('RGB')
 out.resize((1200,1059)).save(ROOT+'docs/design/units/bl05-check.jpg',quality=80)

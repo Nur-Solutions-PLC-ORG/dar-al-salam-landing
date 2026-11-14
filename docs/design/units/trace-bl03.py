@@ -43,7 +43,7 @@ u.opening('g-mbed-terrace', (388, 80, 400, 270), 'glazed-door', 'mbed-terrace', 
 u.opening('w-bed3', (384, 612, 404, 745), 'window', 'bed3-balcony', 0.9, 2.4, 'inferred', note='Thin double line facing the 5.66 m² balcony')
 u.opening('g-living-balcony', (230, 787, 245, 1250), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 5.66 m² balcony')
 u.open('o-living-hall', (868, 693, 1124, 707), 'living-hall')
-u.walkable('terrace', [(282, 60), (388, 60), (388, 268), (282, 268)], note='Unlabelled tiled area beside the master bedroom')
+u.walkable('terrace', [(282, 60), (388, 60), (388, 268), (282, 268)], note='Unlabelled tiled area beside the master bedroom', name='terrace')
 # balconies
 u.railing('r-tl-w', (282, 60), (282, 268)); u.railing('r-tl-n', (282, 60), (388, 60))
 u.railing('r-b-w', (205, 612), (78, 1335)); u.railing('r-b-s', (78, 1335), (232, 1320))

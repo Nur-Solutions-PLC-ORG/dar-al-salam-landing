@@ -13,6 +13,42 @@ OUT = ROOT + 'docs/design/units/'
 CLEAN_ROOMS = ('bedroom', 'masterBedroom', 'livingDining', 'store', 'corridor')
 
 
+
+def _inside(pt, poly):
+    x, y = pt; c = False
+    for i in range(len(poly)):
+        (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % len(poly)]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1: c = not c
+    return c
+
+
+def _dseg(p, a, b):
+    px, py = p; ax, ay = a; bx, by = b; dx, dy = bx - ax, by - ay
+    L = dx * dx + dy * dy
+    t = 0 if L == 0 else max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L))
+    return math.hypot(px - ax - t * dx, py - ay - t * dy)
+
+
+def stand_point(poly, solids, step=0.1):
+    """Rev 9.4: where a visitor stands in a room (metres). The point inside `poly` with the most clearance from
+    the room's edges and from every solid (furniture, wardrobes, counters, columns), so the walk-in camera never
+    starts inside or against a block. Returns [x, z, clearance]."""
+    xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; best = None
+    obst = [s['poly'] for s in solids]
+    y = min(ys) + step / 2
+    while y < max(ys):
+        x = min(xs) + step / 2
+        while x < max(xs):
+            if _inside((x, y), poly) and not any(_inside((x, y), o) for o in obst):
+                d = min(_dseg((x, y), poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly)))
+                for o in obst:
+                    d = min(d, min(_dseg((x, y), o[i], o[(i + 1) % len(o)]) for i in range(len(o))))
+                if best is None or d > best[2]: best = [round(x, 2), round(y, 2), round(d, 2)]
+            x += step
+        y += step
+    return best
+
+
 class Unit:
     def __init__(self, uid, code, typ, gross, net, sx, sy, ox, oy, crop, measured):
         self.uid, self.code, self.typ, self.gross, self.net = uid, code, typ, gross, net
@@ -52,9 +88,9 @@ class Unit:
         """An open archway: a room meets the hall, corridor or another space with no door (rev 9.2, walk-in rings)."""
         self.opening(id, r, 'open', wall, 0, 2.8, 'plan', None, note)
 
-    def walkable(self, id, poly, note=None):
+    def walkable(self, id, poly, note=None, name='hall'):
         """An unlabelled space a visitor can stand in (lobby, unlabelled wet room or terrace): no hotspot, no list row."""
-        d = {'id': id, 'poly': [self.m(*p) for p in poly]}
+        d = {'id': id, 'name': name, 'poly': [self.m(*p) for p in poly]}
         if note: d['note'] = note
         self.extra.append(d)
 
@@ -89,6 +125,9 @@ class Unit:
     # ---------- outputs ----------
     def build(self):
         c = self.crop
+        for r in self.rooms + self.extra:
+            sp = stand_point(r['poly'], self.solids)
+            if sp: r['stand'] = sp[:2]; r['standClearance'] = sp[2]
         data = {
             'unit': self.code, 'type': self.typ, 'grossM2': self.gross, 'netM2': self.net,
             'source': f'brand-source/plans/{self.uid}.jpg. Traced by realstate-frontend-design, Nov 2026; tolerance about ±5 cm.',
@@ -123,6 +162,9 @@ class Unit:
         f = [P(self.m(*p)) for p in self.foot]; d.line(f + [f[0]], fill=(0, 0, 0, 255), width=3)
         for s in self.solids:
             d.polygon([P(p) for p in s['poly']], fill=(255, 0, 200, 90) if s['kind'] == 'furniture' else (140, 0, 255, 90))
+        for r in self.rooms + self.extra:
+            if 'stand' in r:
+                x, y = P(r['stand']); d.ellipse((x - 9, y - 9, x + 9, y + 9), fill=(255, 255, 255, 255), outline=(0, 0, 0, 255), width=3)
 
         def seg(a, b, t, col):
             ax, ay = P(a); bx, by = P(b); dx, dy = bx - ax, by - ay; L = math.hypot(dx, dy) or 1
