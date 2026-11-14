@@ -130,8 +130,9 @@
   border-bottom: 1px solid var(--line);
 }
 
-/* rev 8.1 E: two columns of 40 px rows from 1024 px (44 px where the pointer is coarse) */
-@media (min-width: 1024px) {
+/* rev 8.3: two columns from 1200 px (at 1024 the long names wrapped to 3 lines); one column below. Rows are 40 px
+   with a fine pointer, 44 px on touch */
+@media (min-width: 1200px) {
   .u3d-rooms__list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -139,7 +140,7 @@
   }
 }
 
-@media (min-width: 1024px) and (pointer: fine) {
+@media (pointer: fine) {
   .u3d-room {
     min-height: 40px;
   }
