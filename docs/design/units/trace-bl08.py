@@ -48,6 +48,8 @@ u.door('d-store', (1128, 1485, 1147, 1625), 'store-living', note='The store open
 u.opening('w-shower1', (169, 767, 411, 783), 'window', 'shower1-balcony', 1.5, 2.2, 'inferred', note='Thin line between the shower room and the 4.8 m² balcony; reads as glazing')
 u.opening('w-bed2', (416, 790, 435, 930), 'window', 'bed2-balcony', 0.9, 2.4, 'inferred', note='Thin double line facing the 4.8 m² balcony')
 u.opening('g-living-balcony', (222, 985, 245, 1437), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 4.8 m² balcony')
+u.open('o-living-hall-e', (1133, 992, 1147, 1240), 'living-hall')
+u.open('o-living-hall-n', (1031, 978, 1140, 992), 'living-hall')
 # balconies
 u.railing('r-b1-w', (250, 103), (212, 348))
 u.railing('r-b2-w', (138, 790), (38, 1385)); u.railing('r-b2-s', (38, 1385), (222, 1385))

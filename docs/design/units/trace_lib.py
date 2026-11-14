@@ -20,7 +20,7 @@ class Unit:
         self.measured = measured
         self.plan = ROOT + f'brand-source/plans/{uid}.jpg'
         self.walls, self.openings, self.railings, self.solids, self.rooms = [], [], [], [], []
-        self.hall_poly, self.foot, self.protect = None, None, []
+        self.hall_poly, self.foot, self.protect, self.extra = None, None, [], []
 
     # px -> metres
     def m(self, x, y):
@@ -47,6 +47,16 @@ class Unit:
 
     def door(self, id, r, wall, leaves=1, note=None):
         self.opening(id, r, 'door', wall, 0, 2.1, 'plan', leaves, note)
+
+    def open(self, id, r, wall, note=None):
+        """An open archway: a room meets the hall, corridor or another space with no door (rev 9.2, walk-in rings)."""
+        self.opening(id, r, 'open', wall, 0, 2.8, 'plan', None, note)
+
+    def walkable(self, id, poly, note=None):
+        """An unlabelled space a visitor can stand in (lobby, unlabelled wet room or terrace): no hotspot, no list row."""
+        d = {'id': id, 'poly': [self.m(*p) for p in poly]}
+        if note: d['note'] = note
+        self.extra.append(d)
 
     def railing(self, id, p, q):
         self.railings.append({'id': id, 'a': self.m(*p), 'b': self.m(*q), 'h': 1.1})
@@ -92,6 +102,7 @@ class Unit:
                          'note': 'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
             'footprint': [self.m(*p) for p in self.foot], 'walls': self.walls, 'openings': self.openings,
             'railings': self.railings, 'solids': self.solids, 'rooms': self.rooms,
+            'walkable': self.extra,
             'hall': {'id': 'hall', 'name': None, 'area': None, 'poly': [self.m(*p) for p in self.hall_poly]} if self.hall_poly else None,
         }
         s = json.dumps(data, separators=(',', ':'), ensure_ascii=False)
@@ -108,6 +119,7 @@ class Unit:
         ov = Image.new('RGBA', im.size, (0, 0, 0, 0)); d = ImageDraw.Draw(ov); P = self._P
         for r in self.rooms: d.polygon([P(p) for p in r['poly']], fill=(0, 160, 255, 50), outline=(0, 120, 255, 255))
         if self.hall_poly: d.polygon([P(self.m(*p)) for p in self.hall_poly], fill=(255, 200, 0, 40), outline=(200, 150, 0, 255))
+        for e in self.extra: d.polygon([P(p) for p in e['poly']], fill=(255, 200, 0, 40), outline=(200, 150, 0, 255))
         f = [P(self.m(*p)) for p in self.foot]; d.line(f + [f[0]], fill=(0, 0, 0, 255), width=3)
         for s in self.solids:
             d.polygon([P(p) for p in s['poly']], fill=(255, 0, 200, 90) if s['kind'] == 'furniture' else (140, 0, 255, 90))
@@ -117,7 +129,7 @@ class Unit:
             nx, ny = -dy / L, dx / L; hw = t * (self.SX + self.SY) / 4
             d.polygon([(ax + nx * hw, ay + ny * hw), (bx + nx * hw, by + ny * hw), (bx - nx * hw, by - ny * hw), (ax - nx * hw, ay - ny * hw)], fill=col)
         for w in self.walls: seg(w['a'], w['b'], w['t'], (255, 0, 0, 150))
-        for o in self.openings: seg(o['a'], o['b'], o['t'], (0, 200, 0, 200) if o['basis'] == 'plan' else (255, 140, 0, 200))
+        for o in self.openings: seg(o['a'], o['b'], o['t'], (0, 230, 230, 220) if o['type'] == 'open' else (0, 200, 0, 200) if o['basis'] == 'plan' else (255, 140, 0, 200))
         for r in self.railings: seg(r['a'], r['b'], 0.05, (0, 0, 255, 255))
         out = Image.alpha_composite(im.convert('RGBA'), ov).convert('RGB')
         w = 1200; out.resize((w, round(im.height * w / im.width)), Image.LANCZOS).save(OUT + f'{self.uid}-check.jpg', quality=80)

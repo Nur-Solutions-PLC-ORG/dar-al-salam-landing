@@ -71,6 +71,8 @@ O('g-living-balcony',(1100,1505,1740,1525),'glazed-door','living-balcony',0,2.4,
 O('w-kitchen',(1598,118,1617,329),'window','kitchen-lightwell',1.05,2.2,basis='plan',note='150 cm, dimensioned on the plan (63 | 150 | 41); sill and head heights assumed')
 O('w-bed2',(888,1310,1074,1332),'window','bed2-balcony',0.9,2.4,basis='inferred',note='10 cm line facing the balcony; reads as glazing')
 
+O('o-living-hall',(1082,565,1096,745),'open','living-hall',0,2.8,note='Open archway between the living room and the hall (rev 9.2, walk-in rings)')
+
 railings=[
  {'id':'r-balc1-w','a':m(211,1330),'b':m(211,1483),'h':1.1},
  {'id':'r-balc1-s','a':m(211,1483),'b':m(476,1483),'h':1.1},
@@ -127,7 +129,7 @@ data={
             'plane':{'minX':m(crop[0],crop[1])[0],'minZ':m(crop[0],crop[1])[1],'maxX':m(crop[2],crop[3])[0],'maxZ':m(crop[2],crop[3])[1]},
             'note':'UV = ((x-minX)/(maxX-minX), 1-(z-minZ)/(maxZ-minZ)); the texture is the crop resized to 1024 px wide'},
  'defaults':{'wallH':2.8,'modelCutH':2.4,'cutawayH':1.0,'doorHead':2.1,'note':'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
- 'footprint':footprint,'walls':walls,'openings':openings,'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
+ 'footprint':footprint,'walls':walls,'openings':openings,'walkable':[],'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
 }
 s=json.dumps(data,separators=(',',':'),ensure_ascii=False)
 open(ROOT+'docs/design/units/bl05.json','w').write(s)
@@ -146,7 +148,7 @@ def seg(a,b,t,col):
     nx,ny=-dy/L,dx/L; hw=t*(SX+SY)/4
     d.polygon([(ax+nx*hw,ay+ny*hw),(bx+nx*hw,by+ny*hw),(bx-nx*hw,by-ny*hw),(ax-nx*hw,ay-ny*hw)],fill=col)
 for w in walls: seg(w['a'],w['b'],w['t'],(255,0,0,150))
-for o in openings: seg(o['a'],o['b'],o['t'],(0,200,0,200) if o['basis']=='plan' else (255,140,0,200))
+for o in openings: seg(o['a'],o['b'],o['t'],(0,230,230,220) if o['type']=='open' else (0,200,0,200) if o['basis']=='plan' else (255,140,0,200))
 for r in railings: seg(r['a'],r['b'],0.05,(0,0,255,255))
 out=Image.alpha_composite(im.convert('RGBA'),ov).convert('RGB')
 out.resize((1200,1059)).save(ROOT+'docs/design/units/bl05-check.jpg',quality=80)

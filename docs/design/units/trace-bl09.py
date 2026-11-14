@@ -43,6 +43,10 @@ u.door('d-shower2', (596, 905, 610, 1005), 'mbed-shower2', note='En-suite to the
 u.opening('g-bed1-balcony', (390, 617, 413, 752), 'glazed-door', 'bed1-balcony', 0, 2.4, 'inferred', note='White strip between the bedroom and the 0.8 m² balcony')
 u.opening('g-mbed-balcony', (343, 1140, 366, 1300), 'glazed-door', 'mbed-balcony', 0, 2.4, 'inferred', note='White strip between the master bedroom and the 2.8 m² balcony')
 u.opening('g-living-balcony', (734, 1245, 1132, 1262), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 4 m² balcony')
+u.open('o-living-hall', (734, 684, 852, 698), 'living-hall')
+u.open('o-living-lobby', (716, 785, 733, 884), 'living-lobby')
+u.walkable('lobby', [(613, 785), (716, 785), (716, 884), (613, 884)], note='Unlabelled lobby between the living room, a bedroom, a shower room and the master bedroom')
+u.walkable('wet', [(478, 45), (591, 45), (591, 262), (440, 262)], note='Unlabelled wet room off the kitchen')
 # balconies
 u.railing('r-b1-w', (376, 612), (351, 765))
 u.railing('r-b2-w', (322, 1010), (250, 1405)); u.railing('r-b2-s', (250, 1405), (343, 1392))

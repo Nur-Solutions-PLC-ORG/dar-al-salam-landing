@@ -39,6 +39,7 @@ u.door('d-store', (1180, 803, 1290, 827), 'store-corridor')
 u.opening('g-bed1-balcony', (525, 123, 540, 242), 'glazed-door', 'bed1-balcony', 0, 2.4, 'inferred', note='Thin double line between the bedroom and the 1.06 m² balcony')
 u.opening('g-kitchen-balcony', (1300, 140, 1315, 295), 'glazed-door', 'kitchen-balcony', 0, 2.4, 'inferred', note='Thin double line between the kitchen and the 1.31 m² balcony')
 u.opening('g-living-balcony', (308, 817, 315, 1210), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 2.68 m² balcony')
+u.open('o-living-corridor', (890, 803, 1070, 817), 'living-corridor')
 # balconies
 u.railing('r-b1-w', (397, 110), (397, 242)); u.railing('r-b1-n', (397, 110), (540, 110))
 u.railing('r-b2-n', (1300, 110), (1440, 110)); u.railing('r-b2-e', (1440, 110), (1440, 233))

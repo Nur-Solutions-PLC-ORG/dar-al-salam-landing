@@ -44,6 +44,8 @@ u.door('d-shower2', (1190, 1299, 1345, 1312), 'mbed-shower2', note='En-suite to 
 u.opening('g-living-balcony', (134, 1480, 757, 1495), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 5 m² balcony')
 u.opening('w-bed2', (792, 1287, 1134, 1300), 'window', 'bed2-balcony', 0.9, 2.4, 'inferred', note='Thin line facing the balcony; reads as glazing')
 u.opening('g-mbed-balcony', (1376, 1287, 1608, 1300), 'glazed-door', 'mbed-balcony', 0, 2.4, 'inferred', note='Thin double line between the master bedroom and the 1.8 m² balcony')
+u.open('o-living-hall-n', (535, 633, 757, 647), 'living-hall')
+u.open('o-living-hall-e', (750, 647, 764, 737), 'living-hall')
 # balconies
 u.railing('r-b1-s', (134, 1607), (955, 1575))
 u.railing('r-b2-s', (1385, 1537), (1614, 1537))
