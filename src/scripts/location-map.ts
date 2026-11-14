@@ -85,10 +85,15 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
   let started = 0;
   let failed = 0;
   let loaded = false;
+  // deferred: fail() can run inside Leaflet's own tile 'load' event, and GridLayer._tileReady reads this._map
+  // after the event returns (review r5 #1: an uncaught TypeError on every tile outage)
   const fail = () => {
     window.clearTimeout(timer);
-    map.remove();
-    el.remove();
+    tiles.off();
+    window.setTimeout(() => {
+      map.remove();
+      el.remove();
+    }, 0);
   };
   const timer = window.setTimeout(() => !loaded && fail(), 10_000);
   tiles.on('tileloadstart', () => !loaded && started++);
