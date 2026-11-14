@@ -3,7 +3,7 @@
  * Film dialog (DESIGN §5.11 rev 5). One native modal <dialog> for both openers (hero card, Story link).
  * The dialog itself is a transparent full-viewport shell; .film__scrim, the frame and the chrome are
  * separate layers so each can be animated (src/scripts/film.ts: FLIP from the card, rise from the link).
- * The film loads nothing until opened: preload="none", and the poster is set by JS on first open.
+ * The film loads nothing until opened: preload="none"; the poster and the captions src are set by JS on first open.
  */
 import { getDict, type Lang } from '../../i18n';
 
@@ -38,7 +38,7 @@ const f = t.film;
         data-poster="/video/film-full-poster.webp"
         data-film-video
       >
-        <track kind="captions" srclang={lang} label={f.captionsLabel} src={`/video/film.${lang}.vtt`} default />
+        <track kind="captions" srclang={lang} label={f.captionsLabel} data-src={`/video/film.${lang}.vtt`} default />
       </video>
     </div>
     <p id="film-desc" class="small film__desc" data-film-chrome>{f.desc}</p>

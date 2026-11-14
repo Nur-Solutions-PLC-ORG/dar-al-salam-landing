@@ -301,6 +301,8 @@ function createDialog() {
     stop();
     // same task as the click: showModal, Lenis, loop pause, play (user activation allows sound)
     if (!video.poster) video.poster = video.dataset.poster ?? '';
+    const track = video.querySelector<HTMLTrackElement>('track[data-src]');
+    if (track && !track.getAttribute('src')) track.src = track.dataset.src ?? '';
     dialog!.showModal();
     getLenis()?.stop();
     document.documentElement.classList.add('has-dialog');

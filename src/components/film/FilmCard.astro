@@ -162,8 +162,11 @@ const f = t.film;
     clip-path: polygon(0 0, 100% 50%, 0 100%);
   }
 
+  /* on the disc's row, bottom-left */
   .film-card__label {
-    align-self: center;
+    display: flex;
+    align-items: center;
+    min-height: 24px;
     font-family: var(--font-body);
     font-size: 0.8125rem;
     font-weight: 600;
@@ -365,6 +368,7 @@ const f = t.film;
     }
 
     .film-card__label {
+      min-height: 28px;
       font-size: 0.875rem;
     }
   }

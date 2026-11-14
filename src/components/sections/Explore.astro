@@ -710,6 +710,13 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     display: flex;
   }
 
+  /* "To be confirmed" wraps inside the narrow 3×3 chip instead of spilling into the next one */
+  .chip[data-tbc] > .chip__tbc-meta {
+    display: block;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
   .chip[data-tbc] {
     box-shadow: none;
     outline: 1px dashed var(--input-border);
@@ -869,17 +876,22 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
       column-gap: var(--space-5);
     }
 
-    .floors__mix {
-      display: none;
-    }
-
+    /* rev 5: every floor keeps its own mix; in the two-column list it sits under the floor number */
     .floors__row {
       grid-template-columns: 1fr auto;
+      row-gap: 0;
+      padding-block: 6px;
     }
 
-    .floors__summary {
-      display: block;
-      margin-top: calc(-1 * var(--space-3));
+    .floors__mix {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: 0.8125rem;
+    }
+
+    .floors__chev {
+      grid-column: 2;
+      grid-row: 1 / span 2;
     }
 
     .view {
@@ -903,10 +915,9 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
       min-height: 360px;
     }
 
+    /* rev 5: the longer strip wraps rather than cutting "Basement parking" */
     .explore__strip {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.4;
     }
 
     :global(html.js) .explore__stepper {
