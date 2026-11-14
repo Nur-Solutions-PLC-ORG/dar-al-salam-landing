@@ -284,6 +284,8 @@ export const en = {
       phone: '📞 Phone: {phone}',
       home: '🏠 Home: {unit}',
       floor: '🏢 Floor: {floor}',
+      /** {floor} on that line: the bare number ("🏢 Floor: 7"). */
+      floorN: '{n}',
       message: '💬 Message: {message}',
       sign: 'Sent from the Dar Al Salam website',
     },

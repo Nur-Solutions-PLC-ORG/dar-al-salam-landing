@@ -13,7 +13,7 @@ type Channel = 'whatsapp' | 'telegram' | 'email';
 export function initEnquiry() {
   const form = document.querySelector<HTMLFormElement>('[data-enquiry]');
   if (!form) return;
-  type MsgKey = 'hello' | 'intro' | 'phone' | 'home' | 'floor' | 'message' | 'sign';
+  type MsgKey = 'hello' | 'intro' | 'phone' | 'home' | 'floor' | 'floorN' | 'message' | 'sign';
   const t = JSON.parse(form.dataset.i18n ?? '{}') as Record<string, string> & {
     channels: Record<Channel, string>;
     msg: Record<MsgKey, string>;
@@ -160,7 +160,7 @@ export function initEnquiry() {
       '',
       f(m.phone, { phone: phone.value.trim() }),
       home ? f(m.home, { unit: home }) : null,
-      floor.value ? f(m.floor, { floor: f(t.floorN ?? '', { n: floor.value }) }) : null,
+      floor.value ? f(m.floor, { floor: f(m.floorN, { n: floor.value }) }) : null,
       msg ? f(m.message, { message: msg }) : null,
       '',
       m.sign,

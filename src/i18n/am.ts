@@ -269,6 +269,7 @@ export const am: Dict = {
       phone: '📞 ስልክ፦ {phone}',
       home: '🏠 ቤት፦ {unit}',
       floor: '🏢 ወለል፦ {floor}',
+      floorN: '{n}ኛ',
       message: '💬 መልዕክት፦ {message}',
       sign: 'ከዳር አል ሰላም ድረ-ገጽ የተላከ',
     },
