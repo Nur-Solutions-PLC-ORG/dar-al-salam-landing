@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14 Nov 2026, rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -12,6 +12,9 @@ Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quali
 | `brand-source/plans/keyplan-duotone.png` | The typical-floor key plan recoloured to ink-on-ivory, with the baked-in legend removed and each unit's tone normalised. This is the base image for the floor view; our own SVG hotspots supply the colour. 1549×1940, the same pixel grid as the original. |
 | `docs/design/keyplan-hotspots.json` | Polygons and centroids for BL01–BL09 in key-plan pixels, the floor-plate outline (for the 3D massing), the scale (35.7 px/m), and the legend colours. |
 | `docs/design/keyplan-hotspots-check.jpg` | The traced polygons drawn over the original plan, for visual verification. |
+| `public/video/film-loop.webm` (AV1), `film-loop.mp4` (H.264) | Muted preview loop for the hero film card, 480×264, 9.75 s (prepared by the coordinator). Ratio 20:11, the same as the film. |
+| `public/video/film-poster.webp` / `.jpg` | The loop's first frame, 480×264: the card's poster and its static state. |
+| `public/video/film.mp4`, `film-full-poster.webp` / `.jpg` | The full 41 s fly-through (640×352, H.264 + AAC, faststart) and its poster, 640×352. Loaded only when the film dialog opens. The source is `brand-source/video/tower-film-original.mp4`. |
 
 ---
 
@@ -228,7 +231,7 @@ Copy below is draft English. Keep every string in the i18n dictionary. Amharic d
 
 ### 5.1 Hero (`#top`)
 
-Content: eyebrow "Garment · Addis Ababa"; H1 "A house of *peace* in the heart of Garment." (italic on *peace*); lead "126 two- and three-bedroom homes across 14 residential floors."; CTAs "Book a visit" (primary) and "Explore apartments" (secondary, scrolls to `#explore`); scroll cue "Scroll" with a 1 px gold line that grows and shrinks.
+Content: eyebrow "Garment · Addis Ababa"; H1 "A house of *peace* in the heart of Garment." (italic on *peace*); lead "126 two- and three-bedroom homes across 16 floors." (rev 5); CTAs "Book a visit" (primary) and "Explore apartments" (secondary, scrolls to `#explore`); scroll cue "Scroll" with a 1 px gold line that grows and shrinks.
 
 ```
 Mobile 360                         Desktop 1440
@@ -253,18 +256,19 @@ Mobile 360                         Desktop 1440
 
 - Mobile: the arch is 100% of the content width, aspect 4:5 capped at `58svh`, with text below. The H1 must sit above the fold at 360×640, so test it and reduce the arch height if needed.
 - Desktop: two columns. The arch is cols 7–12, top aligned 24 px below the header, with `.arch--outline` around it. A faint mark watermark (gold-500 at 6%, 520 px) sits behind the text column, bottom-left.
+- **Film card (rev 5):** a small "Watch the film · 0:41" card overlaps the arch's lower-left edge and plays a muted preview loop. It opens the film dialog. Full spec in §5.11. The still render stays in the arch and stays the LCP; the film never replaces it, never goes full-bleed and is never cropped into the arch.
 - **LCP** is the hero image. `<Picture>` gives AVIF/WebP at widths 360/540/720/960/1280/1560. Use `fetchpriority="high"`, a preload `<link>` with matching `imagesizes`, no lazy loading, and explicit width/height.
 
 ### 5.2 Key facts (`#facts`)
 
-Four facts in a row (desktop) or a 2×2 grid (mobile), separated by gold hairlines: **14** residential floors · **126** apartments · **2 & 3** bedroom homes · **158–171** m² gross. Numerals use `--fs-number` (Cormorant); labels are eyebrow style in `--text-muted`. Under the row, a muted note: "Basement parking and offices · Commercial ground floor" (a fact from the brief).
+Four facts in a row (desktop) or a 2×2 grid (mobile), separated by gold hairlines: **16** floors (rev 5; the label is "Floors", not "Residential floors", and the S2 count-up runs 0 → 16) · **126** apartments · **2 & 3** bedroom homes · **158–171** m² gross. Numerals use `--fs-number` (Cormorant); labels are eyebrow style in `--text-muted`. Under the row, a muted note: "Basement parking and offices · Commercial ground floor" (a fact from the brief).
 
 ```
 Mobile                       Desktop
 ┌───────────┬───────────┐    ┌────────────┬────────────┬────────────┬──────────────┐
-│ 14        │ 126       │    │ 14         │ 126        │ 2 & 3      │ 158–171 m²   │
-│ RESIDENT. │ APARTMENTS│    │ RESIDENTIAL│ APARTMENTS │ BEDROOM    │ GROSS AREA   │
-├───────────┼───────────┤    │ FLOORS     │            │ HOMES      │              │
+│ 16        │ 126       │    │ 16         │ 126        │ 2 & 3      │ 158–171 m²   │
+│ FLOORS    │ APARTMENTS│    │ FLOORS     │ APARTMENTS │ BEDROOM    │ GROSS AREA   │
+├───────────┼───────────┤    │            │            │ HOMES      │              │
 │ 2 & 3     │ 158–171m² │    └────────────┴────────────┴────────────┴──────────────┘
 └───────────┴───────────┘
 ```
@@ -275,6 +279,7 @@ Mobile                       Desktop
 - Two short paragraphs drawn only from the facts: Garment location, two-block layout, nine homes per floor, balconies, a lift lobby with 2+ lifts and stairs per block (BRIEF wording), basement parking.
 - Media: a second crop of the tower render in a tall arch (detail of the balconies: `left 560, top 900, width 900, height 1125`), plus a small framed **key-plan duotone** thumbnail captioned "Typical floor: nine homes, two blocks".
 - Desktop: the statement spans cols 1–7. The arch spans cols 8–12 and is offset 120 px down (staggered editorial layout). Mobile stacks statement, then arch, then paragraphs.
+- Rev 5: after the paragraphs, one text link, "Watch the film · 0:41", with a 20 px gold play disc before it. It opens the same film dialog as the hero card (§5.11) and gets the focus back when the dialog closes. It is a second way in for people who scrolled past the hero, **not a second player**: no video and no loop here. Explore gets no film entry, because the fly-through doesn't help anyone pick a floor or a unit.
 
 ### 5.4 Tower explorer (`#explore`, navy): see §9 for the full spec
 
@@ -290,7 +295,7 @@ Desktop 1440 (section ≈ 100svh, not pinned after intro)
 │ │   floor slabs hover/select   │  │ cols 6–12, ivory "paper" panel on navy   ││
 │ │   ‹ drag to turn ›           │  │                                          ││
 │ └──────────────────────────────┘  └──────────────────────────────────────────┘│
-│ ▸ Floors 1–14 residential · Ground floor commercial · Basement parking         │
+│ ▸ Floors 1–14 residential · 16th floor planned · Ground floor commercial · Basement parking │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 Mobile 360
@@ -312,6 +317,10 @@ Mobile 360
 
 - H2 "Nine layouts. *One* calm way of living." Filter chips (`role="radiogroup"`): **All (9)** · **2 bedroom (1)** · **3 bedroom (8)**. Sort toggle: "By size". Chips are 44 px tall, with a gold underline on the active chip.
 - Card: an arch-topped frame (`.arch--soft`, sand background) with the plan thumbnail (`object-fit: contain`, 24 px padding), then `BL05` (eyebrow), "3 bedroom" (h3), "169.23 m² gross · 119.05 m² net" (tabular), and a rooms line (small, muted). Two actions: **View plan** (opens the viewer) and **Find on a floor** (scrolls to the explorer with BL05 highlighted on the current floor, default floor 1).
+- **BL01 floors (rev 5).** The filter counts stay as they are; they count layouts, not homes. Two additions:
+  - When **2 bedroom** is the active filter, a muted note sits under the chip row: "2-bedroom homes are on floors 4, 6, 8, 10 and 11." It is small, in `--text-muted`, inside an `aria-live="polite"` wrapper. It is hidden for All and 3 bedroom.
+  - The BL01 card always carries "On floors 4, 6, 8, 10 and 11" under the rooms line, small and in gold-700. The plan viewer's side panel for BL01 repeats it under the type.
+  - BL01's **Find on a floor** opens floor 4, the first 2-bedroom floor. The other units keep floor 1.
 - Layout: 3 columns at ≥1024, 2 at ≥640, and a horizontal scroll-snap carousel under 640 (card width 82%, a peek of the next card, a progress hairline below, and no scroll-jacking).
 - Filtering uses **GSAP Flip**: hidden cards fade and scale to 0.96 over 0.25 s, then the rest reflow over 0.6 s with `power3.inOut`. With reduced motion, it's an instant swap.
 
@@ -340,18 +349,55 @@ Desktop
 
 - H2 "Easy to *live*." (an echo of the brochure). Lead: "In the heart of Garment, close to Haile Garment roundabout, the Garment taxi station, Lafto square and the Africa CDC headquarters."
 - **Stylised diagram map (inline SVG, not a real map)**: roads drawn as 2 px `--line-strong` strokes, the Haile Garment roundabout as a ring, labelled nodes for the four landmarks, and the site as a gold keyhole pin with a slow 2.4 s pulse ring. Positions are schematic, taken from the relative layout in the brochure map: site west; taxi station north-east of the site; roundabout east; Lafto square beside the roundabout; Africa CDC east, past the ring road. Caption: "Diagram, not to scale." **No coordinates, distances or travel times.**
-- CTA: "Open in Google Maps" → `https://www.google.com/maps/search/?api=1&query=Haile%20Garment%2C%20Addis%20Ababa` (new tab, `rel="noopener"`). If the client later supplies an address in `site.ts`, use that query instead.
+- CTA (rev 5): **"Open exact location in Google Maps"** → `site.location.mapsUrl`, the client's pin `https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9`. Secondary pill style, with a 16 px keyhole-pin glyph before the label and an external-link arrow after it. New tab, `rel="noopener"`, with a visually hidden "(opens in a new tab)". If `mapsUrl` is ever empty, fall back to the search link with the label "Open in Google Maps" (`mapsHref()` already does this).
+- **"Get directions": not yet.** The Maps URLs API can target a directions destination exactly only with coordinates or a `ChIJ…` place ID. We have neither: the ID in the brief is the internal hex form, which the URLs API doesn't accept, and we never hand-type coordinates. A "Get directions" button would therefore either repeat the pin link or route to an approximate search result, so leave it out. The pin page already has Google's own Directions button one tap away. It is ready to switch on later: if `site.location.placeId` (a `ChIJ…` ID) is ever added, show a text link "Get directions" after the CTA, pointing to `https://www.google.com/maps/dir/?api=1&destination=Garment%20Tower&destination_place_id={placeId}`.
+- The site pin on the diagram stays where it is and keeps its "Diagram, not to scale." caption. The exact pin changes the link only, not the drawing.
 - Desktop: map in cols 1–8 inside a soft arch frame, text and landmark list in cols 9–12. Mobile: text, then map (aspect 4:5), then the list.
 
 ### 5.7 Why Dar Al Salam + flexible payment (`#payment`, navy)
 
-Part A, four pillars, only what the plans and brief support:
+Part A, **three pillars** (rev 5: the "Basement parking" pillar is gone, because parking is now a building feature, and the offices and commercial ground floor are already in the facts note), only what the plans and brief support:
 1. **Generous homes**: 158–171 m² gross, 2 & 3 bedrooms, separate shower room per bath.
 2. **Homes with balconies**: the plans show balconies.
 3. **Lift lobbies**: lift lobby with 2+ lifts and stairs per block (the BRIEF's wording; no other counts).
-4. **Basement parking**: plus offices below and commercial space at ground level.
 
-Each pillar has a 32 px line icon (gold-500, 1.25 px stroke), an h3, and one line of text.
+Each pillar has a 32 px line icon (gold-500, 1.25 px stroke), an h3, and one line of text. Pillars sit in 3 columns at ≥768 and 1 column below that.
+
+**Building features band (rev 5)**, directly under the pillars and before the payment H2. It uses the same navy surface and is denser than the pillars, so it reads as a spec list rather than four more pillars.
+
+- Heading: h3 in eyebrow style, "Building features", with the gold rule from S4.
+- Items, using **exactly these wordings and nothing else** (no sub-lines, no numbers, no borehole/tank/generator detail):
+  1. Garbage chute on every floor
+  2. Standby lift
+  3. Underground water
+  4. Parking
+- Markup: a `<ul>` of 4 `<li>`, each holding an icon (`aria-hidden`) and a label.
+- Each cell: a 28 px line icon in gold-500 (1.25 px stroke, round caps and joins, `vector-effect: non-scaling-stroke`), then the label in Manrope 500, 16 px, ivory, vertically centred. Cell padding 20 px 24 px.
+- Layout:
+  - ≥1024: one row of 4 cells between a top and a bottom hairline (gold-500 at 0.35), with vertical hairlines between cells.
+  - 640–1023: 2×2, hairlines between.
+  - <640: a single-column list, rows at least 56 px, with hairlines between.
+- Motion: part of S15. After the pillars, the cells fade in with y 16 → 0 (stagger 0.08), and each icon draws left → right with `clip-path`. With reduced motion, a fade only.
+- Icons (viewBox `0 0 24 24`, `fill="none"`, `stroke="currentColor"`). These are our own simple drawings, not a library set:
+
+| Item | SVG |
+|---|---|
+| Garbage chute on every floor | `<path d="M9 3v18M15 3v18M3 7h6M15 7h6M3 13h6M15 13h6M3 19h6M15 19h6M12 9v6M10.5 13.5 12 15l1.5-1.5"/>` (a shaft through three floors, with a down arrow) |
+| Standby lift | `<rect x="3" y="4" width="8" height="16" rx="1"/><path d="M5.5 10.5 7 9l1.5 1.5M5.5 13.5 7 15l1.5-1.5"/><rect x="13" y="4" width="8" height="16" rx="1" stroke-dasharray="2 2"/>` (a lift car with up/down arrows, and a dashed second car "on standby") |
+| Underground water | `<path d="M8 9V4h8v5M2 9h20M12 12.5c2.4 3 3.6 4.9 3.6 6.3a3.6 3.6 0 0 1-7.2 0c0-1.4 1.2-3.3 3.6-6.3z"/>` (a building on the ground line, with a drop below it) |
+| Parking | `<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9.5 17V7H13a3 3 0 0 1 0 6H9.5"/>` |
+
+```
+Desktop (#payment, navy)
+ ✦ Generous homes       ✦ Homes with balconies   ✦ Lift lobbies
+   158–171 m² gross…      The plans show…          A lift lobby with…
+ BUILDING FEATURES ──
+ ──────────────────┬──────────────────┬──────────────────┬──────────────
+ ⫼ Garbage chute on │ ▣┆ Standby lift   │ ⌂ Underground    │ Ⓟ Parking
+   every floor      │                  │   water          │
+ ──────────────────┴──────────────────┴──────────────────┴──────────────
+ Flexible payment, at your pace.  (Part B)
+```
 
 Part B, H2 "Flexible payment, at your *pace*." Three steps on a horizontal hairline timeline (vertical on mobile):
 
@@ -384,6 +430,7 @@ Desktop                                              Mobile
 - Submit builds the text `"Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}"` and opens WhatsApp (`https://wa.me/{number}?text=`), Telegram (`https://t.me/{username}`, with the text copied to the clipboard and a toast "Message copied, paste it in Telegram"), or `mailto:`. **If no channel is configured** (all `TODO(client)`), hide the radio and show: "Our contact lines are being set up. Please check back soon." with the submit button disabled. Never post the form anywhere.
 - Success: the mark (`<use href="#mark">`, cropped by viewBox to the dove) lifts 24 px and fades. Status text reads "Opening WhatsApp…".
 - Explorer, gallery and viewer CTAs deep-link here with `?unit=BL05&floor=7` (hash-safe), which prefills the selects and focuses Name.
+- **BL01 and floors (rev 5).** The BL01 option keeps its label "BL01 – 2 bedroom". When BL01 is chosen with a floor that is not 4, 6, 8, 10 or 11, show a **hint, not an error** under the Floor field: small, `--text-muted`, linked with `aria-describedby`, and it never blocks submit. It reads: "BL01 is a 2-bedroom home on floors 4, 6, 8, 10 and 11. On floor 7 this home is still to be confirmed." In that case the message template names the unit "BL01 (to be confirmed)" instead of "BL01 – 2 bedroom". The explorer's "Ask about this home" CTA for a to-be-confirmed position deep-links `?unit=BL01&floor=7`, which lands in exactly this state. The floor select stays 1–14; 15 and 16 are not offered.
 
 ### 5.9 Footer (navy-950)
 
@@ -394,7 +441,194 @@ Desktop                                              Mobile
 
 ### 5.10 Mobile sticky CTA
 
-Under 768 px, after the hero has left the viewport: a bottom bar, 64 px plus `env(safe-area-inset-bottom)`, ivory with a hairline top border. It holds "Book a visit" (primary, flex 1) and a WhatsApp icon button (only if configured). It slides in at y 100% → 0 over 0.4 s with `power3.out` and hides while `#enquire` or the footer is in view. Content gets `padding-bottom` so the bar never covers the last element.
+Under 768 px, after the hero has left the viewport: a bottom bar, 64 px plus `env(safe-area-inset-bottom)`, ivory with a hairline top border. It holds "Book a visit" (primary, flex 1) and a WhatsApp icon button (only if configured). It slides in at y 100% → 0 over 0.4 s with `power3.out` and hides while `#enquire` or the footer is in view. Content gets `padding-bottom` so the bar never covers the last element. It also hides while the film dialog is open.
+
+### 5.11 Tower film (rev 5): hero card and film dialog
+
+**The constraint.** The film is 640×352 and the preview loop is 480×264. Both are sharp only at small sizes, so the film is always shown **at or below about 1.5× its source width**. It is never full-bleed, never stretched, and never cropped into the arch. The still render keeps the arch and the LCP.
+
+**Card markup.** The card is server-rendered once in the hero media wrapper. It is a **sibling** of the masked arch, not inside it, so the dome mask and the S1 scale never touch it.
+
+```html
+<div class="film-card" data-film-card>
+  <video class="film-card__video" muted loop playsinline preload="none" aria-hidden="true"
+         width="480" height="264" poster="/video/film-poster.webp">
+    <!-- JS adds the <source>s (webm/AV1 first, then mp4) only when autoplay is allowed -->
+  </video>
+  <a class="film-card__open" href="/video/film.mp4" aria-haspopup="dialog">
+    <span class="film-card__play" aria-hidden="true"></span>
+    <span class="film-card__label">Watch the film</span>
+    <span class="film-card__time">0:41</span>
+    <span class="visually-hidden">: the tower fly-through, 41 seconds, with music</span>
+  </a>
+  <button class="film-card__sound" type="button" aria-pressed="false" aria-label="Film music" hidden>…bars…</button>
+  <button class="film-card__pause" type="button" aria-pressed="false" hidden>Pause preview</button>
+</div>
+```
+
+- **No JS**: the link opens `film.mp4` in the browser's own player, and the card shows the poster. There is no `autoplay` attribute; JS starts the loop.
+- **With JS**: the click is intercepted (`preventDefault`) and opens the dialog.
+- The pause button is a sibling, not nested inside the link. The link stretches over the whole card (`position:absolute; inset:0`), and the button sits above it (z-index 2).
+
+**Card look.**
+
+- Aspect ratio 20:11, the same as the video, so nothing is cropped (`object-fit: cover` is a no-op).
+- `--radius-s`, overflow clip, `--shadow-2`, and a 1 px inset hairline in gold-500 at 0.7 (`box-shadow: inset 0 0 0 1px`). The background is navy-950, which shows while the poster loads.
+- Scrim: `linear-gradient(to top, rgb(11 18 32 / .8), rgb(11 18 32 / 0) 62%)` over the video.
+- **Bottom-left**: a play disc (28 px; 24 under 640), solid gold-500 with a navy-950 triangle. 8 px after it comes "Watch the film" in Manrope 600, 14 px (13 px under 640), ivory. Check that this label reaches ≥ 4.5:1 against the brightest frame of the loop; if it doesn't, raise the scrim to 0.88.
+- **Top-left**: the duration pill "0:41". Manrope 600, 12 px, tabular, ivory on navy-950 at 0.6, `--radius-pill`, padding 2 px 8 px. In the label above, "0:41" is visually moved here (`.film-card__time` positioned absolutely), so it reads as part of the link name.
+- **Top-right**: the pause toggle. A 32 px visible circle in navy-950 at 0.55 with a 12 px ivory glyph (two bars, or a triangle when paused), inset 6 px from the corner. Its hit area is 44 px (`::after { inset: -6px }`). The accessible name swaps between "Pause preview" and "Play preview", with `aria-pressed`. It shows only while the loop is allowed to play; otherwise there is nothing moving to pause.
+- **Hover** (fine pointer only): the video scales 1 → 1.04 inside the clip and the play disc scales 1 → 1.1, both 0.45 s `power3.out`. The cursor ring label is "Play" (§6).
+- **Focus**: the `--focus` ring (2 px at 2 px offset) is drawn around the whole card, via `.film-card:has(.film-card__open:focus-visible)`. The pause button gets its own ring.
+
+**Size and placement.** Steps are by viewport width; positions are relative to the hero media wrapper.
+
+| Viewport | Card width × height | Position | Notes |
+|---|---|---|---|
+| < 640 (360, 390) | 168 × 92 | inside the arch: `left: 12px; bottom: 12px` | The arch is full content width with text below. The card sits over the render's street level and must not push the H1 below the fold at 360×640. |
+| 640–1023 (768) | 200 × 110 | inside the arch: `left: 16px; bottom: 16px` | Stacked layout, as on mobile. |
+| 1024–1599 (1024, 1366) | 240 × 132 | straddles the arch's left edge: `left: -40px; bottom: 48px` | 40 px of the card hangs into the gutter. QA check at 1024: if the lead or CTAs come within 24 px of the card, reduce the overhang to 24 px. |
+| ≥ 1600 (1920) | 264 × 145 | `left: -48px; bottom: 64px` | 264 CSS px is the 480 px loop at 1.8 device px per CSS px, so it stays sharp at DPR 1–1.8. |
+
+```
+Desktop 1366: lower-left of the hero arch          Mobile 360: inside the arch
+          │                        │               ┌──────────────────┐
+  (CTAs)  │   tower render         │               │  tower render    │
+          │                        │               │                  │
+     ┌────┼──────────┐             │               │┌────────┐        │
+     │0:41│        ⏸ │             │               ││0:41   ⏸│        │
+     │    │  loop    │             │               ││ ▶ Watch │        │
+     │ ▶ Watch the film            │               │└────────┘        │
+     └────┼──────────┘             │               └──────────────────┘
+          └────────────────────────┘                GARMENT · ADDIS ABABA
+```
+
+**When the loop plays.** Loading is deferred:
+
+- On `window` `load`, wait for `requestIdleCallback` (2 s timeout).
+- Then, **only if** all of the following hold, add the `<source>`s, call `load()`, and `play()` on `canplay`:
+  - `prefers-reduced-motion: no-preference`
+  - `!navigator.connection?.saveData`
+  - `effectiveType` is `4g` or unknown
+  - the hero is intersecting (IntersectionObserver)
+- Pause the loop when:
+  - the hero leaves the viewport (resume on re-entry, unless the user paused it)
+  - `document.hidden` is true
+  - the film dialog is open
+- **Auto-stop after 3 loops (about 29 s).** Pause, set `currentTime = 0` so the card rests on the poster frame, and flip the toggle to "Play preview". This saves battery and keeps the card calm.
+- Otherwise (reduced motion, Save-Data, slow connection, no JS): the poster only. No sources are added, no bytes of video are fetched, and the pause toggle stays `hidden`. The card still opens the dialog.
+- QA note: headless Chrome reports `effectiveType: '3g'`, so a poster-only card in headless screenshots is correct.
+
+**The film dialog.** One `<dialog class="film" aria-labelledby="film-title" aria-describedby="film-desc">` at the end of `<body>` serves both openers (the hero card and the §5.3 link).
+
+- **Shell**: the dialog element itself is full-viewport and transparent (`width:100vw; height:100svh; max-width:none; max-height:none; padding:0; background:transparent`), and its `::backdrop` is transparent. Inside it is a `.film__scrim` (navy-950 at 0.94, fixed, inset 0) that GSAP can fade. This keeps every animated layer tweenable.
+- **Layout**, centred in a column:
+  1. A top row as wide as the frame: an eyebrow on the left, `<h2 id="film-title">` "The tower film" (eyebrow style, sand-200); on the right, a **Close** button. The close button is 44 px, an ivory × in a hairline circle (ivory at 0.3), with `aria-label="Close film"`.
+  2. The frame: `<video controls playsinline preload="none" poster="/video/film-full-poster.webp" src="/video/film.mp4">`, aspect 20:11, `--radius-s`, on navy-950. Native controls, sound on.
+  3. The caption, `<p id="film-desc">` in small text, sand-200 at 0.8, max width the same as the frame: "Rendered fly-through, 0:41, music only. It shows the tower from the street, the entrance and ground floor, and the facade up to the roof. Renders are illustrative and may change." This is the text alternative for the visuals; it describes only what is in the film.
+- **Frame width**: `min(960px, 100vw − 32px, (100svh − 176px) × 20/11)`. 960 px is 1.5× the 640 px source, which is the ceiling. Reference sizes:
+  - 360×640: 328 × 180
+  - 768×1024: 736 × 405
+  - 1366×768: 960 × 528 (height-limited: (768 − 176) × 20/11 = 1076, so the 960 cap applies)
+  - 1920×1080: 960 × 528
+- **Short landscape screens** (`max-height: 500px`): the caption becomes visually hidden (it stays as the description). The close button overlays the viewport's top-right corner at 8 px. The width formula becomes `(100svh − 32px) × 20/11`.
+- **Captions**: there is no speech, so the track is one cue. `<track kind="captions" srclang="en" label="English" src="/video/film.en.vtt" default>` contains a single cue `00:00.000 --> 00:41.000` reading `[Music]`. On /am the cue reads `[ሙዚቃ]`; this is draft wording, flag it for the client's Amharic review.
+
+**Open: from the card (FLIP).**
+
+1. In the click handler, run these in the same task, so the click's user activation still allows sound:
+   - `dialog.showModal()`
+   - `lenis.stop()`
+   - pause the card loop
+   - `video.play()`; if it rejects, the native play button is the fallback
+   - hide the custom cursor
+2. **First**: the opener card's rect. **Last**: the dialog frame's rect. The aspect ratios are equal, so a pure transform fits it without distortion: `x, y` = centre delta, `scale` = card width ÷ frame width.
+3. Tween the frame from that transform to identity: **0.7 s `expo.out`** (large media). During the flight, set the card itself to `opacity: 0`, so it looks as if the card lifts out.
+4. The scrim fades opacity 0 → 1 over 0.4 s `power3.out`.
+5. The top row and the caption fade in with y 8 → 0 at +0.35 s (0.4 s `power3.out`).
+6. Focus moves to the `<video>` at the end of the flight (or immediately with reduced motion), so Space toggles play and the native controls are reachable.
+
+From the §5.3 text link there is no matching card, so the frame rises instead: y 24 → 0, opacity 0 → 1, scale 0.96 → 1, 0.6 s `power3.out`.
+
+**Close** (the Close button, Esc, or a click on the scrim outside the frame):
+
+1. Pause the film immediately, so the sound stops on the first frame of the close.
+2. Handle Esc through the dialog's `cancel` event: call `preventDefault()`, run the close animation, then `dialog.close()`.
+3. If the opener card is in the viewport, play the reverse FLIP: 0.45 s `power2.inOut`, with the scrim fading out over 0.3 s. Otherwise fade the whole dialog out over 0.25 s.
+4. Then:
+   - `dialog.close()`
+   - `lenis.start()`
+   - restore the card's opacity
+   - resume the card loop if it was playing and the user hadn't paused it
+   - return focus to the opener (the card link or the §5.3 link)
+5. On reopen, keep `currentTime`, so the film resumes where it stopped. If it had ended, reset it to 0.
+6. Never autoplay the film except as a direct result of the open click.
+
+**Reduced motion.** No FLIP and no rise: the dialog cross-fades in over 0.2 s and out the same way. The film still plays on open, because the user explicitly asked for it. The card shows only its poster (above).
+
+**Sound toggle (rev 5).** The film's music plays as an optional soundtrack under the muted preview loop.
+
+- Assets: `public/video/film-music.webm` (Opus, 252 KB) and `film-music.m4a` (AAC, 258 KB). The track is 41 s, loudness-normalised to −20 LUFS, with fades at both ends so it loops cleanly. The loop video itself has no audio track.
+
+*Placement*
+
+- The toggle goes **on the card**, in the top-right control row, to the left of the pause toggle.
+  - Order from the right edge: 6 px inset, pause (32 px), a 12 px gap, sound (32 px). The 12 px gap means the two 44 px hit areas touch but don't overlap.
+  - When the pause toggle is hidden (poster-only card), the sound toggle moves into the corner.
+  - The row fits the 168 px card at 360: 82 px of controls plus the 0:41 pill.
+- Not in the header: on mobile the header is already full, and a control that sits next to the thing it belongs to is clearer.
+- Music plays only while the card is visible (rules below), so whenever music is audible, its off switch is on screen.
+
+*Markup and naming*
+
+- `<button class="film-card__sound" type="button" aria-pressed="false" aria-label="Film music" hidden>` sits as another sibling of the link. JS removes `hidden`; there is no sound without JS.
+- The accessible name stays constant ("Film music") and `aria-pressed` carries the state, so screen readers announce "Film music, toggle button, not pressed / pressed". Changing the name as well as `aria-pressed` would announce the state twice and contradict itself.
+- The visible state is a small tooltip on hover and focus-visible: ivory on navy-950, 12 px, 6 px above the button. It reads "Sound off" or "Sound on" (the current state). It is `aria-hidden`, because the state is already announced.
+
+*Glyph*
+
+- The same 32 px navy-950 circle at 0.55 as the pause toggle, holding three ivory bars (2 px wide, 2 px apart, max 12 px tall, `transform-origin: bottom`).
+- **Off**: the bars rest at scaleY 0.25, and a 1.5 px ivory diagonal slash crosses the circle.
+- **On**: no slash; the bars run an equaliser keyframe on `transform: scaleY()` only. The three bars use 0.9 s, 1.1 s and 0.7 s, `alternate`, `ease-in-out`, between 0.3 and 1. The animation runs only while audio is actually playing (`animation-play-state: paused` otherwise, for example when the music is paused because the card scrolled away).
+- **Loading** (the first press, until `canplay`): the bars at 0.25, no slash, with an opacity pulse of 0.5 ↔ 1 over 0.8 s.
+- **Reduced motion**: the toggle works the same. On is shown by static bars at 0.6, 1 and 0.45, with no animation; off is the slash.
+
+*Behaviour*
+
+- **Default OFF on every page load. Nothing is fetched until the first press.**
+- **On the first press**, synchronously inside the click handler (that is the user gesture):
+  - Create one `AudioContext` and call `resume()` on it.
+  - Create `new Audio()` with `loop = true` and `preload = "auto"`. Pick the source with `canPlayType('audio/webm; codecs="opus"')`: the `.webm` if supported, otherwise the `.m4a`.
+  - Wire it as `MediaElementAudioSourceNode → GainNode → destination`, starting at gain 0, then call `play()`.
+  - Use the gain node for every fade. `audio.volume` is read-only on iOS, so it can't be used.
+- **Fades**:
+  - On: gain 0 → 0.8 over 600 ms (`linearRampToValueAtTime`).
+  - Off: gain → 0 over 600 ms, then `pause()`.
+  - A press during a fade cancels it (`cancelScheduledValues`) and ramps from the current value.
+- **Errors**: if loading or `play()` fails, set `aria-pressed` back to false, show the off glyph and the toast "Sound couldn't start" (§6). Don't retry automatically.
+
+*When the music pauses and resumes (only while the toggle is on)*
+
+- **Card out of view**:
+  - Desktop: when S1f's ScrollTrigger reaches its end (`40% top`), which is when the card has faded out.
+  - Mobile and tablet: when an IntersectionObserver on the card reports it fully out of the viewport.
+  - Fade out over 600 ms and pause. When the card is back (`onEnterBack`, or intersecting again), fade back in. That is the resume rule: the music follows the visibility of its own control.
+- **Tab hidden** (`visibilitychange`): fade out over 200 ms and pause. When the tab is visible again, resume only if the card is in view.
+- **Film dialog opens**: fade out over 300 ms and pause. The dialog's film has its own soundtrack, so the two never play together. When the dialog closes, fade back in if the toggle is still on and the card is in view.
+- **The pause-preview toggle doesn't affect the music**, and the music doesn't affect the loop. They are separate controls: one for motion (2.2.2), one for audio (1.4.2).
+
+*Memory*
+
+- **No persistence** (refining the coordinator's sessionStorage idea). Browsers block sound that starts without a fresh tap, and "never auto-start" is the stronger rule. A remembered "on" could only ever show the toggle as on while the page stays silent, which is a lie. So every page load, including EN ↔ /am, starts off.
+- If the session ever needs to remember something later, store `'on'` and use it only to show a gold 6 px dot on the toggle meaning "you had sound on". Never use it to play.
+
+**Accessibility summary.**
+
+- The card video is `aria-hidden` and has no tab stop. The link is the only control, apart from the pause and sound toggles.
+- Audio never starts without a press. It is off by default and has its own toggle (WCAG 1.4.2).
+- Moving content that runs longer than 5 s has a pause control (WCAG 2.2.2), and the loop also stops on its own after 3 loops.
+- A native modal `<dialog>` makes the rest of the page inert and traps focus. Esc closes it, and focus returns to the opener.
+- The film has a text description (`aria-describedby`) and a captions track. No content is available only inside the film.
 
 ---
 
@@ -444,6 +678,9 @@ The intro is an ivory curtain (`#intro`, fixed, z 100) holding the gold mark at 
 | 1.50 | arch outline | `clip-path: inset(100% 0 0 0)` → `inset(0)` (draws upward) | 1.0 | power2.inOut |
 | 1.70 | header | opacity 0, y −12 → 1, 0 | 0.5 | power3.out |
 | 1.90 | scroll cue line | scaleY 0 → 1 loop (origin top, then bottom) | 1.6 | power2.inOut, repeat −1 |
+| 1.95 | film card (rev 5, §5.11) | `clip-path: inset(100% 0 0 0 round 6px)` → `inset(0 round 6px)`, y 16 → 0 | 0.8 | power3.out |
+
+The card's keyframe only reveals it. The loop is started by JS (§5.11), never before `window` `load`. If the sources are ready earlier, playback still waits for this keyframe's `animationend`, so the reveal never shows a jump cut.
 
 Without the curtain (repeat visit), the same keyframes start at t = 0.85 with everything shifted earlier. Total time to interactive content is about 1 s.
 
@@ -455,6 +692,7 @@ Without the curtain (repeat visit), the same keyframes start at t = 0.85 with ev
 |---|---|---|---|---|---|
 | S1 | Hero arch (desktop) | `.arch` scale 1 → 1.12, media yPercent 0 → 8, text block y 0 → −80 and opacity 1 → 0.2 | `#top` · `top top` → `bottom top` | `true` | ease none |
 | S1m | Hero arch (mobile) | media yPercent 0 → 10 only | same | `true` | none |
+| S1f | Film card (desktop ≥1024, rev 5) | y 0 → −48, opacity 1 → 0. The card is outside the S1 scale target, so it doesn't grow with the arch. On mobile it scrolls with the arch, with no tween. | `#top` · `top top` → `40% top` | `true` | none |
 | S2 | Facts numerals | count-up from 0 (14, 126; "158–171" counts both ends; "2 & 3" fades only). The text is pre-rendered as the final value and JS tweens from 0, so widths are fixed by tabular-nums and a `min-width` per cell. | `#facts` · `top 80%` | once | 1.4 / power2.out, stagger 0.12 |
 | S3 | Facts hairlines | scaleX 0 → 1 (origin left) | `#facts` · `top 85%` | once | 1.0 / power3.inOut |
 | S4 | All section eyebrows | rule scaleX 0 → 1, label opacity and x −8 → 0 | each eyebrow · `top 85%` | once | 0.7 / power3.out |
@@ -491,6 +729,7 @@ The scroll pace varies on purpose: fast and light through the facts; slow and ed
 - Counters show the final values immediately.
 - Explorer: no camera fly. Floor and unit changes cross-fade over 0.2 s. No auto-rotate. The drag-to-turn control stays, because it is user-initiated.
 - Flip filtering is instant. Dialogs open without scale.
+- Film (rev 5): the hero card shows its poster only (no loop, no sources fetched, no pause toggle). The sound toggle still works, with static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
 - `scroll-behavior: auto`. Anchor jumps are instant.
 - Use `gsap.matchMedia()` conditions `{ motion: "(prefers-reduced-motion: no-preference)" }` so everything is set up once and reverts cleanly when the setting changes.
 
@@ -517,6 +756,11 @@ Blocks, from the plan (internal grouping only; **never shown in the UI**, and th
 - **North** block: BL01, BL02, BL03, BL04, around core A (upper centre).
 - **South** block: BL05, BL06, BL07, BL08, BL09, around core B (centre).
 
+**Rev 5 (BRIEF update 2026-11-14), as already modelled in `src/data/units.ts`:**
+
+- The tower has **16 floors**. The explorer shows plan floors **1–14** only, because those are the plans we have. There are no slabs, rows or numbers for 15 and 16.
+- BL01 (2 bedroom) has `confirmedOn: [4, 6, 8, 10, 11]`. On every other plan floor, that position's `SlotStatus` is `'tbc'`: it is shown as "To be confirmed". It is **never** drawn as a 3-bedroom home, never hidden, and never shown with plan specs.
+
 Assumption, flagged: every residential floor uses the same typical layout. This follows from "9 apartments per floor" and the "typical floor" key plan. Unit naming in the UI: "Floor 7 · BL05". Never "Apartment 705": we don't know the client's numbering, so it is `TODO(client)`.
 
 ### 9.2 States and flow (one state machine, URL-synced)
@@ -537,14 +781,34 @@ IDLE (tower)  --hover slab / focus floor button-->  PREVIEW(floor n)  [tooltip]
 
 **Panel content per state** (right panel on desktop, stacked under the model on mobile; transitions use a 0.5 s cross-fade plus x 24 → 0, `power3.out`):
 
-- **IDLE**: the accessible **floor list** is the primary control. It is a `<ol>` of 14 `<button>`s ordered 14 → 1, each row reading "Floor 14 · 9 homes · 1 × 2-bed · 8 × 3-bed ›". Rows are 48 px with hairlines between them. Hovering or focusing a row highlights the matching 3D slab, and vice versa. Below the list sits a muted legend: "Ground floor: commercial · Basement: parking & offices".
+- **IDLE**: the accessible **floor list** is the primary control. It is a `<ol>` of 14 `<button>`s ordered 14 → 1. Rows are 48 px with hairlines between them. Hovering or focusing a row highlights the matching 3D slab, and vice versa. Below the list sits a muted legend: "Ground floor: commercial · Basement: parking & offices".
+  - **Row text (rev 5)** is "Floor n · {mix} ›", where mix comes from `floorMix()`:
+    - floors 4, 6, 8, 10, 11: "1 × 2-bed · 8 × 3-bed"
+    - other floors: "8 × 3-bed · 1 to be confirmed"
+    - The "1 to be confirmed" part is in `--text-muted`. The rest of the row keeps the normal text colour. "9 homes" is dropped from the row.
+  - **Above the list (rev 5)**, a non-interactive note: a `<p>` outside the `<ol>`, so it is not a list item and not a button. It reads "16th floor planned".
+    - It is 40 px tall, small, in `--text-muted`, with a dashed hairline under it (1 px `--line`, `border-bottom-style: dashed`).
+    - It is preceded by a 10 px dashed-outline square glyph (`aria-hidden`), the same "not drawn yet" language as the TBC hatch.
+    - No slab is added to the model. The dashed note is the only sign of floors above 14.
+  - Under the list, the muted line "2-bedroom homes on floors 4, 6, 8, 10 and 11" (`explore.twoBedOn`) sits above the legend.
 - **FLOOR(n)**: heading "Floor 7". Floor stepper (−/+, 44 px, magnetic). The **key plan SVG** (§9.3). Below it, 9 unit chips in a 3×3 grid, or a horizontal scroller on mobile (`BL01 · 2 bed · 158.54 m²`), mirroring the hotspots for keyboard and screen-reader users. A "Back to tower" button.
-- **UNIT(n, code)**: the plan image (click opens the plan viewer from §5.5), then code, type, gross and net m², and the room list. Actions: **Request pricing for Floor 7 · BL05** (primary, deep-links the form) and **Book a visit**. Prev/next unit arrows cycle BL01 → BL09 on the same floor. The 3D model keeps the selected floor pulled out.
+  - Rev 5, on a TBC floor: the BL01 chip reads "BL01 · To be confirmed". It has a 1 px **dashed** `--input-border` border, `--text-muted` text, and no m². It is still a button and still opens UNIT(n, BL01), which shows the TBC card below.
+- **UNIT(n, code)**: the plan image (click opens the plan viewer from §5.5), then code, type, gross and net m², and the room list. Actions: **Request pricing for Floor 7 · BL05** (primary, deep-links the form) and **Book a visit**. Prev/next unit arrows cycle BL01 → BL09 on the same floor, including a TBC position. The 3D model keeps the selected floor pulled out.
+- **UNIT(n, BL01) on a TBC floor (rev 5)**: same frame, different content. There are no plan specs, so no plan image, no m², no rooms and no plan-viewer link. It shows:
+  - **In place of the plan image**: a sand-100 panel of the same aspect ratio, filled with the TBC hatch (§9.3). A centred status chip sits on it: "To be confirmed".
+    - The chip is a non-interactive `<span>`, 32 px tall, `--radius-pill`, gold-700 text with a 1 px dashed gold-700 border on ivory, Manrope 600, 14 px.
+  - Eyebrow "Floor 7 · BL01". No type line: never "2 bedroom" or "3 bedroom" here.
+  - Body (`--text-muted`): "The home in this position on floor 7 is not confirmed yet. 2-bedroom homes are on floors 4, 6, 8, 10 and 11."
+  - Actions:
+    - **Ask about this home** (primary): deep-links `?unit=BL01&floor=7` (§5.8 shows the matching hint).
+    - **See BL01 on floor 4** (secondary): goes to UNIT(m, BL01), where m is the nearest 2-bedroom floor. Ties go to the lower floor, so: 1–5 → 4, 7 → 6, 9 → 8, 12–14 → 11.
+  - Changing floors while in UNIT(·, BL01) keeps BL01 selected and switches between the full card and this TBC card in place, with the usual 0.5 s cross-fade.
+- **3D / SVG maquette tooltip (rev 5)**: "Floor 7 · {mix}", using the same strings as the list rows (`explore.floorTooltip`), not "9 homes".
 
 ### 9.3 Key plan with hotspots (SVG, works without WebGL)
 
 ```html
-<svg viewBox="100 60 1200 1840" role="group" aria-label="Floor 7 key plan: 9 homes">
+<svg viewBox="100 60 1200 1840" role="group" aria-label="Floor 7 key plan: 8 × 3-bed · 1 to be confirmed">
   <image href="{keyplan-duotone.webp}" x="0" y="0" width="1549" height="1940" />
   <!-- one per unit, points straight from keyplan-hotspots.json -->
   <a href="#unit-bl05" class="hotspot" data-unit="BL05"
@@ -565,6 +829,11 @@ Hotspot styles:
 | Hover/focus | gold-500 at 0.28 | gold-600, 2 px | navy pill showing `BL05 · 3 bed · 169.23 m²` |
 | Selected | gold-500 at 0.45 | gold-600, 2 px | gold pill |
 | Dimmed (another unit selected) | ivory at 0.35 | — | 50% opacity |
+| **To be confirmed** (rev 5: BL01 on floors other than 4, 6, 8, 10, 11) | the TBC hatch: `<pattern id="tbc-hatch" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">`, one line `x1=0 y1=0 x2=0 y2=28`, navy at 0.22, 3 SVG units wide, over ivory at 0.6 | `--input-border` 1.5 px, **dashed** `8 6` (non-scaling) | two lines: "BL01" (46 units, navy at 0.6), then "To be confirmed" (32 units, Manrope 500, navy at 0.6). Below 260 px plan width it is hidden like the other labels. |
+| TBC hover/focus | hatch kept, plus gold-500 at 0.18 on the duplicate layer | gold-600, 2 px, still dashed | navy pill "BL01 · To be confirmed" (no type, no m²) |
+| TBC selected | hatch kept, plus gold-500 at 0.3 | gold-600, 2 px, dashed | gold pill "BL01 · To be confirmed" |
+
+TBC hotspot accessibility (rev 5): `aria-label="BL01, to be confirmed on floor 7"`. The key plan's group label uses the mix: "Floor 7 key plan: 8 × 3-bed · 1 to be confirmed" (`explore.keyplanLabel`). The server-rendered `href` stays `#unit-bl01`. The no-JS fallback is the BL01 card, which carries "On floors 4, 6, 8, 10 and 11" (§5.5), so the no-JS user is not misled. "Find on a floor" pulses on a TBC position work the same way.
 
 - Fill transitions are CSS opacity on a duplicate polygon layer, so we never tween colour.
 - Focus ring: `outline` isn't reliable on SVG `<a>`, so use a `:focus-visible` stroke of 3 px in gold-600.
@@ -624,7 +893,7 @@ Floor outline (union of the units and cores, for the 3D slab):
 - **Camera**: `PerspectiveCamera` with fov 28 (architectural, low distortion), a 3/4 view matching the render (azimuth about −35°, elevation about 18°), framing rule (rev 3): fit the tower's **projected bounding box** (outline corners at y = 0 and y = H ≈ 50.5 m) across the whole orbit range (default azimuth ±40°) so it fills **80% of the canvas height and at most 84% of its width**. No extra padding term, and the ground disc is not part of the fit. The look-at target is **y ≈ 0.415·H ≈ 21 m**, not H/2: at 18° elevation the roof pushes the visual mass up, and 21 m centres the projected box. Reference results (fov 28): 497×520 stage → distance 167.5 m; 536×760 → 180.5 m; 370×600 → 205.5 m; 328×385 → 167.5 m. Implement it as a fitting loop (step the distance and project the 8 extreme corners) or as a closed form; then centre the projected box vertically to within ±2% of the canvas centre. **No zoom.** Orbit only horizontally (±40° of the default) by drag, with damped inertia. `touch-action: pan-y` on the canvas, so vertical swipes still scroll the page. **The wheel always scrolls the page.**
 - **Interaction**:
   - Raycast on `pointermove` (rAF-throttled) against the 14 floor meshes.
-  - Hover sets the slab colour to gold-300, sets its emissive to gold-500 × 0.15, sets its edges to opacity 1, lightens the others slightly, and positions an HTML tooltip at the slab's screen-projected right edge: "Floor 7 · 9 homes".
+  - Hover sets the slab colour to gold-300, sets its emissive to gold-500 × 0.15, sets its edges to opacity 1, lightens the others slightly, and positions an HTML tooltip at the slab's screen-projected right edge: "Floor 7 · {mix}" (rev 5, §9.2).
   - Click selects the floor: the slab slides out 3 m toward the camera (0.6 s `power3.out`), the camera eases its look-at **partway** toward that floor: `lookY = 0.415·H + (floorMid − H/2) × 0.35` (0.9 s `power2.inOut`), so even floor 14 or floor 1 keeps the whole tower in frame, and the panel moves to FLOOR(n).
   - Selecting a floor from the list or stepper triggers the same animation.
   - The selected floor stays pulled out while you browse units; changing floors slides the old slab back in.
@@ -659,6 +928,11 @@ Floor outline (union of the units and cores, for the 3D slab):
 | Hero image (LCP) | ≤ 70 KB at 390w AVIF, ≤ 160 KB at 1440w | Preloaded; `fetchpriority="high"`. |
 | Other images | lazy; plan thumbs ≤ 45 KB each (AVIF 600w); viewer images ≤ 250 KB each, loaded on open | `astro:assets` `<Picture formats={['avif','webp']}>` with `widths` and `sizes` on every image. |
 | Key-plan duotone | ≤ 120 KB at 1100w WebP | Lazy; loads with the explorer section. |
+| Film card poster (rev 5) | ≤ 15 KB WebP (now 10 KB) | In the hero HTML via `poster`, `fetchpriority` left at default (never `high`). It is far smaller than the arch render, so it can never become the LCP element. |
+| Film preview loop (rev 5) | ≤ 450 KB AV1 WebM (now 415 KB), ≤ 600 KB H.264 MP4 fallback (now 551 KB) | Never part of the initial load: fetched only after `load` + idle, and only under the §5.11 conditions. Zero bytes with reduced motion, Save-Data, a slow connection or no JS. |
+| Full film (rev 5) | 3.8 MB H.264 + AAC (faststart), plus a ≤ 35 KB poster | `preload="none"`. Fetched only when the dialog opens. Faststart means it plays progressively. |
+| Film JS (rev 5) | ≤ 4 KB | Part of the app bundle: card loader, dialog, FLIP, sound toggle. Uses GSAP, which is already loaded. No video or audio library. |
+| Film music (rev 5) | ≤ 260 KB (Opus WebM 252 KB, AAC M4A fallback 258 KB) | Zero bytes until the first press of the sound toggle. Only one of the two files is ever fetched. |
 
 Targets: LCP ≤ 2.5 s and CLS ≤ 0.02 on Lighthouse mobile (slow 4G, Moto G Power); TBT ≤ 150 ms; INP ≤ 200 ms. Lighthouse scores per CLAUDE.md.
 
@@ -681,12 +955,20 @@ Rules:
 - Plan images: alt text such as "Floor plan of BL05, 3 bedroom: living and dining room, master bedroom, two bedrooms, kitchen, two bathrooms, store, balconies". Build it from the room list.
 - Amharic: `lang="am"` on `<html>` for /am, and `lang` attributes on any mixed snippets. Keep "m²", unit codes (BL05) and numerals as-is. Check that the heading scale still fits, since Ethiopic glyphs are wider (allow H1 at 0.85× size on /am via `:lang(am) { --fs-display: … }`).
 - Language toggle: real links (`/` and `/am/`) with `hreflang`. The state persists across navigation.
+- Film (rev 5): the pause control for the autoplaying loop (2.2.2), the modal dialog's focus behaviour, the text description and the captions track are all specified in §5.11.
+- TBC states (rev 5) are conveyed in text, never by the hatch or dashed lines alone.
+- New rev 5 strings, to be added to both dictionaries with the Amharic flagged for client review:
+  - film: "Watch the film", "The tower film", "Close film", "Pause preview", "Play preview", the film description, `[Music]`
+  - sound: "Film music", "Sound on", "Sound off", "Sound couldn't start"
+  - features: the four feature labels
+  - TBC: "To be confirmed", the TBC body, "Ask about this home", "See BL01 on floor {n}", the form hint
+  - location: "Open exact location in Google Maps"
 
 ---
 
 ## 12. Open items for the client (`TODO(client)` in `src/data/site.ts`)
 
-Phone, WhatsApp number, Telegram username, email, office address, social links, completion date, unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
+Phone, WhatsApp number, Telegram username, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, a `ChIJ…` place ID (only needed to switch on "Get directions", §5.6), unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
 
 - Contact rows hide when unset.
 - The form shows a "being set up" message.
