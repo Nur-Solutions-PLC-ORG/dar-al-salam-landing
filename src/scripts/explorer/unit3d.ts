@@ -53,6 +53,7 @@ const EL_MIN = 50 * DEG;
 const EL_MAX = 62 * DEG;
 const ORBIT = 5 * DEG; // per second
 const RESUME = 5000;
+const FILL = 2.8; // rev 8.1 A: camera fill intensity, tuned so camera-facing walls read #F3ECE2–#D9CFC0
 
 export interface DollhouseOpts {
   renderer: WebGLRenderer;
@@ -324,6 +325,13 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   sun.shadow.normalBias = 0.02;
   Object.assign(sun.shadow.camera, { left: -R - 1, right: R + 1, top: R + 1, bottom: -R - 1, near: 1, far: 40 });
   scene.add(sun, sun.target);
+  // rev 8.1 A: a camera fill (no shadows) keeps camera-facing wall faces cream; it turns with the camera, offset
+  // 25° left and 20° up from the view direction, so the baked sun shadows never need an update
+  const fill = new DirectionalLight('#FFF6EA', FILL);
+  fill.position.set(-Math.sin(25 * DEG), Math.sin(20 * DEG), 1);
+  fill.target.position.set(0, 0, -1);
+  camera.add(fill, fill.target);
+  scene.add(camera);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
