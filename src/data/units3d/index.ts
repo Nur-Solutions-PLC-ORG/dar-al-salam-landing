@@ -9,6 +9,14 @@ export const units3d: Partial<Record<string, () => Promise<{ geo: Unit3d; images
     const [geo, img] = await Promise.all([import('./bl01.json'), import('./bl01')]);
     return { geo: geo.default as unknown as Unit3d, images: img.images };
   },
+  BL02: async () => {
+    const [geo, img] = await Promise.all([import('./bl02.json'), import('./bl02')]);
+    return { geo: geo.default as unknown as Unit3d, images: img.images };
+  },
+  BL03: async () => {
+    const [geo, img] = await Promise.all([import('./bl03.json'), import('./bl03')]);
+    return { geo: geo.default as unknown as Unit3d, images: img.images };
+  },
   BL05: async () => {
     const [geo, img] = await Promise.all([import('./bl05.json'), import('./bl05')]);
     return { geo: geo.default as unknown as Unit3d, images: img.images };
@@ -16,4 +24,4 @@ export const units3d: Partial<Record<string, () => Promise<{ geo: Unit3d; images
 };
 
 /** BL01 (rev 8.4) only where it is confirmed (floors 4, 6, 8, 10, 11): TBC positions never get 3D. */
-export const HAS3D: readonly string[] = ['BL01', 'BL05'];
+export const HAS3D: readonly string[] = ['BL01', 'BL02', 'BL03', 'BL05'];

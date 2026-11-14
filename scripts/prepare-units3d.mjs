@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * 3D apartment inputs (DESIGN §9.6.1 rev 8). Run with `npm run assets:units`; outputs are committed.
- * For every docs/design/units/{id}.json:
+ * 3D apartment inputs (DESIGN §9.6.1 rev 8). Run with `npm run assets:units` (every unit) or
+ * `npm run assets:units -- bl02` (only the named units, so enabling one unit leaves the others' outputs alone);
+ * outputs are committed. For each docs/design/units/{id}.json:
  * - copies the geometry to src/data/units3d/{id}.json (imported dynamically by the explorer)
  * - writes the floor texture to public/units/{id}-floor.avif at the highest quality that fits ≤ 90 KB AND under the
  *   design WebP (browsers fetch the AVIF first, so it must never be the bigger file), and copies the WebP next to it
@@ -19,7 +20,12 @@ const AVIF_MAX = 90 * 1024;
 await mkdir(r('src/data/units3d'), { recursive: true });
 await mkdir(r('public/units'), { recursive: true });
 
-const ids = (await readdir(r('docs/design/units'))).filter((f) => /^bl0\d\.json$/.test(f)).map((f) => f.slice(0, 4));
+const only = process.argv.slice(2).map((a) => a.toLowerCase());
+const ids = (await readdir(r('docs/design/units')))
+  .filter((f) => /^bl0\d\.json$/.test(f))
+  .map((f) => f.slice(0, 4))
+  .filter((id) => !only.length || only.includes(id));
+if (only.length && ids.length !== only.length) throw new Error(`unknown unit(s): ${only.filter((o) => !ids.includes(o)).join(', ')}`);
 for (const id of ids) {
   await copyFile(r(`docs/design/units/${id}.json`), r(`src/data/units3d/${id}.json`));
   const src = r(`docs/design/units/${id}-floor.webp`);
