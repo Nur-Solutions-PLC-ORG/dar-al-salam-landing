@@ -481,10 +481,17 @@ export function createWalk(
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'walk-ring';
-      const label = halls.length > 1 && halls.includes(r) ? goTo(r.to, halls.indexOf(r) + 1, halls.length) : goTo(r.to);
+      const hn = halls.length > 1 && halls.includes(r) ? halls.indexOf(r) + 1 : 0;
+      const label = hn ? goTo(r.to, hn, halls.length) : goTo(r.to);
       b.setAttribute('aria-label', label);
-      b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__arrow" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span>';
-      b.lastElementChild!.textContent = label;
+      b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__arrow" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span><span class="walk-ring__short" aria-hidden="true"></span>';
+      b.children[2]!.textContent = label;
+      // phones: the chip shows the room name only ("Kitchen ↓"); the full label stays the accessible name
+      const room = rooms.get(r.to);
+      const same = room ? data.rooms.filter((x) => x.name === room.name) : [];
+      const n = same.length > 1 ? same.indexOf(room!) + 1 : hn;
+      const nm = nameOf(r.to);
+      b.lastElementChild!.textContent = nm.charAt(0).toUpperCase() + nm.slice(1) + (n ? ` ${n}` : '');
       b.addEventListener('click', () => void through(r.door, r.to));
       ringLayer.append(b);
       const at = ringAt(loc, r);
@@ -504,6 +511,8 @@ export function createWalk(
     const w = h.host.clientWidth;
     const hh = h.host.clientHeight;
     const chips: { r: (typeof rings)[number]; edge: 'l' | 'r' | 'b'; k: number }[] = [];
+    ringLayer.classList.toggle('is-narrow', w < 640);
+    const base = (chip.hidden ? hh - 16 : chip.offsetTop) - 52; // the bottom chip row sits above the honesty chip
     for (const r of rings) {
       const c = cv.copy(r.at).applyMatrix4(camera.matrixWorldInverse); // camera space: −z is ahead
       let x = 0, y = 0;
@@ -541,7 +550,7 @@ export function createWalk(
       lines.forEach((line, i) => {
         let x = (w - line.reduce((a, c) => a + c.s + 8, -8)) / 2;
         for (const c of line) {
-          c.q.r.b.style.transform = `translate(${Math.max(12, x)}px, ${hh - 76 - (lines.length - 1 - i) * 52}px)`;
+          c.q.r.b.style.transform = `translate(${Math.max(12, x)}px, ${base - (lines.length - 1 - i) * 52}px)`;
           x += c.s + 8;
         }
       });
@@ -553,13 +562,13 @@ export function createWalk(
       const sizes = row.map((q) => q.r.b.offsetWidth || 120);
       if (edge === 'b' && sizes.reduce((a, b) => a + b + 8, 0) > w - 16) {
         // too many for one row (phones): a column above the bottom controls
-        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, (w - sizes[i]!) / 2)}px, ${hh - 76 - (row.length - 1 - i) * 52}px)`));
+        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, (w - sizes[i]!) / 2)}px, ${base - (row.length - 1 - i) * 52}px)`));
       } else if (edge === 'b') {
         // centred on their own x where possible, then pushed apart 8 px and kept inside the stage
         const xs = row.map((q, i) => q.k - sizes[i]! / 2);
         for (let i = 0, min = 12; i < xs.length; i++) min = (xs[i] = Math.max(xs[i]!, min)) + sizes[i]! + 8;
         for (let i = xs.length - 1, max = w - 12; i >= 0; i--) max = (xs[i] = Math.min(xs[i]!, max - sizes[i]!)) - 8;
-        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, xs[i]!)}px, ${hh - 76}px)`));
+        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, xs[i]!)}px, ${base}px)`));
       } else {
         const y0 = Math.max(hh * 0.3, hh / 2 - (row.length * 52) / 2);
         row.forEach((q, i) => (q.r.b.style.transform = `translate(${edge === 'l' ? 12 : w - 12 - sizes[i]!}px, ${Math.min(hh - 128, y0 + i * 52)}px)`));

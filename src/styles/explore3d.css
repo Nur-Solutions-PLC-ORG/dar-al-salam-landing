@@ -426,3 +426,20 @@ html.is-walking .u3d-enter {
   transform: none;
   opacity: 1;
 }
+
+/* phones (stage < 640 px): chips read "Kitchen ↓"; the full "Go to the kitchen" stays the accessible name */
+.walk-ring__short {
+  display: none;
+}
+
+.walk-rings.is-narrow .walk-ring.is-chip .walk-ring__label {
+  display: none;
+}
+
+.walk-rings.is-narrow .walk-ring.is-chip .walk-ring__short {
+  display: inline;
+}
+
+.walk-rings.is-narrow .walk-ring.is-chip .walk-ring__arrow {
+  order: 2;
+}
