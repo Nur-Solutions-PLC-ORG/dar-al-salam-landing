@@ -103,6 +103,22 @@ F('f-dining',(1415,600,1540,795),0.75,'#4A3A2C'); F('f-chairs-w',(1340,595,1415,
 F('f-sofa-e',(1605,975,1725,1310),0.8,'#CFC3B1'); F('f-sofa-s',(1380,1320,1595,1440),0.8,'#CFC3B1')
 F('f-tv',(1098,915,1165,1335),0.5,'#5C4636'); F('f-side',(1625,1335,1710,1410),0.55,'#5C4636')
 
+# rev 10 F2: fixtures the plan draws, the rug, and a `piece` for each furniture block (DESIGN §9.10 F1–F2).
+def X(id,kind,r,h,**kw):
+    x0,y0,x1,y1=r; d={'id':id,'kind':kind,'poly':[m(x0,y0),m(x1,y0),m(x1,y1),m(x0,y1)],'h':h}; d.update(kw); solids.append(d)
+X('x-shower1-tray','shower',(620,52,715,140),0.08)
+X('x-shower1-basin','basin',(620,285,678,355),0.85)
+X('x-shower2-basin','basin',(525,1515,600,1566),0.85)
+X('x-shower2-wc','wc',(648,1490,692,1560),0.42)
+X('x-shower2-tray','shower',(733,1475,830,1565),0.08)
+X('x-kitchen-hob','hob',(1070,312,1150,372),0.92,on='k-island')
+X('x-kitchen-sink','sink',(1262,315,1352,372),0.92,on='k-island')
+X('x-living-rug','rug',(1320,965,1605,1335),0.01)
+PIECE=(('-ns','nightstand'),('f-bed','bed'),('f-mbed','bed'),('f-sofa','sofa'),('f-dining','dining'),('f-chair','chair'),('f-tv','tvUnit'),('f-side','sideTable'))
+for s_ in solids:
+    if s_['kind']=='furniture':
+        s_['piece']=next(v for k,v in PIECE if k in s_['id'])
+
 def R(id,name,area,poly,label_px):
     return {'id':id,'name':name,'area':area,'poly':[m(*p) for p in poly],'label':m(*label_px)}
 rooms=[
@@ -121,8 +137,10 @@ hall={'id':'hall','name':None,'area':None,'poly':[m(*p) for p in [(809,47),(995,
 footprint=[m(*p) for p in [(197,17),(1617,17),(1617,390),(1772,390),(1772,1525),(1765,1660),(888,1690),(888,1580),(476,1580),(476,1483),(197,1483)]]
 import sys; sys.path.insert(0, os.path.dirname(__file__))
 from trace_lib import stand_point
+SMALL=('rug','shower','hob','sink')  # flat or on a counter: they don't block standing room
 for r_ in rooms:
-    sp=stand_point(r_['poly'],solids)
+    r_['finish']='tile'  # every BL05 room is labelled "ceramic tile ff."
+    sp=stand_point(r_['poly'],[s_ for s_ in solids if s_['kind'] not in SMALL])
     if sp: r_['stand']=sp[:2]; r_['standClearance']=sp[2]
 crop=(180,0,1800,1765)
 data={
@@ -134,7 +152,7 @@ data={
             'plane':{'minX':m(crop[0],crop[1])[0],'minZ':m(crop[0],crop[1])[1],'maxX':m(crop[2],crop[3])[0],'maxZ':m(crop[2],crop[3])[1]},
             'note':'UV = ((x-minX)/(maxX-minX), 1-(z-minZ)/(maxZ-minZ)); the texture is the crop resized to 1024 px wide'},
  'defaults':{'wallH':2.8,'modelCutH':2.4,'cutawayH':1.0,'doorHead':2.1,'note':'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
- 'footprint':footprint,'walls':walls,'openings':openings,'walkable':[],'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
+ 'fixturesNote':'Fixtures are only those the plan draws clearly. The first shower room shows a tray and a basin; no WC is legible there, so none is modelled. The kitchen shows a hob and a sink and no fridge.','footprint':footprint,'walls':walls,'openings':openings,'walkable':[],'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
 }
 s=json.dumps(data,separators=(',',':'),ensure_ascii=False)
 open(ROOT+'docs/design/units/bl05.json','w').write(s)
@@ -146,7 +164,7 @@ P=lambda p:(p[0]*SX+OX,p[1]*SY+OY)
 for r in rooms: d.polygon([P(p) for p in r['poly']],fill=(0,160,255,50),outline=(0,120,255,255))
 d.polygon([P(p) for p in hall['poly']],fill=(255,200,0,40),outline=(200,150,0,255))
 d.line([P(p) for p in footprint+[footprint[0]]],fill=(0,0,0,255),width=3)
-for s_ in solids: d.polygon([P(p) for p in s_['poly']],fill=(255,0,200,90) if s_['kind']=='furniture' else (140,0,255,90))
+for s_ in solids: d.polygon([P(p) for p in s_['poly']],fill=(255,0,200,90) if s_['kind']=='furniture' else (0,220,120,170) if s_['kind'] in ('shower','basin','wc','hob','sink') else (255,255,0,60) if s_['kind']=='rug' else (140,0,255,90))
 import math
 def seg(a,b,t,col):
     ax,ay=P(a);bx,by=P(b);dx,dy=bx-ax,by-ay;L=math.hypot(dx,dy) or 1
