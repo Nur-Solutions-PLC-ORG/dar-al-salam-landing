@@ -1,0 +1,73 @@
+"""BL02 (3 bedroom; the brief's "store/bedroom" is labelled STORE on this plan) dollhouse data, traced on
+brand-source/plans/bl02.jpg (1604×1383). Broadly BL01 mirrored, plus the store; the left façade is slanted.
+Areas are the plan's labels verbatim; three are illegible (None)."""
+import os, sys; sys.path.insert(0, os.path.dirname(__file__))
+from trace_lib import Unit
+
+u = Unit('bl02', 'BL02', '3 bedroom', 166.97, 117.0, sx=122.5, sy=122.5, ox=58, oy=101, crop=(45, 90, 1520, 1355),
+         measured='bedroom 360 = 441 px, store 323 = 398 px (≈1.23 px/cm, as BL01; the plan\'s own dimensions vary ±5%)')
+# perimeter
+u.wall('p-top', (540, 101, 1300, 123), 'facade')
+u.wall_line('p-west-slant', (230, 250), (148, 778), 0.12, 'facade')
+u.wall('p-shower1-n', (236, 242, 538, 259), 'facade')
+u.wall('p-east', (1492, 305, 1506, 640), 'facade')
+u.wall('p-store-e', (1481, 827, 1495, 1145), 'facade')
+u.wall('p-store-s', (1083, 1122, 1495, 1145), 'facade')
+u.wall('p-living-e', (1069, 1145, 1083, 1323), 'facade')
+u.wall('p-living-s', (298, 1302, 1083, 1323), 'facade')
+u.wall('p-balcony2-s', (1315, 295, 1420, 311), 'facade')
+# interior
+u.wall('shower1-bed1', (525, 242, 538, 330))
+u.wall('shower1-bed2', (205, 445, 628, 474))
+u.wall('bed2-bed1', (612, 450, 628, 644))
+u.wall('bed1-s', (616, 620, 871, 644))
+u.wall('bed1-kitchen', (981, 101, 1003, 641))
+u.wall('kitchen-s', (1003, 627, 1185, 640))
+u.wall('kitchen-shower2', (1300, 101, 1315, 140)); u.wall('kitchen-shower2-b', (1300, 295, 1315, 640))
+u.wall('shower2-s', (1415, 626, 1506, 640))
+u.wall('living-n', (140, 778, 890, 817))
+u.wall('store-n-w', (1070, 803, 1180, 827)); u.wall('store-n-e', (1290, 803, 1495, 827))
+u.wall('store-w', (1070, 827, 1083, 1145))
+# openings
+u.door('entry', (1492, 640, 1506, 803), 'corridor', note='Main entrance at the corridor end, single leaf (read from the swing)')
+u.door('d-shower1', (525, 330, 538, 445), 'bed1-shower1', note='En-suite to the larger bedroom')
+u.door('d-bed1', (871, 620, 957, 644), 'bed1-corridor')
+u.door('d-bed2', (725, 644, 740, 778), 'bed2-corridor')
+u.door('d-kitchen', (1185, 627, 1290, 640), 'kitchen-corridor')
+u.door('d-shower2', (1318, 626, 1415, 640), 'shower2-corridor')
+u.door('d-store', (1180, 803, 1290, 827), 'store-corridor')
+u.opening('g-bed1-balcony', (525, 123, 540, 242), 'glazed-door', 'bed1-balcony', 0, 2.4, 'inferred', note='Thin double line between the bedroom and the 1.06 m² balcony')
+u.opening('g-kitchen-balcony', (1300, 140, 1315, 295), 'glazed-door', 'kitchen-balcony', 0, 2.4, 'inferred', note='Thin double line between the kitchen and the 1.31 m² balcony')
+u.opening('g-living-balcony', (308, 817, 315, 1210), 'glazed-door', 'living-balcony', 0, 2.4, 'inferred', note='Thin double line between the living room and the 2.68 m² balcony')
+# balconies
+u.railing('r-b1-w', (397, 110), (397, 242)); u.railing('r-b1-n', (397, 110), (540, 110))
+u.railing('r-b2-n', (1300, 110), (1440, 110)); u.railing('r-b2-e', (1440, 110), (1440, 233))
+u.railing('r-b3-w', (146, 800), (58, 1340)); u.railing('r-b3-s', (58, 1340), (300, 1340))
+# solids
+u.solid('shaft', 'shaft', [(1420, 233), (1506, 233), (1506, 305), (1420, 305)], 2.8, note='Enclosed duct; purpose not stated on the plan')
+for i, r in enumerate([(297, 430, 385, 475), (960, 400, 1014, 490), (292, 1210, 327, 1340), (1180, 1140, 1495, 1188)]):
+    u.column(f'col-{i+1}', r)
+u.counter('k-left', (1003, 123, 1075, 620)); u.counter('k-top', (1075, 123, 1290, 190)); u.counter('k-right', (1228, 190, 1290, 465))
+u.wardrobe('wr-bed1', (616, 537, 833, 620)); u.wardrobe('wr-bed2', (513, 465, 590, 635))
+u.bed('f-bed1', (655, 125, 870, 365)); u.nightstand('f-bed1-ns1', (612, 125, 665, 180)); u.nightstand('f-bed1-ns2', (865, 125, 918, 180))
+u.bed('f-bed2', (262, 478, 445, 712)); u.nightstand('f-bed2-ns1', (222, 478, 275, 530)); u.nightstand('f-bed2-ns2', (440, 478, 492, 530))
+u.furniture('f-sofa-n', (455, 808, 750, 915), 0.8, '#CFC3B1'); u.furniture('f-sofa-w', (330, 935, 435, 1115), 0.8, '#CFC3B1')
+u.furniture('f-side', (355, 805, 425, 880), 0.55, '#5C4636'); u.furniture('f-tv', (465, 1255, 835, 1305), 0.5, '#5C4636')
+u.furniture('f-dining', (895, 1035, 1060, 1170), 0.75, '#4A3A2C')
+u.furniture('f-chairs-n', (900, 975, 1060, 1035), 0.45, '#B79B74'); u.furniture('f-chairs-s', (900, 1170, 1060, 1215), 0.45, '#B79B74')
+u.furniture('f-chair-w', (830, 1060, 895, 1145), 0.45, '#B79B74')
+u.protect = [(430, 915, 770, 1180)]  # rug
+# rooms (plan labels verbatim)
+u.room('balcony1', 'balcony', 1.06, [(402, 123), (525, 123), (525, 242), (402, 242)], (460, 185))
+u.room('shower1', 'shower', None, [(236, 259), (525, 259), (525, 445), (205, 445)], (360, 340), note='Area label hidden under the "237" dimension; only ".47" is legible. Confirm with the client.')
+u.room('bed1', 'bedroom', 15.65, [(540, 123), (981, 123), (981, 620), (628, 620), (628, 450), (540, 450)], (760, 420))
+u.room('bed2', 'bedroom', 13.14, [(205, 474), (612, 474), (612, 644), (740, 644), (740, 778), (148, 778)], (380, 610))
+u.room('kitchen', 'kitchen', None, [(1003, 123), (1300, 123), (1300, 627), (1003, 627)], (1140, 420), note='Area label hidden under the "240" dimension. Confirm with the client.')
+u.room('balcony2', 'balcony', 1.31, [(1315, 123), (1420, 123), (1420, 295), (1315, 295)], (1365, 180))
+u.room('shower2', 'shower', 3.56, [(1315, 311), (1492, 311), (1492, 626), (1315, 626)], (1400, 480))
+u.room('corridor', 'corridor', 6.84, [(740, 644), (1492, 644), (1492, 803), (890, 803), (890, 778), (740, 778)], (1070, 720))
+u.room('living', 'livingDining', None, [(315, 817), (1070, 817), (1070, 1302), (315, 1302)], (700, 1050), note='Area label hidden under the "600" dimension; reads like 26.25 m² (BL01 shows the same). Confirm with the client.')
+u.room('store', 'store', 8.43, [(1083, 827), (1481, 827), (1481, 1122), (1083, 1122)], (1270, 980))
+u.room('balcony3', 'balcony', 2.68, [(146, 817), (308, 817), (308, 1340), (58, 1340)], (200, 1080))
+u.footprint([(397, 101), (1440, 101), (1440, 233), (1506, 233), (1506, 1145), (1083, 1145), (1083, 1323), (300, 1323), (300, 1340), (58, 1340), (148, 790), (230, 242), (397, 242)])
+u.build()
