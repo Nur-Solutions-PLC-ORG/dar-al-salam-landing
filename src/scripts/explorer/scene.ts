@@ -3,7 +3,8 @@
  * initial JS graph. Named imports so `three` tree-shakes.
  *
  * - Ivory Lambert slabs with gold edge lines and a recessed navy glazing band per floor; darker podium;
- *   parapet; dashed basement outline; navy ground disc with a soft radial shadow. No real-time shadows.
+ *   parapet; dashed basement outline; navy ground disc (sized to stay inside the frame, not the spec's 60 m,
+ *   which the fov-28 framing clips) with a soft radial shadow. No real-time shadows.
  * - fov 28 camera, 3/4 view (azimuth −35°, elevation 18°), horizontal orbit ±40° by drag with inertia.
  *   No zoom; the wheel always scrolls the page; `touch-action: pan-y` keeps vertical swipes scrolling.
  * - Render on demand: frames only on pointer events, tweens, the S10 scrub and the idle sway, which runs
@@ -125,13 +126,13 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
   /* ---------- geometry ---------- */
 
   // ground disc + soft shadow
-  const ground = new Mesh(keep(new CircleGeometry(60, 64)), keep(new MeshBasicMaterial({ color: COLORS.ground })));
+  const ground = new Mesh(keep(new CircleGeometry(36, 64)), keep(new MeshBasicMaterial({ color: COLORS.ground })));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;
   scene.add(ground);
   const shadowTex = keep(shadowTexture());
   const shadow = new Mesh(
-    keep(new CircleGeometry(42, 48)),
+    keep(new CircleGeometry(30, 48)),
     keep(new MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })),
   );
   shadow.rotation.x = -Math.PI / 2;
@@ -203,7 +204,7 @@ export async function createScene(host: HTMLElement, stage: HTMLElement, cb: Mod
     const vfov = camera.fov * DEG;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
     const byHeight = H / 0.85 / (2 * Math.tan(vfov / 2));
-    const byWidth = 62 / 0.9 / (2 * Math.tan(hfov / 2));
+    const byWidth = 74 / 0.95 / (2 * Math.tan(hfov / 2)); // ground disc (Ø72 m) fits the frame
     dist = Math.max(byHeight, byWidth) + 20;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);

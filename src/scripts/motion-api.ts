@@ -24,7 +24,8 @@ export function scrollToTarget(target: Element, opts: { offset?: number; immedia
     return;
   }
   const y = target.getBoundingClientRect().top + window.scrollY + offset;
-  window.scrollTo({ top: y, behavior: reducedQuery.matches || opts.immediate ? 'auto' : 'smooth' });
+  // 'instant', not 'auto': 'auto' inherits the CSS scroll-behavior: smooth
+  window.scrollTo({ top: y, behavior: reducedQuery.matches || opts.immediate ? 'instant' : 'smooth' });
 }
 
 // In-page anchors: offset by the header, smooth via Lenis when available. Components that own their

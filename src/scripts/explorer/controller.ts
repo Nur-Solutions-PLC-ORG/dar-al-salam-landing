@@ -393,6 +393,26 @@ export function createExplorer(root: HTMLElement) {
   // stop model work when offscreen
   const stopVis = onVisibility(root, (v) => root.toggleAttribute('data-offscreen', !v));
 
+  /* ---------- init from the URL ---------- */
+
+  const fromHash = (): State | null => {
+    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9]))?)?$/i.exec(location.hash);
+    if (!m) return null;
+    if (!m[1]) return { level: 'idle', floor: 1, unit: null };
+    const floor = clampFloor(Number(m[1]));
+    const unit = (m[2]?.toUpperCase() as Code | undefined) ?? null;
+    return { level: unit ? 'unit' : 'floor', floor, unit };
+  };
+
+  root.dataset.ready = '';
+  const initial = fromHash();
+  if (initial) Object.assign(state, initial);
+  render(false);
+  window.addEventListener('hashchange', () => {
+    const s = fromHash();
+    if (s) go(s, { animate: true });
+  });
+
   /* ---------- S10 intro (desktop, motion allowed) ---------- */
 
   const mm = gsap.matchMedia();
@@ -427,26 +447,6 @@ export function createExplorer(root: HTMLElement) {
         scrollTrigger: { trigger: root, start: 'top 75%', once: true },
       });
     }
-  });
-
-  /* ---------- init from the URL ---------- */
-
-  const fromHash = (): State | null => {
-    const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9]))?)?$/i.exec(location.hash);
-    if (!m) return null;
-    if (!m[1]) return { level: 'idle', floor: 1, unit: null };
-    const floor = clampFloor(Number(m[1]));
-    const unit = (m[2]?.toUpperCase() as Code | undefined) ?? null;
-    return { level: unit ? 'unit' : 'floor', floor, unit };
-  };
-
-  root.dataset.ready = '';
-  const initial = fromHash();
-  if (initial) Object.assign(state, initial);
-  render(false);
-  window.addEventListener('hashchange', () => {
-    const s = fromHash();
-    if (s) go(s, { animate: true });
   });
 
   return {

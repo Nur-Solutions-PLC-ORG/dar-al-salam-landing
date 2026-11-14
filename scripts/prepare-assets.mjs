@@ -50,7 +50,15 @@ await writeFile(
     `export const markBody = '${body}';\n` +
     `export const markDove = '${dove}';\n`,
 );
-console.log(`mark: body ${body.length} B, dove ${dove.length} B (from ${d.length} B)`);
+// External sprite (cacheable, keeps ~6.5 KB gzip out of every HTML page; review: HTML budget 35 KB)
+await writeFile(
+  r('public/mark-sprite.svg'),
+  `<svg xmlns="http://www.w3.org/2000/svg">` +
+    `<symbol id="mark-body" viewBox="${viewBox}"><path fill-rule="evenodd" d="${body}"/></symbol>` +
+    `<symbol id="mark-dove" viewBox="${viewBox}"><path fill-rule="evenodd" d="${dove}"/></symbol>` +
+    `</svg>\n`,
+);
+console.log(`mark: body ${body.length} B, dove ${dove.length} B (from ${d.length} B) → public/mark-sprite.svg`);
 
 /* ---------- Tower render crops (DESIGN §2: saturation −15 %, slightly warmer, lifted shadows) ---------- */
 await mkdir(r('src/assets/generated'), { recursive: true });

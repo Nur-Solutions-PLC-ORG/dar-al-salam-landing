@@ -24,7 +24,7 @@ type P2 = readonly [number, number];
 
 const AZIMUTH = (-35 * Math.PI) / 180;
 const ELEV = (24 * Math.PI) / 180;
-const SIMPLIFY_EPS = 0.7; // metres (RDP); keeps ~10 vertices per face
+const SIMPLIFY_EPS = 1.1; // metres (RDP); ~8 vertices per face (review: HTML budget)
 /** Selected slab slides out toward the viewer (screen units = metres). */
 export const PULL_OUT = { x: 2.2, y: 1.6 } as const;
 
