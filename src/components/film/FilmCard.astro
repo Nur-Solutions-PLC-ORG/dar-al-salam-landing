@@ -1,0 +1,271 @@
+---
+/**
+ * Hero film card (DESIGN §5.11 rev 5). A sibling of the hero arch: never masked, never scaled by S1.
+ * No JS: the link opens film.mp4 in the browser's own player and the card shows its poster.
+ * With JS (src/scripts/film.ts): the link opens the film dialog; the muted preview loop plays only after
+ * load + idle, with motion allowed, no Save-Data, a 4g/unknown connection and the hero on screen.
+ * The video never carries <source>s in the HTML, so it fetches zero bytes until JS decides it may play.
+ */
+import { getDict, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = getDict(lang);
+const f = t.film;
+---
+
+<div class="film-card" data-film-card data-label-pause={f.pause} data-label-play={f.play}>
+  <video
+    class="film-card__video"
+    muted
+    loop
+    playsinline
+    preload="none"
+    aria-hidden="true"
+    tabindex="-1"
+    width="480"
+    height="264"
+    poster="/video/film-poster.webp"
+    data-film-loop
+  ></video>
+  <span class="film-card__scrim" aria-hidden="true"></span>
+  <a class="film-card__open" href="/video/film.mp4" aria-haspopup="dialog" data-film-open data-cursor="play">
+    <span class="film-card__play" aria-hidden="true"></span>
+    <span class="film-card__label">{f.watch}</span>{' '}
+    <span class="film-card__time tabular">{f.duration}</span>
+    <span class="visually-hidden">{f.openSr}</span>
+  </a>
+  <div class="film-card__controls">
+    <button class="film-card__btn film-card__pause" type="button" data-film-pause hidden>
+      <span class="visually-hidden" data-film-pause-label>{f.pause}</span>
+      <svg viewBox="0 0 12 12" aria-hidden="true" fill="currentColor">
+        <path class="film-card__glyph-pause" d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z"></path>
+        <path class="film-card__glyph-play" d="M3 1.2v9.6L10.5 6z"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .film-card {
+    position: absolute;
+    z-index: 2;
+    left: 12px;
+    bottom: 12px;
+    width: 168px;
+    aspect-ratio: 20 / 11;
+    border-radius: var(--radius-s);
+    overflow: clip;
+    background: var(--navy-950);
+    box-shadow: var(--shadow-2);
+    isolation: isolate;
+  }
+
+  /* the hairline sits above the video */
+  .film-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgb(181 148 88 / 0.7);
+    pointer-events: none;
+  }
+
+  .film-card:has(.film-card__open:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .film-card__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  .film-card__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(11 18 32 / 0.8), rgb(11 18 32 / 0) 62%);
+    pointer-events: none;
+  }
+
+  /* the link stretches over the whole card; the controls sit above it */
+  .film-card__open {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px;
+    color: var(--ivory-50);
+    text-decoration: none;
+    outline: none;
+  }
+
+  .film-card__play {
+    position: relative;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--gold-500);
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  .film-card__play::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 9px;
+    height: 10px;
+    transform: translateX(1px);
+    background: var(--navy-950);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
+  .film-card__label {
+    align-self: center;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  /* "0:41" belongs to the link's name; visually it is the top-left pill */
+  .film-card__time {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: rgb(11 18 32 / 0.6);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .film-card__controls {
+    position: absolute;
+    z-index: 2;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 12px;
+  }
+
+  .film-card__btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgb(11 18 32 / 0.55);
+    color: var(--ivory-50);
+  }
+
+  .film-card__btn[hidden] {
+    display: none;
+  }
+
+  /* 44 px hit area */
+  .film-card__btn::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
+  .film-card__btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .film-card__btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .film-card__glyph-play,
+  .film-card__pause[data-paused] .film-card__glyph-pause {
+    display: none;
+  }
+
+  .film-card__pause[data-paused] .film-card__glyph-play {
+    display: inline;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .film-card:has(.film-card__open:hover) .film-card__video {
+      transform: scale(1.04);
+    }
+
+    .film-card:has(.film-card__open:hover) .film-card__play {
+      transform: scale(1.1);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .film-card {
+      left: 16px;
+      bottom: 16px;
+      width: 200px;
+    }
+
+    .film-card__play {
+      width: 28px;
+      height: 28px;
+    }
+
+    .film-card__label {
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .film-card {
+      left: -40px;
+      bottom: 48px;
+      width: 240px;
+    }
+
+    .film-card__open {
+      padding: 12px;
+    }
+  }
+
+  @media (min-width: 1600px) {
+    .film-card {
+      left: -48px;
+      bottom: 64px;
+      width: 264px;
+    }
+  }
+
+  /* §7.2: revealed at t0 + 1.1 s (1.95 s with the curtain); JS waits for this before starting the loop */
+  @media (prefers-reduced-motion: no-preference) {
+    .film-card {
+      animation: film-card-in 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) backwards;
+      animation-delay: calc(var(--t0, 0s) + 1.1s);
+    }
+  }
+
+  @keyframes film-card-in {
+    from {
+      clip-path: inset(100% 0 0 0 round 6px);
+      transform: translateY(16px);
+    }
+    to {
+      clip-path: inset(0 round 6px);
+      transform: translateY(0);
+    }
+  }
+</style>

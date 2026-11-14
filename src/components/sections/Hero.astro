@@ -2,8 +2,10 @@
 /**
  * Hero (DESIGN §5.1, §7.2; amendment 5). Entrance is CSS keyframes on the intro clock (--t0),
  * so the headline never depends on JS. motion.ts adds only the S1 scroll scrub.
- * Layers: .arch (S1 scale) > .arch__media (mask, static) > .hero__parallax (S1 yPercent) > img (CSS intro scale).
+ * Layers: .hero__media (grid item) > .arch (S1 scale) > .arch__media (mask, static) > .hero__parallax (S1 yPercent)
+ * > img (CSS intro scale). The film card (rev 5, §5.11) is a sibling of the arch, so neither the mask nor S1 touch it.
  */
+import FilmCard from '../film/FilmCard.astro';
 import type { ResponsiveSet } from '../../lib/images';
 import Arch from '../ui/Arch.astro';
 import Button from '../ui/Button.astro';
@@ -42,6 +44,7 @@ const lines = t.hero.title.split('|');
       </div>
     </div>
 
+    <div class="hero__media">
     <Arch class="hero__arch" outline data-hero-arch>
       <div class="hero__parallax" data-hero-media>
         <picture>
@@ -60,6 +63,8 @@ const lines = t.hero.title.split('|');
         </picture>
       </div>
     </Arch>
+    <FilmCard lang={lang} />
+    </div>
   </div>
   <div class="hero__cue" aria-hidden="true">
     <span class="hero__cue-line"></span>
@@ -89,18 +94,24 @@ const lines = t.hero.title.split('|');
     order: 2;
   }
 
-  .hero__arch {
+  /* grid item: sized like the arch, so the film card can be positioned against the arch's box */
+  .hero__media {
     grid-column: 1 / -1;
     order: 1;
     justify-self: center;
+    position: relative;
     width: min(100%, calc(var(--arch-h) * 0.8));
-    aspect-ratio: 4 / 5;
     --arch-h: 58svh;
     margin-top: 10px; /* room for the outline */
   }
 
+  .hero__arch {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+  }
+
   @media (max-height: 720px) and (max-width: 1023px) {
-    .hero__arch {
+    .hero__media {
       --arch-h: 46svh;
     }
   }
@@ -184,12 +195,15 @@ const lines = t.hero.title.split('|');
       gap: var(--space-5);
     }
 
-    .hero__arch {
+    .hero__media {
       grid-column: 7 / 13;
       order: 2;
       justify-self: end;
       align-self: center;
       --arch-h: calc(100svh - var(--header-h) - 72px);
+    }
+
+    .hero__arch {
       max-height: 980px;
     }
 

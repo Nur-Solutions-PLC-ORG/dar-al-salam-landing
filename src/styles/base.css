@@ -644,18 +644,19 @@ html.has-cursor:not(.has-dialog) :is(.cursor-dot, .cursor-ring) {
 
 html.has-cursor .cursor-ring[data-mode='link'] ~ .cursor-dot,
 html.has-cursor .cursor-ring[data-mode='view'] ~ .cursor-dot,
-html.has-cursor .cursor-ring[data-mode='drag'] ~ .cursor-dot {
+html.has-cursor .cursor-ring[data-mode='drag'] ~ .cursor-dot,
+html.has-cursor .cursor-ring[data-mode='play'] ~ .cursor-dot {
   opacity: 0;
 }
 
-.cursor-ring:is([data-mode='view'], [data-mode='drag'])::before {
+.cursor-ring:is([data-mode='view'], [data-mode='drag'], [data-mode='play'])::before {
   opacity: 0;
 }
 
-.cursor-ring:is([data-mode='view'], [data-mode='drag'])::after {
+.cursor-ring:is([data-mode='view'], [data-mode='drag'], [data-mode='play'])::after {
   transform: scale(2);
 }
 
-.cursor-ring:is([data-mode='view'], [data-mode='drag']) span {
+.cursor-ring:is([data-mode='view'], [data-mode='drag'], [data-mode='play']) span {
   opacity: 1;
 }

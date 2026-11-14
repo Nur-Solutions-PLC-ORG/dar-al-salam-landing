@@ -126,7 +126,10 @@ const ogUrl = abs(og.src);
           // Anchor handling + scroll helpers are tiny and needed immediately; GSAP/Lenis (motion.ts) are not:
           // the hero is pure CSS, so motion.ts loads after `load` + idle to keep it out of the LCP window.
           import '../scripts/motion-api';
-          const start = () => import('../scripts/motion').then((m) => m.initMotion());
+          const start = () => {
+            void import('../scripts/motion').then((m) => m.initMotion());
+            void import('../scripts/film').then((m) => m.initFilm()); // rev 5: hero film card (§5.11)
+          };
           const go = () =>
             'requestIdleCallback' in window ? window.requestIdleCallback(() => void start(), { timeout: 2000 }) : setTimeout(start, 200);
           if (document.readyState === 'complete') go();

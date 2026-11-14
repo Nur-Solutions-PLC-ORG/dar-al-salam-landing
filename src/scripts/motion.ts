@@ -328,11 +328,19 @@ function cursor() {
     rx(e.clientX);
     ry(e.clientY);
     const t = e.target as Element;
-    const next = t.closest('[data-cursor="view"]') ? 'view' : t.closest('[data-cursor="drag"], [data-tier="3d"] canvas') ? 'drag' : t.closest('a, button, [role="radio"], label, select, input, textarea') ? 'link' : '';
+    const next = t.closest('[data-cursor="view"]')
+      ? 'view'
+      : t.closest('[data-cursor="play"]')
+        ? 'play'
+        : t.closest('[data-cursor="drag"], [data-tier="3d"] canvas')
+          ? 'drag'
+          : t.closest('a, button, [role="radio"], label, select, input, textarea')
+            ? 'link'
+            : '';
     if (next !== mode) {
       mode = next;
       ring.dataset.mode = mode;
-      label.textContent = mode === 'view' || mode === 'drag' ? (labels[mode] ?? '') : '';
+      label.textContent = mode === 'view' || mode === 'drag' || mode === 'play' ? (labels[mode] ?? '') : '';
     }
   };
   const leave = () => document.documentElement.classList.remove('has-cursor');
@@ -359,6 +367,29 @@ function heroScrub(desktop: boolean) {
     tl.to('[data-hero-arch]', { scale: 1.12, transformOrigin: '50% 0%' }, 0)
       .to(media, { yPercent: 8 }, 0)
       .to('[data-hero-copy]', { y: -80, opacity: 0.2 }, 0);
+    // S1f (rev 5): the film card fades up and out by 40% of the hero; outside the S1 scale target.
+    // Once faded it is inert (no invisible tab stop) and film.ts pauses the loop and the music.
+    const card = hero.querySelector<HTMLElement>('[data-film-card]');
+    if (card) {
+      const visible = (v: boolean) => {
+        card.inert = !v;
+        window.dispatchEvent(new CustomEvent('film:s1f', { detail: { visible: v } }));
+      };
+      gsap.to(card, {
+        y: -48,
+        opacity: 0,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hero,
+          start: 'top top',
+          end: '40% top',
+          scrub: true,
+          onLeave: () => visible(false),
+          onEnterBack: () => visible(true),
+        },
+      });
+      return () => visible(true); // matchMedia revert (resize to mobile, reduced motion)
+    }
   } else if (media) {
     gsap.to(media, { yPercent: 10, ease: 'none', scrollTrigger: st });
   }
