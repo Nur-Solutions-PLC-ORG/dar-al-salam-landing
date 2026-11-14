@@ -19,11 +19,12 @@ const headerOffset = () => document.querySelector<HTMLElement>('.site-header')?.
 /** Scroll to an element, honouring Lenis, the header height and reduced motion. */
 export function scrollToTarget(target: Element, opts: { offset?: number; immediate?: boolean } = {}) {
   const offset = -(opts.offset ?? headerOffset());
+  // absolute y: Lenis would otherwise add the CSS scroll-padding-top on top of our offset (lands 88 px low)
+  const y = target.getBoundingClientRect().top + window.scrollY + offset;
   if (lenis) {
-    lenis.scrollTo(target as HTMLElement, { offset, duration: 1.2, immediate: opts.immediate });
+    lenis.scrollTo(y, { duration: 1.2, immediate: opts.immediate });
     return;
   }
-  const y = target.getBoundingClientRect().top + window.scrollY + offset;
   // 'instant', not 'auto': 'auto' inherits the CSS scroll-behavior: smooth
   window.scrollTo({ top: y, behavior: reducedQuery.matches || opts.immediate ? 'instant' : 'smooth' });
 }

@@ -130,11 +130,22 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
             {
               units.map((u) => (
                 <li>
-                  <button type="button" class="chip" data-unit={u.code} aria-pressed="false">
-                    <span class="chip__code">{u.code}</span>
-                    <span class="chip__meta tabular">
-                      {fmt(t.explore.bedShort, { n: u.bedrooms })} · {formatArea(u.gross, lang)}
+                  <button
+                    type="button"
+                    class="chip"
+                    data-unit={u.code}
+                    data-pill={`${fmt(t.explore.bedShort, { n: u.bedrooms })} · ${formatArea(u.gross, lang)}`}
+                    aria-pressed="false"
+                  >
+                    <span class="chip__code">
+                      {u.code}
+                      {u.bedrooms === 2 ? (
+                        <span class="chip__tag">{fmt(t.explore.bedShort, { n: u.bedrooms })}</span>
+                      ) : (
+                        <span class="visually-hidden">{fmt(t.explore.bedShort, { n: u.bedrooms })}</span>
+                      )}
                     </span>
+                    <span class="chip__meta tabular">{formatArea(u.gross, lang)}</span>
                   </button>
                 </li>
               ))
@@ -339,11 +350,11 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     z-index: 2;
   }
 
+  /* top-left: the top of the frame is empty now that the tower fills it (design QA follow-up) */
   .explore__hint {
     position: absolute;
-    left: 50%;
-    bottom: var(--space-3);
-    transform: translateX(-50%);
+    left: 0;
+    top: 12px;
     padding: 0.35rem 0.9rem;
     border-radius: var(--radius-pill);
     background: rgb(15 24 40 / 0.72);
@@ -553,6 +564,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
 
   .chip {
     scroll-snap-align: start;
+    overflow: hidden;
     display: grid;
     min-width: 8.5rem;
     min-height: var(--tap-min);
@@ -582,9 +594,26 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
     opacity: 0.45;
   }
 
+  /* two even lines: code (+ a "2 bed" tag on the one 2-bed type) / gross area (design QA follow-up) */
   .chip__code {
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
     font-weight: 700;
     font-size: var(--fs-small);
+    white-space: nowrap;
+  }
+
+  .chip__tag {
+    padding: 0 0.3em;
+    border-radius: var(--radius-xs);
+    background: var(--sand-200);
+    font-size: 0.625rem;
+    font-weight: 600;
+  }
+
+  .chip__meta {
+    white-space: nowrap;
   }
 
   .chip__meta {

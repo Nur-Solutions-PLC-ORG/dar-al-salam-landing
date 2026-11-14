@@ -64,7 +64,7 @@ export function createExplorer(root: HTMLElement) {
     hotspots.map((h) => {
       const code = h.dataset.unit as Code;
       const chip = chips.find((c) => c.dataset.unit === code);
-      return [code, chip?.querySelector('.chip__meta')?.textContent?.trim() ?? ''];
+      return [code, chip?.dataset.pill ?? ''];
     }),
   );
 
