@@ -253,9 +253,6 @@ export const am: Dict = {
     // rev 7 strings: drafts from DESIGN §11, for the client to check
     submitVia: 'በ{channel} ይላኩ',
     opensTo: 'ቴሌግራምን ወደ {handle} ይከፍታል',
-    tgTitle: 'በቴሌግራም ያግኙን',
-    tgHint: 'ውይይት ለመጀመር የተጠቃሚ ስሙን ይንኩ።',
-    tgOr: 'ወይም ዝርዝር መረጃዎን ይላኩልን',
     tgDoneTitle: 'በቴሌግራም ይጨርሱ።',
     tgDoneBody: 'መልዕክትዎ ከ{handle} ጋር ባለው ውይይት ውስጥ ሊኖር ይገባል። እዚያ ላይ ይላኩ።',
     tgAgain: 'ቴሌግራምን እንደገና ክፈት',

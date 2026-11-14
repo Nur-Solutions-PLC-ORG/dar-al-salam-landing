@@ -265,9 +265,6 @@ export const en = {
     submitVia: 'Send on {channel}',
     /** Helper under the submit; {handle} is rendered as an ltr, untranslated span. */
     opensTo: 'Opens Telegram to {handle}',
-    tgTitle: 'Contact us on Telegram',
-    tgHint: 'Tap a username to open a chat.',
-    tgOr: 'or send us your details',
     tgDoneTitle: 'Finish in Telegram.',
     tgDoneBody: 'Your message should already be in the chat with {handle}. Press send there.',
     tgAgain: 'Open Telegram again',
