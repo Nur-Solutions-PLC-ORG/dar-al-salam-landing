@@ -8,3 +8,4 @@ dist/
 *.log
 Abdi ppt.pdf
 .lighthouse/
+__pycache__/
