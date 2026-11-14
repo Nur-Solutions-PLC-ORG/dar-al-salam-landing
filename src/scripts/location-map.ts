@@ -51,7 +51,8 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
 
   const map = L.map(el, {
     center: centre,
-    zoom: reduced ? 17 : 15,
+    // rev 7.1: opened from the Save-Data / slow-connection pill → straight at z17 (no z15 tiles), like reduced motion
+    zoom: reduced || focus ? 17 : 15,
     minZoom: 14,
     maxZoom: 19,
     maxBounds: L.latLngBounds([cfg.lat - d, cfg.lng - d], [cfg.lat + d, cfg.lng + d]),
@@ -132,7 +133,7 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
       .finished.then(() => {
         if (diagram) diagram.hidden = true;
         if (caption) caption.textContent = cfg.t.caption;
-        if (reduced) return drop();
+        if (reduced || focus) return drop();
         map.once('moveend', drop);
         map.flyTo(centre, 17, { duration: 2 });
       })
@@ -212,6 +213,11 @@ export function mountMap(fig: HTMLElement, focus: boolean) {
         const now = performance.now();
         if (now - last < 4000) return;
         last = now;
+        // rev 7.1: centred at 70% height, but at least 12 px above the attribution's top edge (it may wrap)
+        const attr = el.querySelector('.leaflet-control-attribution');
+        const box = el.getBoundingClientRect();
+        const limit = (attr ? attr.getBoundingClientRect().top - box.top : box.height) - 12 - hint.offsetHeight / 2;
+        hint.style.top = `${Math.min(box.height * 0.7, limit)}px`;
         hint.classList.add('is-on');
         window.clearTimeout(hide);
         hide = window.setTimeout(() => hint.classList.remove('is-on'), 1600); // 0.2 in + 1.4 hold

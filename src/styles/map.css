@@ -86,7 +86,7 @@
 .lmap__hint {
   position: absolute;
   left: 50%;
-  top: 40%;
+  top: 70%; /* JS keeps it ≥ 12 px above the attribution */
   z-index: 1000;
   max-width: calc(100% - 140px);
   padding: 8px 14px;
