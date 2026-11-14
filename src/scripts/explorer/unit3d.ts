@@ -197,7 +197,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
 
   const mat = {
     wall: inject(new MeshLambertMaterial({ color: '#F3ECE2' })),
-    oak: inject(new MeshLambertMaterial({ color: '#B08A63' })),
+    oak: inject(new MeshLambertMaterial({ color: '#B5A08A' })), // rev 8.2 H: greige oak
     counter: inject(new MeshLambertMaterial({ color: '#E4DACB' })),
     top: inject(new MeshLambertMaterial({ color: '#B9AE9E' })),
     glass: inject(new MeshBasicMaterial({ color: '#CFE0EA', transparent: true, opacity: 0.28, depthWrite: false, side: DoubleSide })),
