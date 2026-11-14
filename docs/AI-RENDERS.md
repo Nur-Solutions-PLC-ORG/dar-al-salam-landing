@@ -13,7 +13,7 @@ Start the trial only when this list is final. Generate everything in one sitting
 5. Cancel the trial.
 
 ## Rules for every prompt
-- **Confirmed facts only:** ceramic tile floors; a high-rise apartment in Addis Ababa; balconies where the plan shows them. Nothing else is confirmed: no brands, marble, wood floors, smart-home kit or appliances by name.
+- **Confirmed facts only:** floor finishes exactly as the plan labels them (ceramic tile; **parquet in BL01's bedrooms and living/dining**); a high-rise apartment in Addis Ababa; balconies where the plan shows them. Nothing else is confirmed: no brands, marble, wood floors, smart-home kit or appliances by name.
 - No text, logos, watermarks or people. No sea, beach or skyline that reads as another city: city views are of low-rise Addis with green hills on the horizon.
 
 ## Art direction (matches the site; DESIGN §2–§3, §9.6.5)
@@ -42,13 +42,15 @@ Append the **style line** below to every interior prompt (section A) unchanged, 
 **Negative line:** `text, letters, logo, watermark, people, pets, brand names, marble, hardwood floor, carpet, chrome, bright colours, teal and orange grade, HDR, bloom, fisheye, tilted verticals, wide-angle distortion, clutter, sea, beach, skyscraper skyline, night`
 - Use the room's plan crop as the reference image when the tool accepts one, so the shape and door/window positions follow the plan.
 
-## A. Shared interiors (5 shots)
+## A. Shared interiors (5 shots + 2 parquet variants for BL01)
 | # | Room (plan label) | Size reference | Prompt |
 |---|---|---|---|
 | A1 | Living / dining | BL05 26.41 m² | Photoreal interior of a bright modern living and dining room in a high-rise apartment in Addis Ababa. Light beige ceramic tile floor, warm ivory walls, a low linen sofa facing a slim TV wall unit, a round coffee table on a soft rug, a six-seat light-wood dining table near the kitchen door. Floor-to-ceiling glazed door to a balcony with a view over low-rise city and green hills. Soft late-afternoon daylight, brushed-gold lamp, navy cushions. No people, no text. 3:2, eye level, 24 mm. |
 | A2 | Kitchen | BL05 9.05 m² | Photoreal interior of a compact L-shaped kitchen in a modern apartment. Light ceramic tile floor and splashback, matte ivory cabinets with slim brushed-gold handles, stone-look worktop, the hob and sink on the counter run that faces into the room, a tall run of cabinets along the back wall, and a single window above the side counter (the plan shows the window on the short side wall, not over the sink). Clean, uncluttered, soft daylight. No brands, no people, no text. 3:2, eye level, 24 mm. |
 | A3 | Master bedroom | BL05 15.82 m² | Photoreal interior of a calm master bedroom in a modern apartment. Light ceramic tile floor, warm ivory walls, a double bed with linen bedding and a navy throw, two nightstands with small brushed-gold lamps, a built-in wardrobe along one wall. A glazed door to a small balcony with soft daylight. No people, no text. 3:2, eye level, 26 mm. |
 | A4 | Bedroom | BL05 9.74 m² | Photoreal interior of a cosy secondary bedroom in a modern apartment. Light ceramic tile floor, ivory walls, a double bed with light linen, a nightstand and a wall wardrobe, soft daylight from a window. No people, no text. 3:2, eye level, 24 mm. |
+| A1p | Living / dining, parquet (BL01) | BL01 | Same as A1, but with a warm light **parquet** floor instead of tile (BL01's plan labels its living/dining "PARQUET"). |
+| A3p | Bedroom, parquet (BL01) | BL01 15.65 m² | Same as A3, but with a warm light **parquet** floor (BL01's plan labels both bedrooms "PARQUET"). |
 | A5 | Shower room | BL05 2.71 m² | Photoreal interior of a small modern shower room. Large-format light grey ceramic tiles on floor and walls, a walk-in shower with a clear glass screen, a wall-hung basin with a round mirror and a brushed-gold tap, a wall-hung WC. Soft even light. No people, no text. 3:2, eye level, 24 mm. |
 
 ## B. Isometric cutaway per type (9 shots)
@@ -71,7 +73,7 @@ The live 3D model (DESIGN §9.6) uses each furnished plan as its floor. The plan
 
 ## Acceptance checklist (per image)
 - [ ] Matches the plan's room shape and openings (cutaways: room count and layout).
-- [ ] Only confirmed facts: no brands, no named materials beyond ceramic tile.
+- [ ] Only confirmed facts: no brands; floor material matches the plan label (ceramic or parquet).
 - [ ] No text, logos, people or foreign skyline.
 - [ ] Shipped with "Artist's impression; finishes may vary."
 - [ ] Original saved in `brand-source/renders/`; `approved: true` set only after this checklist passes.

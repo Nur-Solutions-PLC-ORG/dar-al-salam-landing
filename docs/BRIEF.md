@@ -37,7 +37,7 @@ Assets in `brand-source/`:
 | BL08 | 3 bedroom | 167.63 | 117.66 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 | BL09 | 3 bedroom | 168.55 | 118.54 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 
-  Plans show balconies, a separate shower room per bath, ceramic tile finishes, lift lobby with 2+ lifts and stairs per block.
+  Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01 (2-bed) labels its bedrooms and living/dining "PARQUET ff"**, with ceramic in the kitchen, corridor, showers and balconies.
 - **Update 2026-11-14 (from the client, via the user):**
   - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
   - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
@@ -48,7 +48,7 @@ Assets in `brand-source/`:
   - **Telegram contacts (client request):** add a "Contact us on Telegram" block to the Book a visit section with **@abdulaziz_a12** and **@monur14** (links `https://t.me/abdulaziz_a12`, `https://t.me/monur14`). These are the first confirmed contacts, so the enquiry form can now send via Telegram. No names or roles are given for them; don't invent any.
   - **3D apartments (approved by the user and the client, 2026-11-14):** inspired by a reference video (tower → floor → 3D cutaway of a unit → photoreal room shots). Build it as a hybrid inside the existing explorer:
     - Tap a unit → it lifts into a rotating **3D "dollhouse"** built in Three.js from the plan's own measurements (walls in cm, room names and areas from `brand-source/plans/bl0X.jpg`). Tap a room hotspot for its name and m². Must match the plans exactly.
-    - Tap a room → an **AI interior image**, always labelled "Artist's impression; finishes may vary". Only ceramic tile finishes are confirmed; every AI image must keep the plan's room shape, windows and balcony, and gets checked against the plan before use.
+    - Tap a room → an **AI interior image**, always labelled "Artist's impression; finishes may vary". Only the floor finishes on the plan labels (ceramic tile, and parquet where a plan says so, e.g. BL01) are confirmed; every AI image must keep the plan's room shape, windows and balcony, and gets checked against the plan before use.
     - Pilot on **BL05** first, then the other 8 types. Fallback stays the current 2D plan viewer (no WebGL, reduced motion, Save-Data).
   - **Building features (confirmed):** garbage chute on every floor, standby lift, underground water, parking. Basement parking is also shown on the plans. Use the wording "underground water"; don't specify borehole vs tank.
 - **Tower film:** `brand-source/video/` (rendered fly-through, 41 s, 640×352, H.264 with a music track). It's low resolution, so never show it full-bleed or stretched; see DESIGN for the treatment.
