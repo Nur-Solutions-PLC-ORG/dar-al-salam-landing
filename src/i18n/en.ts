@@ -254,11 +254,13 @@ export const en = {
     watch: 'Watch the film',
     duration: '0:41',
     /** Appended to the card link's name (visually hidden). */
-    openSr: ': the tower fly-through, 41 seconds, with music',
+    openSr: ': the tower fly-through with music',
     title: 'The tower film',
     close: 'Close film',
-    pause: 'Pause preview',
-    play: 'Play preview',
+    /** Hero background controls (rev 6): group name, and the pause/play label that swaps (no aria-pressed). */
+    bgGroup: 'Background film',
+    bgPause: 'Pause background film',
+    bgPlay: 'Play background film',
     desc: 'Rendered fly-through, 0:41, music only. It shows the tower from the street, the entrance and ground floor, and the facade up to the roof. Renders are illustrative and may change.',
     captionsLabel: 'English',
     music: 'Film music',
