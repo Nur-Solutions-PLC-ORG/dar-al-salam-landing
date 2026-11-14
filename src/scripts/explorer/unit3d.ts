@@ -351,7 +351,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const half = Math.atan(Math.tan((camera.fov * DEG) / 2) * Math.min(1, camera.aspect));
-    d = R / Math.sin(Math.atan(0.88 * Math.tan(half)));
+    // rev 8.1 C: the bounding circle fills 100% of the shorter side (the same at every azimuth, so no pop)
+    d = R / Math.sin(half);
     renderer.setSize(w, h, false);
   };
   const place = () => {
