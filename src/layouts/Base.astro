@@ -10,10 +10,7 @@ import '../styles/tokens.css';
 import '../styles/base.css';
 
 export interface ImagePreload {
-  /** A single URL (rev 6 hero poster) or a responsive srcset + sizes. */
-  href?: string;
-  srcset?: string;
-  sizes?: string;
+  href: string;
   type: string;
 }
 
@@ -89,8 +86,6 @@ const ogUrl = abs(og.src);
           rel="preload"
           as="image"
           href={preloadImage.href}
-          imagesrcset={preloadImage.srcset}
-          imagesizes={preloadImage.sizes}
           type={preloadImage.type}
           fetchpriority="high"
         />

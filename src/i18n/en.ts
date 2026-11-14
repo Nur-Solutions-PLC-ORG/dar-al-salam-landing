@@ -47,7 +47,6 @@ export const en = {
     title: 'A house of|*peace* in the heart|of Garment.',
     lead: '126 two- and three-bedroom homes across 16 floors.',
     scroll: 'Scroll',
-    imageAlt: 'Render of Garment Tower: a white high-rise with dark balconies above a tree-lined street',
   },
   facts: {
     title: 'Key facts',
