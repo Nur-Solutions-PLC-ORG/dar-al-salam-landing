@@ -204,6 +204,7 @@ export const en = {
     livingDining: 'Living and dining room',
     balcony: 'Balcony',
     corridor: 'Corridor',
+    hall: 'Hall',
   },
   location: {
     eyebrow: 'Location',

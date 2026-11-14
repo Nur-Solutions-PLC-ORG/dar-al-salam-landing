@@ -13,6 +13,11 @@
  *   the room, the camera fill at 40%, gradient "ambient occlusion" strips along wall bases and ceiling corners, and
  *   furniture derived from the blocks (headboards and mattress steps, sofa backs, counter overhangs). A chip says
  *   "Simplified 3D model from the floor plan". Everything here is visible only inside.
+ * - B4 moving: every door of the current room (or hall standpoint) gets a ring on the floor 0.7 m inside it, projected
+ *   HTML (≥ 44 px). Where a door leads is computed: the points 0.5 m either side of the opening are tested against the
+ *   room polygons and the hall. The hall has one standpoint per door, 0.9 m in. Taking a ring glides through the
+ *   door's centre (U10, 1.2 s power2.inOut) with the yaw easing to the direction of travel; the lamp follows. Rings
+ *   behind the camera or beyond 9 m hide. Reduced motion: 0.2 s cross-fades.
  */
 import {
   BoxGeometry,
@@ -75,9 +80,43 @@ const PITCH = 25 * DEG;
 const STEP = 30 * DEG;
 const LAMP = 6; // r187 units, tuned in a settled capture so the walls read about sand-100, not clipped and not grey
 
-export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void; strings: Record<string, string> }): Walk {
+export function createWalk(
+  h: WalkHost,
+  o: { onArrive: (roomId: string) => void; strings: Record<string, string>; names: Record<string, string>; lang: string },
+): Walk {
   const { camera, data, uniforms: U } = h;
   const rooms = new Map(data.rooms.map((r) => [r.id, r]));
+
+  /* ---------- B4: where each door leads ---------- */
+  const hall = (data as typeof data & { hall?: { poly: P2[] } | null }).hall?.poly ?? null;
+  /** The room (or 'hall') containing a plan point, else null (outside, or an unlabelled space). */
+  const where = (q: P2): string | null => data.rooms.find((r) => insidePoly(q, r.poly))?.id ?? (hall && insidePoly(q, hall) ? 'hall' : null);
+  const doors = data.openings
+    .filter((op) => op.type !== 'window')
+    .map((op) => {
+      const m: P2 = [(op.a[0] + op.b[0]) / 2, (op.a[1] + op.b[1]) / 2];
+      const len = Math.hypot(op.b[0] - op.a[0], op.b[1] - op.a[1]);
+      const n: P2 = [-(op.b[1] - op.a[1]) / len, (op.b[0] - op.a[0]) / len];
+      const at = (d: number): P2 => [m[0] + n[0] * d, m[1] + n[1] * d];
+      return { id: op.id, m, at, plus: where(at(0.5)), minus: where(at(-0.5)) };
+    })
+    .filter((d) => d.plus && d.minus && d.plus !== d.minus);
+  /** The area a location stands in: a room id, or 'hall' for the hall's door standpoints ('hall-<door>'). */
+  const areaOf = (loc: string) => (loc.startsWith('hall-') ? 'hall' : loc);
+  /** Rings for a location: each door of its area, 0.7 m inside, and where it leads. */
+  const ringsAt = (loc: string) =>
+    doors
+      .filter((d) => d.plus === areaOf(loc) || d.minus === areaOf(loc))
+      .map((d) => {
+        const side = d.plus === areaOf(loc) ? 1 : -1;
+        const other = side > 0 ? d.minus! : d.plus!;
+        return { door: d, at: d.at(side * 0.7), to: other === 'hall' ? `hall-${d.id}` : other };
+      });
+  const nameOf = (loc: string) => {
+    const key = loc.startsWith('hall-') ? 'hall' : (rooms.get(loc)?.name ?? '');
+    const n = o.names[key] ?? key;
+    return o.lang === 'en' ? n.toLowerCase() : n;
+  };
 
   // ceiling: the footprint at full storey height, fading in at the end of the fly-in
   const s = new Shape();
@@ -256,8 +295,10 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
     chip.hidden = !on;
   };
   const moveLamp = (id: string) => {
-    const r = rooms.get(id);
-    if (r) lamp.position.copy(h.toWorld(centroidOf(r.poly), 2.4)).add(h.root.position.clone().negate());
+    const poly = id.startsWith('hall-') ? hall : rooms.get(id)?.poly;
+    if (!poly) return;
+    const c = centroidOf(poly);
+    lamp.position.set(c[0], 2.4, c[1]); // the lamp lives in the model's (plan) space
   };
 
   const view = { yaw: 0, pitch: 0 };
@@ -336,6 +377,51 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
   );
   const toolbar = document.createElement('div');
   toolbar.className = 'walk-toolbar';
+  const ringLayer = document.createElement('div');
+  ringLayer.className = 'walk-rings';
+  ui.append(ringLayer);
+  let rings: { b: HTMLButtonElement; at: Vector3; edge: Vector3 }[] = [];
+  const showRings = (loc: string | null) => {
+    ringLayer.replaceChildren();
+    rings = [];
+    if (!loc) return;
+    for (const r of ringsAt(loc)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'walk-ring';
+      const label = (o.strings.goTo ?? '').replace('{room}', nameOf(r.to));
+      b.setAttribute('aria-label', label);
+      b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span>';
+      b.lastElementChild!.textContent = label;
+      b.addEventListener('click', () => void through(r.door, r.to));
+      ringLayer.append(b);
+      const at = h.toWorld(r.at, 0.02);
+      rings.push({ b, at, edge: at.clone().add(new Vector3(0.45, 0, 0)) });
+    }
+  };
+  const pv = new Vector3();
+  const fwd = new Vector3();
+  const projectRings = () => {
+    if (!rings.length) return;
+    camera.updateMatrixWorld();
+    camera.getWorldDirection(fwd);
+    const w = h.host.clientWidth;
+    const hh = h.host.clientHeight;
+    for (const r of rings) {
+      const toR = pv.copy(r.at).sub(camera.position);
+      const hide = toR.dot(fwd) <= 0.2 || toR.length() > 9;
+      r.b.classList.toggle('is-hidden', hide);
+      r.b.inert = hide;
+      if (hide) continue;
+      pv.copy(r.at).project(camera);
+      const x = ((pv.x + 1) / 2) * w;
+      const y = ((1 - pv.y) / 2) * hh;
+      pv.copy(r.edge).project(camera);
+      const size = Math.max(44, Math.abs(((pv.x + 1) / 2) * w - x) * 2);
+      r.b.style.setProperty('--size', `${size}px`);
+      r.b.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  };
   const chip = document.createElement('p');
   chip.className = 'walk-chip';
   chip.textContent = o.strings.geometryLabel ?? '';
@@ -387,7 +473,10 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
         vel *= 0.9;
         velP *= 0.9;
       }
-      if (current) apply();
+      if (current) {
+        apply();
+        projectRings();
+      }
       return Boolean(gyro) || Math.abs(vel) > 1e-4 || Math.abs(velP) > 1e-4;
     },
   };
@@ -412,6 +501,13 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
 
   /** The standpoint (rooms[].stand, else the label point) and the initial view target. */
   const pose = (id: string) => {
+    if (id.startsWith('hall-')) {
+      // 0.9 m into the hall from that door, looking on into the hall
+      const d = doors.find((x) => `hall-${x.id}` === id);
+      const side = d?.plus === 'hall' ? 1 : -1;
+      const at = h.toWorld(d ? d.at(side * 0.9) : hall![0]!, EYE);
+      return { at, yaw: d ? yawTo(h.toWorld(d.m, EYE), at) : 0 };
+    }
     const r = rooms.get(id)!;
     const stand = (r as typeof r & { stand?: P2 }).stand ?? r.label;
     const at = h.toWorld(stand, EYE);
@@ -494,12 +590,48 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
 
   const fade = (to: number) => h.host.animate([{ opacity: to ? 0 : 1 }, { opacity: to }], { duration: 200, fill: 'forwards' }).finished;
 
+  /** U10: through a door's centre to the next standpoint; the yaw eases to the direction of travel. */
+  const through = async (door: { m: P2 }, to: string) => {
+    if (h.reduced) return arrive(to, 0);
+    showRings(null);
+    const p = pose(to);
+    const mid = h.toWorld(door.m, EYE);
+    const start = camera.position.clone();
+    const a = start.distanceTo(mid);
+    const b = mid.distanceTo(p.at);
+    const split = a / (a + b || 1);
+    const yaw0 = view.yaw;
+    let yaw1 = yawTo(mid, p.at);
+    yaw1 = yaw0 + Math.atan2(Math.sin(yaw1 - yaw0), Math.cos(yaw1 - yaw0)); // the short way round
+    const t = { p: 0 };
+    moveLamp(to);
+    await new Promise<void>((resolve) =>
+      h.run(t, {
+        p: 1,
+        duration: 1.2,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          if (t.p < split) camera.position.lerpVectors(start, mid, t.p / split);
+          else camera.position.lerpVectors(mid, p.at, (t.p - split) / (1 - split || 1));
+          view.yaw = yaw0 + (yaw1 - yaw0) * t.p;
+          view.pitch *= 0.9;
+          apply();
+        },
+        onComplete: resolve,
+      }),
+    );
+    current = to;
+    showRings(to);
+    o.onArrive(to);
+  };
+
   const arrive = async (id: string, glide: number) => {
     const p = pose(id);
     view.yaw = p.yaw;
     view.pitch = 0;
     current = id;
     moveLamp(id);
+    showRings(id);
     if (h.reduced || glide === 0) {
       await fade(0);
       camera.position.copy(p.at);
@@ -535,6 +667,7 @@ export function createWalk(h: WalkHost, o: { onArrive: (roomId: string) => void;
       const back = new PerspectiveCamera(30, camera.aspect);
       h.orbitPose(back);
       current = null;
+      showRings(null);
       if (h.reduced) {
         await fade(0);
         enclose(false, 0, 0);

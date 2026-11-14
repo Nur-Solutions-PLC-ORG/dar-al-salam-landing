@@ -26,6 +26,8 @@ export interface PanelStrings {
 
 export interface RoomsPanel {
   select(id: string | null): void;
+  /** Rev 9 B4: walk mode rows read "Go to the …" with the current room marked; arrivals are announced. */
+  setWalk(current: string | null): void;
   hideHint(): void;
   destroy(): void;
 }
@@ -87,6 +89,10 @@ export function createRoomsPanel(o: {
     return { id: r.id, b };
   });
   rooms.append(h, ul);
+  const live = document.createElement('p');
+  live.className = 'visually-hidden';
+  live.setAttribute('aria-live', 'polite');
+  rooms.append(live);
   added.push(rooms);
 
   const hint = document.createElement('p');
@@ -239,6 +245,18 @@ export function createRoomsPanel(o: {
     },
     hideHint() {
       hint.hidden = true;
+    },
+    setWalk(at) {
+      rows.forEach((r) => {
+        const room = geo.rooms.find((x) => x.id === r.id)!;
+        const name = nameOf(room.name);
+        r.b.firstElementChild!.textContent = at ? s.walk.goTo.replace('{room}', o.lang === 'en' ? name.toLowerCase() : name) : name;
+        if (at === r.id) r.b.setAttribute('aria-current', 'location');
+        else r.b.removeAttribute('aria-current');
+      });
+      if (!at) return;
+      const r = geo.rooms.find((x) => x.id === at);
+      live.textContent = r ? label(r).replace(' · ', ', ') : nameOf('hall');
     },
     destroy() {
       if (sheet.open) {

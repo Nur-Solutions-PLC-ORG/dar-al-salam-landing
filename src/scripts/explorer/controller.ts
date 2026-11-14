@@ -594,7 +594,16 @@ export function createExplorer(root: HTMLElement) {
       const [m, s] = await Promise.all([(walkMod ??= import('./walk')), strings!]);
       if (!dh || walk) return;
       walkStrings = (s as unknown as { walk: Record<string, string> }).walk;
-      walk = m.createWalk(dh.walkHost(), { onArrive: () => undefined, strings: walkStrings });
+      walk = m.createWalk(dh.walkHost(), {
+        strings: walkStrings,
+        names: (s as unknown as { rooms: Record<string, string> }).rooms,
+        lang,
+        // a ring took the visitor elsewhere: the state (and hash) follow; the panel marks the room and announces it
+        onArrive: (id) => {
+          if (state.walk !== id) go({ ...state, walk: id });
+          rooms?.setWalk(id);
+        },
+      });
     }
     if (!walk.room) {
       selectRoom(null);
@@ -611,6 +620,7 @@ export function createExplorer(root: HTMLElement) {
   }
   let insideLi: HTMLLIElement | null = null;
   function setWalking(on: boolean) {
+    if (!on) rooms?.setWalk(null);
     if (on === root.hasAttribute('data-walk')) return;
     document.documentElement.classList.toggle('is-walking', on);
     void walkLayout(on);

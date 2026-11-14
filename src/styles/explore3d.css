@@ -244,3 +244,67 @@ html.is-walking .u3d-enter {
 .walk-chip[hidden] {
   display: none;
 }
+
+/* rev 9 (B4): door rings, projected on the floor; the label shows on hover or focus */
+.walk-rings {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.walk-ring {
+  --size: 44px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--size);
+  height: calc(var(--size) * 0.55);
+  min-height: 44px;
+  margin: calc(var(--size) * -0.275) 0 0 calc(var(--size) * -0.5);
+  border: 3px solid rgb(181 148 88 / 0.9);
+  border-radius: 50%;
+  background: rgb(181 148 88 / 0.18);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.walk-ring.is-hidden {
+  display: none;
+}
+
+.walk-ring__dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ivory-50);
+  transform: translate(-50%, -50%);
+}
+
+.walk-ring__label {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(251 247 242 / 0.95);
+  color: var(--navy-900);
+  font: 600 12px/1 var(--font-body);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.walk-ring:hover .walk-ring__label,
+.walk-ring:focus-visible .walk-ring__label {
+  opacity: 1;
+}
+
+.walk-ring:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
