@@ -40,7 +40,7 @@ for code in PLACE:
     for o in d['openings']:
         if o['type'] in ('window', 'glazed-door'):
             glazing.append({'unit': code, 'id': o['id'], 'a': place(code, o['a']), 'b': place(code, o['b']), 'sill': o['sill'], 'head': o['head'], 'basis': o['basis']})
-G, T = 4.5, 3.0
+G, T = 6.3, 3.0
 levels = [{'id': 'ground', 'label': 'Ground floor', 'y0': 0, 'h': G, 'status': 'built', 'use': 'commercial', 'selectable': False}]
 for n in range(1, 15):
     levels.append({'id': f'f{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'plan', 'selectable': True})
@@ -51,7 +51,7 @@ data = {
     'units_note': 'metres; x right, z down the key plan; y up. Subtract `centre` to centre the tower on the origin.',
     'centre': centre, 'outline': outline,
     'heights': {'ground': G, 'typical': T, 'slab': 0.3, 'parapet': 1.2, 'plantRoom': 3.0,
-                'basis': 'Illustrative. No section or elevation drawing exists. On the render the ground storey is about 2.1 typical storeys tall at the corner (245 px against 117 px), so 4.5 m would be low and 6.3 m matches the picture; 4.5 m is used as the coordinator asked. Typical 3.0 m is an assumption.'},
+                'basis': 'Illustrative. No section or elevation drawing exists. Ground 6.3 m: on the render the ground storey is about 2.1 typical storeys tall at the corner (245 px against 117 px). Typical 3.0 m is an assumption.'},
     'levels': levels,
     'floorCountReading': 'Ground + typical floors 1-14 (the plans) = 15 storeys, drawn solid. The client is "adding a 16th floor", so ONE more storey sits on top in the lighter "planned" style, with no units and no selection. The render draws ground + 13 typical storeys, so the 3D tower is one storey taller than the picture before the planned storey. Confirm with the client.',
     'units': units,
@@ -65,7 +65,7 @@ data = {
         'glass': {'colour': '#4F6E8C', 'opacity': 0.75, 'litColour': '#FFD9A0'},
         'windowBay': {'width': 1.2, 'sill': 0.9, 'head': 2.4, 'spacing': 3.6, 'note': 'one punched window per bay on walls with no traced opening'},
         'balconyFront': {'colour': '#7D7872', 'height': 1.1, 'railColour': '#2A2A2A', 'slab': 0.2},
-        'groundCladding': {'colour': '#8C857C', 'shopfrontGlass': '#3B4A5A', 'canopy': {'depth': 2.5, 'height': 3.6, 'colour': '#FFFFFF'}},
+        'groundCladding': {'colour': '#8C857C', 'shopfrontGlass': '#3B4A5A', 'shopfrontHead': 4.8, 'canopy': {'depth': 2.5, 'height': 4.2, 'colour': '#FFFFFF'}},
         'roof': {'parapet': 1.2, 'plantRoom': {'inset': 6.0, 'h': 3.0}},
     },
     'context': {'basis': 'Generic. No real neighbouring buildings, road names or distances are modelled.',
