@@ -140,6 +140,31 @@ const pts = (poly: number[][]) => poly.map(([x = 0, y = 0]) => `${x - x0},${y - 
     stroke-opacity: 0.6;
   }
 
+  /* A2: veils over the floors above/below the chosen band, and the lifted slab (built by photo-model.ts) */
+  .tstage__svg :global(.tveil) {
+    fill: var(--navy-950);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tstage__zoom :global(.tstage__lift) {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 18px 24px rgb(11 18 32 / 0.5));
+  }
+
+  .tstage__zoom :global(.tstage__lift-img),
+  .tstage__zoom :global(.tstage__lift-img picture),
+  .tstage__zoom :global(.tstage__lift-img img) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .tband {
       transition: none;

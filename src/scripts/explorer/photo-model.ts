@@ -5,8 +5,18 @@
  * - Touch: the first tap previews (chip + "View floor n"), a second tap on the same band picks. A vertical drag that
  *   starts on the tower scrubs the preview floor.
  * - The ground storey shows a muted "Ground floor: commercial" chip and is never picked.
+ * - A2, choosing a floor: the image pushes in (scale 2.4, the band's centre to 50% / 46% of the stage, 1.1 s
+ *   power3.inOut) while navy veils over the floors above and below fade to 0.5; then a copy of the image clipped to the
+ *   band lifts −28 px and scales 1.04 (0.5 s power3.out, overlapping the last 0.2 s). Back to the tower reverses it in
+ *   0.8 s; another floor glides to its band (0.6 s). Reduced motion: no push-in or lift, the band is highlighted.
+ *   Transform and opacity only.
  */
+import { gsap, prefersReducedMotion } from '../motion';
 import type { ModelAdapter, ModelCallbacks } from './types';
+
+const VB = { w: 1350, h: 1850 };
+const SCALE = 2.4;
+const NS = 'http://www.w3.org/2000/svg';
 
 export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: ModelCallbacks & { onGround: (at: { x: number; y: number; center?: boolean } | null) => void }): ModelAdapter {
   const svg = root.querySelector<SVGSVGElement>('[data-tstage-svg]')!;
@@ -111,6 +121,107 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
     cb.onPick(n);
   };
 
+  /* ---------- A2: push-in, veils, slab lift ---------- */
+  const frame = root.querySelector<HTMLElement>('.tstage__frame')!;
+  const zoom = root.querySelector<HTMLElement>('[data-tstage-zoom]')!;
+  const pts = (n: number) => Array.from(bands.get(n)!.points).map((p) => [p.x, p.y] as const);
+  const veil = (cls: string) => {
+    const v = document.createElementNS(NS, 'polygon');
+    v.setAttribute('class', `tveil ${cls}`);
+    svg.insertBefore(v, svg.querySelector('.tband'));
+    return v;
+  };
+  const veilUp = veil('tveil--up');
+  const veilDown = veil('tveil--down');
+  // the lifted slab: a copy of the picture clipped to the band (the drop shadow sits on the unclipped wrapper)
+  const lift = document.createElement('div');
+  lift.className = 'tstage__lift';
+  lift.setAttribute('aria-hidden', 'true');
+  const liftImg = document.createElement('div');
+  liftImg.className = 'tstage__lift-img';
+  lift.append(liftImg);
+  zoom.append(lift);
+
+  /** Veils over everything above and below band n (6 points: left-top, corner-top, right-top, right-bottom, …). */
+  const shapeVeils = (n: number) => {
+    const [a, b, c, d, e, f] = pts(n) as [readonly [number, number], ...(readonly [number, number])[]] & { length: 6 };
+    const s = (q: readonly (readonly [number, number])[]) => q.map(([x, y]) => `${x},${y}`).join(' ');
+    veilUp.setAttribute('points', s([[0, 0], [VB.w, 0], [VB.w, c![1]], c!, b!, a, [0, a[1]]]));
+    veilDown.setAttribute('points', s([[0, f![1]], f!, e!, d!, [VB.w, d![1]], [VB.w, VB.h], [0, VB.h]]));
+  };
+  const shapeLift = (n: number) => {
+    if (!liftImg.firstChild) {
+      const pic = zoom.querySelector('picture, img');
+      if (pic) liftImg.append(pic.cloneNode(true));
+    }
+    const poly = pts(n).map(([x, y]) => `${((x / VB.w) * 100).toFixed(2)}% ${((y / VB.h) * 100).toFixed(2)}%`).join(', ');
+    liftImg.style.clipPath = `polygon(${poly})`;
+    const c = centroid(n);
+    lift.style.transformOrigin = `${(c[0] / VB.w) * 100}% ${(c[1] / VB.h) * 100}%`;
+  };
+  /** The band's visual centre: its bounding-box middle (the vertex mean leans toward the corner's two points). */
+  const centroid = (n: number) => {
+    const q = pts(n);
+    const xs = q.map((p) => p[0]);
+    const ys = q.map((p) => p[1]);
+    return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2] as const;
+  };
+  /** Zoom-wrapper transform that puts band n's centre at 50% / 46% of the stage at SCALE (origin 0 0). */
+  const pushFor = (n: number) => {
+    const k = frame.offsetWidth / VB.w;
+    const [cx, cy] = centroid(n);
+    const fx = stage.clientWidth / 2 - frame.offsetWidth / 2;
+    const fy = stage.clientHeight * 0.4 - frame.offsetHeight * 0.4;
+    return { x: stage.clientWidth * 0.5 - fx - SCALE * cx * k, y: stage.clientHeight * 0.46 - fy - SCALE * cy * k, scale: SCALE };
+  };
+
+  let tl: gsap.core.Timeline | null = null;
+  function focusBand(from: number | null, to: number | null) {
+    tl?.kill();
+    const reduced = prefersReducedMotion();
+    if (to === null) {
+      // back to the tower: the reverse, 0.8 s
+      tl = gsap
+        .timeline()
+        .to(lift, { opacity: 0, y: 0, scale: 1, duration: reduced ? 0 : 0.25, ease: 'power2.in' })
+        .to(zoom, { x: 0, y: 0, scale: 1, duration: reduced ? 0 : 0.8, ease: 'power3.inOut' }, reduced ? 0 : 0.1)
+        .to([veilUp, veilDown], { opacity: 0, duration: reduced ? 0 : 0.6 }, '<');
+      return;
+    }
+    if (reduced) {
+      gsap.set(zoom, { x: 0, y: 0, scale: 1 });
+      gsap.set([veilUp, veilDown, lift], { opacity: 0 });
+      return;
+    }
+    shapeVeils(to);
+    shapeLift(to);
+    const push = pushFor(to);
+    if (from === null) {
+      gsap.set(zoom, { transformOrigin: '0 0' });
+      gsap.set(lift, { opacity: 0, y: 0, scale: 1 });
+      tl = gsap
+        .timeline()
+        .to(zoom, { ...push, duration: 1.1, ease: 'power3.inOut' })
+        .to([veilUp, veilDown], { opacity: 0.5, duration: 0.8, ease: 'power2.out' }, 0.3)
+        // the lift overlaps the last 0.2 s of the push-in; −28 screen px inside a 2.4× zoom
+        .set(lift, { opacity: 1 }, 0.9)
+        .to(lift, { y: -28 / SCALE, scale: 1.04, duration: 0.5, ease: 'power3.out' }, 0.9);
+    } else {
+      // another floor: glide to its band; the slab drops and lifts again
+      gsap.set(lift, { opacity: 0, y: 0, scale: 1 });
+      tl = gsap
+        .timeline()
+        .to(zoom, { ...push, duration: 0.6, ease: 'power3.inOut' })
+        .set(lift, { opacity: 1 }, 0.4)
+        .to(lift, { y: -28 / SCALE, scale: 1.04, duration: 0.5, ease: 'power3.out' }, 0.4);
+    }
+  }
+  // keep the push centred when the stage resizes (rotation, desktop layout change)
+  const ro = new ResizeObserver(() => {
+    if (selected !== null && !prefersReducedMotion() && !tl?.isActive()) gsap.set(zoom, pushFor(selected));
+  });
+  ro.observe(stage);
+
   svg.addEventListener('pointermove', onMove);
   svg.addEventListener('pointerleave', onLeave);
   svg.addEventListener('pointerdown', onDown);
@@ -124,9 +235,13 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
       paint();
     },
     select(n) {
+      if (n === selected) return;
+      const from = selected;
       selected = n;
       touchPreview = null;
       paint();
+      if (n !== null) cb.onHover(null); // the chip would sit stale over a moving image
+      focusBand(from, n);
     },
     anchor,
     destroy() {
@@ -137,6 +252,12 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
       window.removeEventListener('pointerup', onUp);
       svg.removeEventListener('click', onClick);
       bands.forEach((p) => p.classList.remove('is-hover', 'is-selected'));
+      tl?.kill();
+      ro.disconnect();
+      gsap.set(zoom, { clearProps: 'transform' });
+      veilUp.remove();
+      veilDown.remove();
+      lift.remove();
     },
   };
 }
