@@ -4,7 +4,7 @@ import Button from './ui/Button.astro';
 import Mark from './ui/Mark.astro';
 import LangToggle from './ui/LangToggle.astro';
 import { navItems } from '../data/sections';
-import { mailtoHref, site, telHref, telegramHref, whatsappHref } from '../data/site';
+import { mailtoHref, site, telHref, telegramAccounts, whatsappHref } from '../data/site';
 import { emph, getDict, type Lang } from '../i18n';
 
 interface Props {
@@ -19,7 +19,7 @@ const year = new Date().getFullYear();
 const rows = [
   c.phone && { label: c.phone, href: telHref() },
   c.whatsapp && { label: t.enquiry.whatsapp, href: whatsappHref(), external: true },
-  c.telegram && { label: t.enquiry.telegram, href: telegramHref(), external: true },
+  ...telegramAccounts().map((a) => ({ label: `${t.enquiry.telegram} ${a.handle}`, href: a.href, external: true })),
   c.email && { label: c.email, href: mailtoHref() },
 ].filter((r): r is { label: string; href: string; external?: boolean } => Boolean(r));
 const hasContact = rows.length > 0 || c.address.length > 0;

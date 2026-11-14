@@ -10,7 +10,7 @@ import Logo from './ui/Logo.astro';
 import LangToggle from './ui/LangToggle.astro';
 import Button from './ui/Button.astro';
 import { navItems } from '../data/sections';
-import { site, telHref, whatsappHref, telegramHref, mailtoHref } from '../data/site';
+import { site, telHref, whatsappHref, telegramAccounts, mailtoHref } from '../data/site';
 import { getDict, homePath, type Lang } from '../i18n';
 
 interface Props {
@@ -23,7 +23,7 @@ const c = site.contact;
 const contactLinks = [
   c.phone && { label: c.phone, href: telHref() },
   c.whatsapp && { label: t.enquiry.whatsapp, href: whatsappHref(), external: true },
-  c.telegram && { label: t.enquiry.telegram, href: telegramHref(), external: true },
+  ...telegramAccounts().map((a) => ({ label: `${t.enquiry.telegram} ${a.handle}`, href: a.href, external: true })),
   c.email && { label: c.email, href: mailtoHref() },
 ].filter((x): x is { label: string; href: string; external?: boolean } => Boolean(x));
 ---

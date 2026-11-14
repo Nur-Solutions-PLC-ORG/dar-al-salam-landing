@@ -11,7 +11,7 @@ import balconies from '../../assets/generated/story-balconies.jpg';
 import Arch from '../ui/Arch.astro';
 import { sections } from '../../data/sections';
 import { planFloors, units } from '../../data/units';
-import { enquiryChannels, mailtoHref, site, telHref, telegramHref, whatsappHref } from '../../data/site';
+import { enquiryChannels, mailtoHref, site, telHref, telegramAccounts, whatsappHref } from '../../data/site';
 import { emph, floorList, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
@@ -26,7 +26,7 @@ const c = site.contact;
 const contactRows = [
   c.phone && { label: c.phone, href: telHref() },
   c.whatsapp && { label: e.whatsapp, href: whatsappHref(), external: true },
-  c.telegram && { label: e.telegram, href: telegramHref(), external: true },
+  ...telegramAccounts().map((a) => ({ label: `${e.telegram} ${a.handle}`, href: a.href, external: true })),
   c.email && { label: c.email, href: mailtoHref() },
 ].filter((r): r is { label: string; href: string; external?: boolean } => Boolean(r));
 
@@ -52,7 +52,7 @@ i18n.tbcHint = Object.keys(confirmedOn).length
   : e.tbcHint;
 const config = {
   whatsapp: c.whatsapp.replace(/\D/g, ''),
-  telegram: c.telegram.replace(/^@/, ''),
+  telegram: telegramAccounts()[0]?.user ?? '', // the form hands off to the first account; rev 7 may offer both
   email: c.email,
 };
 ---

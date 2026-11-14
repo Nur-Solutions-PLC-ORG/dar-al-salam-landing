@@ -37,8 +37,8 @@ export interface SiteConfig {
     phone: string;
     /** International digits only for wa.me, e.g. '2519xxxxxxxx'. */
     whatsapp: string;
-    /** Telegram username without '@', e.g. 'daralsalam_sales'. */
-    telegram: string;
+    /** Telegram usernames without '@', in display order (links https://t.me/<user>). No names or roles given. */
+    telegram: readonly string[];
     email: string;
     /** Office address lines. */
     address: string[];
@@ -48,9 +48,19 @@ export interface SiteConfig {
   location: {
     /** The client's Google Maps pin (share link). Preferred for "Open in Google Maps" / "Get directions". */
     mapsUrl: string;
-    /** Fallback Google Maps search query when no pin is set; no invented coordinates. */
+    /** Fallback Google Maps search query when no pin is set. */
     mapsQuery: string;
+    /** The client's pin, resolved from mapsUrl (BRIEF update 2026-11-14). Used for the satellite map and directions. */
+    coords: { lat: number; lng: number };
     landmarks: readonly LandmarkKey[];
+  };
+  /** Satellite map (BRIEF update 2026-11-14). */
+  map: {
+    /**
+     * Esri ArcGIS API key. Keyless World Imagery tiles are for non-commercial use only, so a commercial launch needs
+     * a key. Empty = the keyless tile URL. The Esri attribution shows either way.
+     */
+    esriApiKey: string;
   };
   /** Confirmed building features, in display order; labels in src/i18n/*.ts under `features.items`. */
   features: readonly FeatureKey[];
@@ -81,7 +91,7 @@ export const site: SiteConfig = {
   contact: {
     phone: '', // TODO(client)
     whatsapp: '', // TODO(client)
-    telegram: '', // TODO(client)
+    telegram: ['abdulaziz_a12', 'monur14'], // client (BRIEF update 2026-11-14)
     email: '', // TODO(client)
     address: [], // TODO(client): sales office address
     hours: '', // TODO(client)
@@ -89,7 +99,11 @@ export const site: SiteConfig = {
   location: {
     mapsUrl: 'https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9', // client's pin (BRIEF update 2026-11-14)
     mapsQuery: 'Haile Garment, Addis Ababa',
+    coords: { lat: 8.9356809, lng: 38.7299505 }, // client's pin (BRIEF update 2026-11-14)
     landmarks: ['haileGarmentRoundabout', 'garmentTaxiStation', 'laftoSquare', 'africaCdc'],
+  },
+  map: {
+    esriApiKey: '', // TODO(client): Esri ArcGIS API key for commercial use of World Imagery
   },
   features: ['garbageChute', 'standbyLift', 'undergroundWater', 'parking'],
   social: [], // TODO(client): social links
@@ -108,8 +122,15 @@ export const whatsappHref = (text = '', number = site.contact.whatsapp) => {
 };
 
 /** Telegram has no reliable prefilled-text deep link to a user; text is copied by the form UI instead. */
-export const telegramHref = (username = site.contact.telegram) =>
+export const telegramHref = (username = site.contact.telegram[0] ?? '') =>
   username ? `https://t.me/${username.replace(/^@/, '')}` : '';
+
+/** One entry per configured Telegram account: '@user' for display, the t.me link. */
+export const telegramAccounts = () =>
+  site.contact.telegram.map((u) => {
+    const user = u.replace(/^@/, '');
+    return { user, handle: `@${user}`, href: telegramHref(user) };
+  });
 
 export const mailtoHref = (subject = '', body = '', email = site.contact.email) => {
   if (!email) return '';
@@ -120,9 +141,18 @@ export const mailtoHref = (subject = '', body = '', email = site.contact.email) 
   return `mailto:${email}${qs ? `?${qs}` : ''}`;
 };
 
-/** The client's pin when set; otherwise a Maps search for `query`. Never coordinates. */
+/** The client's pin when set; otherwise a Maps search for `query`. */
 export const mapsHref = (query = site.location.mapsQuery) =>
   site.location.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+
+/** Esri World Imagery tile template (Leaflet {z}/{y}/{x}); `?token=` only when a key is set. */
+export const esriTileUrl = (key = site.map.esriApiKey) =>
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' +
+  (key ? `?token=${encodeURIComponent(key)}` : '');
+
+/** Google Maps directions to the client's pin (BRIEF update 2026-11-14). */
+export const directionsHref = ({ lat, lng } = site.location.coords) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
 export type EnquiryChannel = 'whatsapp' | 'telegram' | 'email';
 
@@ -130,7 +160,7 @@ export type EnquiryChannel = 'whatsapp' | 'telegram' | 'email';
 export const enquiryChannels = (): EnquiryChannel[] => {
   const out: EnquiryChannel[] = [];
   if (site.contact.whatsapp) out.push('whatsapp');
-  if (site.contact.telegram) out.push('telegram');
+  if (site.contact.telegram.length) out.push('telegram');
   if (site.contact.email) out.push('email');
   return out;
 };
@@ -139,7 +169,7 @@ export const hasAnyContact = () =>
   Boolean(
     site.contact.phone ||
       site.contact.whatsapp ||
-      site.contact.telegram ||
+      site.contact.telegram.length ||
       site.contact.email ||
       site.contact.address.length,
   );
