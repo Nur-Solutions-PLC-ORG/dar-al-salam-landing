@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14 Nov 2026, rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 8 (BRIEF "3D apartments", 40c474f): new §9.6, the unit dollhouse. When a unit has 3D geometry, its plan lifts into a Three.js cutaway with room hotspots, a slim side panel and a room card with the AI interior slot (placeholder: the room's plan crop). The pilot is BL05: `docs/design/units/bl05.json` plus its floor texture, check overlay and tracing script. Also §9.2 UNIT, §8, §10, §11, §12. Rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -15,6 +15,7 @@ Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quali
 | `public/video/hero-bg.webm` (AV1), `hero-bg.mp4` (H.264), `hero-bg-poster.webp` / `.jpg` | Rev 6 hero background: a 640×352, 24 fps, 20.6 s loop with no audio and a continuous seam, plus its first frame as the poster (the LCP). The rev 5 `film-loop.*` and `film-poster.*` files are no longer used. |
 | `docs/design/hero-grain.png`, `hero-shade-check.jpg`, `hero-shade-contrast.py` | Rev 6: the grain tile, the shade previewed over the poster at 1366 and 360, and the script that verified hero text contrast over every second of the loop. |
 | `docs/design/story-arch-check.jpg` | Rev 6: the whole-tower Story crop seen through the dome mask, at rest and at 1.06 overscan. |
+| `docs/design/units/bl05.json`, `bl05-floor.webp`, `bl05-check.jpg`, `trace-bl05.py` | Rev 8: BL05's 3D geometry (walls, openings, solids, rooms, in metres), its floor texture, the overlay check against the plan, and the script that traced it (§9.6.1). |
 | `public/video/film.mp4`, `film-full-poster.webp` / `.jpg` | The full 41 s fly-through (640×352, H.264 + AAC, faststart) and its poster, 640×352. Loaded only when the film dialog opens. The source is `brand-source/video/tower-film-original.mp4`. |
 
 ---
@@ -964,6 +965,7 @@ The scroll pace varies on purpose: fast and light through the facts; slow and ed
 - Hero (rev 6): **the poster only**: no video sources, no curtain, no `.hero__bg` scale, no S1, no play-disc breath, and the pause toggle is hidden. The shade and grain stay, because they are static. The play control and the sound toggle work; the sound toggle shows static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
 - Location map (rev 7): the map still loads, because it is content, but it opens straight at z17 with `setView` (no fly, so no z15 tiles), with `fadeAnimation: false`. It cross-fades in over 0.2 s. The pin and card are placed at once, the ground ring doesn't pulse, and "Centre on the tower" uses `setView`. Zoom animations the user starts with the buttons, double-tap or pinch stay.
 - Telegram card (rev 7): no hover nudge on the arrow.
+- 3D apartments (rev 8): the default view is `plan`. On request, 3D shows at the static angle (56° / −35°): no lift (U1 becomes a 0.2 s cross-fade at full height), no auto-orbit, instant cutaway, and an instant room look-at. Drag-to-turn stays, because the user starts it.
 - `scroll-behavior: auto`. Anchor jumps are instant.
 - Use `gsap.matchMedia()` conditions `{ motion: "(prefers-reduced-motion: no-preference)" }` so everything is set up once and reverts cleanly when the setting changes.
 
@@ -1027,7 +1029,7 @@ IDLE (tower)  --hover slab / focus floor button-->  PREVIEW(floor n)  [tooltip]
   - Under the list, the muted line "2-bedroom homes on floors 4, 6, 8, 10 and 11" (`explore.twoBedOn`) sits above the legend.
 - **FLOOR(n)**: heading "Floor 7". Floor stepper (−/+, 44 px, magnetic). The **key plan SVG** (§9.3). Below it, 9 unit chips in a 3×3 grid, or a horizontal scroller on mobile (`BL01 · 2 bed · 158.54 m²`), mirroring the hotspots for keyboard and screen-reader users. A "Back to tower" button.
   - Rev 5, on a TBC floor: the BL01 chip reads "BL01 · To be confirmed". It has a 1 px **dashed** `--input-border` border, `--text-muted` text, and no m². It is still a button and still opens UNIT(n, BL01), which shows the TBC card below.
-- **UNIT(n, code)**: the plan image (click opens the plan viewer from §5.5), then code, type, gross and net m², and the room list. Actions: **Request pricing for Floor 7 · BL05** (primary, deep-links the form) and **Book a visit**. Prev/next unit arrows cycle BL01 → BL09 on the same floor, including a TBC position. The 3D model keeps the selected floor pulled out.
+- **UNIT(n, code)** (rev 8: units with geometry open in the 3D dollhouse, §9.6; the rest, and every fallback, keep this view): the plan image (click opens the plan viewer from §5.5), then code, type, gross and net m², and the room list. Actions: **Request pricing for Floor 7 · BL05** (primary, deep-links the form) and **Book a visit**. Prev/next unit arrows cycle BL01 → BL09 on the same floor, including a TBC position. The 3D model keeps the selected floor pulled out.
 - **UNIT(n, BL01) on a TBC floor (rev 5)**: same frame, different content. There are no plan specs, so no plan image, no m², no rooms and no plan-viewer link. It shows:
   - **In place of the plan image**: a sand-100 panel of the same aspect ratio, filled with the TBC hatch (§9.3). A centred status chip sits on it: "To be confirmed".
     - The chip is a non-interactive `<span>`, 32 px tall, `--radius-pill`, gold-700 text with a 1 px dashed gold-700 border on ivory, Manrope 600, 14 px.
@@ -1147,6 +1149,166 @@ Floor outline (union of the units and cores, for the 3D slab):
 - Mobile: the model is 52svh (tier 2) or the SVG maquette at the same aspect. Below it, the stepper row ("−  Floor 7  +", buttons 48 px) and the primary "View floor 7" button. The panel stacks under that. When a floor or unit is selected, smooth-scroll the panel top into view (offset header).
 - Hint chip over the model (fades after the first interaction): "Tap a floor" on touch, "Hover a floor · drag to turn" on pointer devices.
 
+### 9.6 3D apartments (rev 8): the unit "dollhouse"
+
+BRIEF "3D apartments" (approved 14 Nov 2026). The reference is the user's video, where a tower leads to a lifted floor, then an isometric cutaway of one home with a side panel, then a photoreal room. Our version lives **inside the existing explorer**: tower → floor → key plan → unit. When a unit has geometry, its plan "lifts" into a Three.js cutaway built from the plan's own measurements. **Pilot: BL05.** The other eight follow the same data format (§9.6.1) and switch on one at a time.
+
+#### 9.6.1 Data: `docs/design/units/{id}.json` (BL05 delivered)
+
+| File | What |
+|---|---|
+| `docs/design/units/bl05.json` | The geometry, 9 KB raw and 2.7 KB gzipped (budget 20 KB). Impl copies it to `src/data/units3d/bl05.json` and imports it dynamically. |
+| `docs/design/units/bl05-floor.webp` | The floor texture: the plan crop px (180, 0)–(1800, 1765) at 1024 × 1116, 105 KB. Impl makes the AVIF (target ≤ 90 KB) with sharp at build time and keeps this WebP as the fallback. **v1 still shows the plan's dimension lines and labels.** A cleaned v2 (lines and labels painted out, furniture kept) is a design follow-up and changes only this file. |
+| `docs/design/units/bl05-check.jpg` | Every wall, opening, solid and room from the JSON drawn over the plan, for review. Red: walls. Green: openings drawn on the plan. Orange: openings inferred. Blue: railings. Purple: solids. Light blue: rooms. Yellow: hall. |
+| `docs/design/units/trace-bl05.py` | The tracing script, which writes both the JSON and the check image. Copy it for BL01–BL09: change the px rectangles, rerun, and compare against the check image. |
+
+**Format**: metres; x to the right, z down the plan (plan-aligned, not north-aligned, because north isn't on the plans), y up.
+- `pxPerM: [145, 140.5]`: the plan raster is about 3% wider than tall, so x and z scale differently. Measured against the labelled dimensions: kitchen 404, corridor 129 and 355, bedroom 391, living 451, bedroom 255. Tolerance is about ±5 cm.
+- `originPx` is the unit's outer top-left corner.
+- `texture.plane` is the floor rectangle in metres that the texture covers, with UV = ((x − minX)/(maxX − minX), 1 − (z − minZ)/(maxZ − minZ)).
+- `footprint`: the outline of the unit, including balconies. It is the floor and plinth shape.
+- `walls[]`: `{id, a, b, t, h, kind}`. A centreline from `a` to `b`, thickness `t` and height `h`. `kind` is `interior | facade | corridor | lightwell` and drives the cutaway (§9.6.3). Door gaps are already left out of the walls.
+- `openings[]`: `{id, type: door | glazed-door | window, a, b, t, sill, head, wall, basis, leaves?, note?}`. `basis` is `plan` when the plan draws or dimensions the opening, and `inferred` when we read it from the drawing. Inferred openings are the two balcony glazed doors and the bedroom window to the balcony; their notes say why.
+- `railings[]`: `{id, a, b, h: 1.1}`, for the balcony edges.
+- `solids[]`: `{id, kind: column | shaft | wardrobe | counter, poly, h}`. Extruded polygons. Wardrobes are 2.2 m and counters 0.9 m.
+- `rooms[]`: `{id, name, area, poly, label}`. `name` is an i18n key and `area` is **exactly the plan's label** (BL05: 9.74, 2.71, 9.05, 3.14, 26.41, 15.82, 9.74, 2.71, 1.9, 6.7). We never show an area computed from the polygon. `label` is the hotspot anchor point.
+- `hall`: the circulation floor polygon. It is unlabelled on the plan, so it gets **no hotspot**.
+
+**Heights aren't on the plans.** The values used are a 2.8 m storey wall, 2.1 m door head, a 1.05/2.2 m kitchen window, 2.4 m glazed doors, 2.2 m wardrobes, 0.9 m counters and 1.1 m railings. These are standard and illustrative. The UI never states a height.
+
+**Windows:** the plans dimension only the kitchen window (150 cm, onto the light well). Façade walls are drawn without window marks, so **we don't invent window positions**: façade walls render solid, and the cutaway keeps their camera side low anyway. Real window positions per room are in §12. This is the one place the model deliberately shows less than the reference video.
+
+`src/data/units.ts` gains `has3d: boolean`, true only for codes with a JSON (BL05 today). Everything else in UNIT state stays as it is.
+
+#### 9.6.2 Flow and states
+
+- `UNIT(n, code)` gains a **view**: `plan | 3d`, kept in the hash as `#explore/f7/bl05/3d`.
+- **Default view:** `3d` when `has3d`, tier 2 is running and motion is allowed. In every other case the default is `plan`, which is the current 2D view, unchanged:
+  - `has3d` is false;
+  - the unit is a TBC position (§9.2 rev 5), which never gets a 3D view;
+  - tier 0/1 (no WebGL, Save-Data, slow connection, `deviceMemory < 4`);
+  - reduced motion.
+- **Toggle:** a 2-segment control at the top of the unit panel, **"3D | Plan"** (`role="radiogroup"`, 44 px, the pill style of the filter chips). It shows only when `has3d` and WebGL2 is available.
+  - With Save-Data or a slow connection, choosing **3D** is the opt-in that loads it.
+  - With reduced motion, 3D still works on request, as a **static angle**: no lift animation, no auto-orbit, cross-fades only (§8).
+- **Back / Esc**: from UNIT 3D, go to FLOOR (the walls drop flat, then the stage cross-fades to the tower). The breadcrumb reads `Tower › Floor 7 › BL05`, unchanged.
+- **Prev/next unit:** if the next unit has 3D, the walls drop (0.3 s) and the new unit rises (0.9 s). If not, the view falls back to `plan` for that unit, without changing the user's preference in the hash.
+- **Layout in UNIT 3D (desktop ≥ 1024):** the stage widens from cols 1–5 to **cols 1–7**, and the panel narrows to cols 8–12, with a 0.6 s GSAP Flip and `power3.inOut`. The reference gives the cutaway most of the frame, with a slim side panel. Tablet and mobile keep the stacked layout: stage on top (52svh on mobile, 60svh on tablet), then the panel.
+
+#### 9.6.3 The scene (`src/scripts/explorer/unit3d.ts`)
+
+**One WebGL context.** The dollhouse reuses tier 2's renderer and canvas and swaps scenes. Never create a second context, because phones lose them. It is dynamically imported on the **first UNIT entry with `has3d`**, together with the unit JSON and the texture. It is prefetched on idle once FLOOR state is reached and the hovered or focused hotspot belongs to a `has3d` unit.
+
+- **Floor:** a `ShapeGeometry` of `footprint` with UVs from `texture.plane`, and `MeshLambertMaterial({ map })`. The map uses `SRGBColorSpace` and `anisotropy = min(4, max)`.
+- **Plinth:** `footprint` extruded 0.35 m **down** in ivory `#FBF7F2`. This is the white base of the reference model, and it reads as a maquette.
+- **Walls:** each wall becomes a box (length |b − a|, height h, depth t) centred on its midpoint and rotated to the segment, in `MeshLambertMaterial` sand-100 `#F3ECE2`.
+  - Interior walls are merged into **one** geometry with `mergeGeometries`.
+  - Façade, corridor and light-well walls stay separate meshes (about 9), so they can be lowered.
+  - Wall tops get no special cap; the light makes them read as the white cut edge.
+- **Openings:**
+  - A header box from `head` to 2.8 m over every opening.
+  - Windows also get a sill box (0 → `sill`).
+  - Glazing (windows and glazed doors) is a plane at the wall centre: `MeshBasicMaterial` `#CFE0EA` at opacity 0.28, `depthWrite: false`, with a 3 cm navy-800 frame line.
+  - Doors are open gaps; no leaves are modelled, because the floor texture already shows the swing.
+- **Solids:**
+  - Columns and the shaft: wall material at full height.
+  - Wardrobes: warm oak `#B08A63`.
+  - Counters: sand-200 `#E4DACB` with a 2 cm darker top.
+
+  The floor texture's furniture shows through around them.
+- **Railings:** glass at 1.1 m (same material as glazing) with a 4 cm navy-800 top rail.
+- **Cutaway:**
+  - No ceiling.
+  - On every camera change, each perimeter wall whose outward normal faces the camera (`dot(n, toCamera.xz) > 0.25`) tweens to **1.0 m** (`cutawayH`); walls turning away grow back to 2.8 m. Each tween is 0.35 s, `power2.out`, using `scale.y` with the pivot at the base.
+  - Interior walls stay at 2.8 m. A fixed 50–62° camera elevation keeps rooms readable over them, as in the reference.
+- **Light (warm, soft, brand):**
+  - `HemisphereLight`: sky `#FFF4E6`, ground `#1A273F`, intensity 0.9.
+  - **One** `DirectionalLight` `#FFE3BD` at 1.1 from the upper left, (−6, 14, −4) relative to the model centre. It casts shadows with `PCFSoftShadowMap`, a 1024² map, and `radius` 4.
+  - The light is fixed to the model, not the camera, so the shadow map is **baked once**: `shadowMap.autoUpdate = false`, with `needsUpdate` only after build and lift.
+  - Walls and solids cast; floor and plinth receive. The soft contact shadows are what make it read as the reference's warm interior.
+- **Ground:** the stage keeps the explorer's navy-900. Under the plinth sits a 512 px radial canvas texture (navy-950 at 0.6 → 0) as a soft drop shadow. There is no visible ground edge.
+- **Camera:**
+  - `PerspectiveCamera` fov 30. Elevation 56° by default; dragging can move it between 50° and 62°.
+  - Azimuth starts at −35°, the reference's 3/4 view.
+  - Framing: fit the footprint's bounding circle (BL05 radius ≈ 8.3 m) so it fills **88% of the stage's shorter side**. The fit is the same at every azimuth, so the model never pops while orbiting.
+  - Look-at is the footprint centroid at y = 0.6 m.
+  - **No zoom, and the wheel always scrolls the page** (as §9.4). `touch-action: pan-y` on the canvas.
+- **Orbit:**
+  - Drag rotates (azimuth is free through 360°, elevation is clamped as above), with damped inertia.
+  - **Auto-orbit:** 360° in 72 s (5°/s). It starts 0.6 s after the lift completes, stops on `pointerdown`, and resumes 5 s after the last interaction. It pauses offscreen, with the tab hidden, while a room sheet is open, and with reduced motion (never runs).
+  - Render on demand: the loop runs only while orbiting, dragging or tweening.
+- **The lift (entering UNIT 3D):**
+  1. The tower stage cross-fades out (0.4 s). The dollhouse scene appears **flat and top-down**: camera elevation 89°, azimuth −90°, so it matches the key plan's orientation. Walls are at `scale.y` 0.01 and solids at 0.01.
+  2. Over 1.4 s, `power3.inOut`, the camera swings to 56° / −35°.
+  3. At the same time, walls rise to full height, staggered 0.012 s per wall, ordered by distance from the centroid outward, over 0.7 s each, `power3.out`. Solids rise after a 0.3 s delay.
+  4. Then the hotspots fade in (0.3 s, stagger 0.03) and the shadow map bakes.
+
+  Reduced motion: build at full height, show it at the static angle, and cross-fade in over 0.2 s.
+- **Budget:** under 6k triangles and under 20 draw calls for BL05. `setPixelRatio(min(dpr, 1.75))`, as §9.4.
+- **Fail-safe:** if the import, JSON, texture or WebGL fails, fall back to the `plan` view silently and hide the toggle for the session.
+
+#### 9.6.4 Room hotspots and the side panel
+
+- **Hotspots** are HTML `<button>`s in an overlay, positioned at each room's `label` point (y = 0.05 m) projected to the screen and updated per rendered frame with `transform` only.
+  - **At rest:** a 14 px gold-500 dot with a 2 px ivory ring and a 44 × 44 transparent hit area.
+  - **On hover or focus:** a pill grows from the dot (0.25 s), ivory with navy-900 text, Manrope 600 at 13 px, for example "Master bedroom · 15.82 m²". `m²` and the numerals are tabular.
+  - **Occlusion:** each frame, raycast from the camera to the anchor against the walls and solids. When the anchor is hidden, fade the button to opacity 0 and set it `inert`. The panel's room list keeps every room reachable.
+  - Balconies get hotspots too. The hall gets none.
+- **Panel (UNIT 3D)**, top to bottom:
+  1. The "3D | Plan" toggle.
+  2. Eyebrow "Floor 7 · BL05".
+  3. H3 "3 bedroom".
+  4. "169.23 m² gross · 119.05 m² net" (tabular).
+  5. **Rooms list**: a `<ul>` of buttons, "Master bedroom 15.82 m²", in the plan's room order. Hovering or focusing a row highlights the matching floor polygon (a gold-500 overlay at 0.22, y = 0.02) and opens its hotspot pill. It is the screen-reader path into the model.
+  6. Actions: **Request pricing for Floor 7 · BL05** (primary, deep-links the form, as §9.2) and **Book a visit**.
+  7. A hint line in muted text: "Drag to turn · Tap a room". It hides after the first interaction.
+
+  The canvas stays `aria-hidden`.
+- **Selecting a room**, by hotspot or list:
+  - The floor polygon highlights.
+  - The camera look-at eases 35% of the way toward the room centroid (0.8 s, `power2.inOut`), and auto-orbit pauses.
+  - The **room card** opens (§9.6.5).
+  - Selecting the same room again, or pressing Esc, deselects.
+
+#### 9.6.5 Room card and the AI interior slot
+
+**Rule (BRIEF):**
+- An AI interior image is shown **only when it is marked approved**: checked against the plan for room shape, windows and balcony.
+- It is **always** labelled **"Artist's impression; finishes may vary."**
+- The only finish we may name is ceramic tile.
+
+The generator isn't chosen yet, so the slot is designed now and filled later.
+
+- **Data:** `rooms[].image?: { src: string; alt: string; approved: boolean }` in `src/data/units3d/{id}.ts` (TS, not the JSON), so images can land without touching the geometry. Only `approved: true` images render.
+- **Placeholder, used until then:** the **room's own crop of the furnished plan**, cut from the floor texture with the room polygon's bounding box plus 0.3 m. It is honest and already exists. Its label is **"From the floor plan"**, not the AI label.
+- **Card, desktop:** inside the panel, under the specs, as a 3:2 frame with `--radius-s` and `--shadow-1`, revealed by `clip-path: inset(100% 0 0 0)` → `inset(0)` over 0.5 s, `power3.out`.
+  - The title row is "Master bedroom · 15.82 m²", plus a close button (44 px, "Close room").
+  - On the image, bottom-left, sits a **label chip**: ivory at 0.92, navy-900 at 12 px Manrope 600, `--radius-pill`, 6 × 10 padding. It reads "Artist's impression; finishes may vary." for AI images or "From the floor plan" for the placeholder.
+  - The chip is part of the image frame, never a tooltip, and never hidden on hover.
+- **Card, mobile (< 768):** a bottom sheet, 88svh max, `role="dialog"`, `aria-modal="true"`, labelled by the title. Esc, the close button or a swipe down close it. Focus moves to the close button and returns to the hotspot. It reuses the §5.5 viewer dialog styles and hides the sticky CTA, as §5.10.
+- **Alt text:**
+  - AI image: "Artist's impression of the master bedroom in BL05". The `alt` is authored per image.
+  - Placeholder: "Floor plan detail of the master bedroom in BL05".
+- **AI image spec, for whoever generates them:**
+  - 1600 × 1067 (3:2), AVIF ≤ 140 KB with a WebP fallback, loaded lazily on room open.
+  - Eye height 1.5 m, looking toward the room's window or balcony wall.
+  - Warm daylight; ceramic tile floors.
+  - No people, no logos, and no views claiming a specific outlook.
+  - Each image is checked against `bl05-check.jpg` for wall count, door and balcony positions before `approved: true` is set.
+
+#### 9.6.6 Motion summary (adds to §7.3)
+
+| ID | Element | Animation | Duration / ease |
+|---|---|---|---|
+| U1 | Enter UNIT 3D | stage cross-fade, flat plan → camera swing 89°/−90° → 56°/−35°; walls rise staggered from the centre out; solids follow; hotspots fade | 1.4 / power3.inOut; walls 0.7 / power3.out, stagger 0.012; solids +0.3 |
+| U2 | Leave UNIT 3D | walls drop to 0.01, then stage cross-fades to the tower | 0.45 / power2.in; fade 0.3 |
+| U3 | Cutaway | perimeter walls facing the camera go 2.8 → 1.0 m and back | 0.35 / power2.out |
+| U4 | Auto-orbit | 5°/s, resumes 5 s after interaction | linear |
+| U5 | Room select | floor highlight 0 → 0.22; look-at 35% toward the room | 0.3; 0.8 / power2.inOut |
+| U6 | Room card | `clip-path` reveal (desktop) or sheet y 100% → 0 (mobile) | 0.5 / power3.out |
+| U7 | Desktop layout | stage cols 1–5 → 1–7 (Flip) | 0.6 / power3.inOut |
+
+
 ---
 
 ## 10. Performance budget
@@ -1169,6 +1331,10 @@ Floor outline (union of the units and cores, for the 3D slab):
 | Leaflet (rev 7) | ≤ 45 KB JS (1.9.4 is about 42 KB) + ≤ 4 KB CSS | Dynamic `import()` when `#location` is within 800 px. Zero bytes with no JS, or until the "Show the satellite map" pill is pressed on slow or Save-Data connections. Not in the initial bundle. |
 | Map glue JS (rev 7) | ≤ 3 KB | Loader, entrance, custom controls, two-finger hint, failure fallback. |
 | Satellite tiles, first view (rev 7) | ≤ 1 MB (about 22 KB per 256 px JPEG, checked) | z15 view plus z17 view, at 1×. `detectRetina: false`, `keepBuffer: 1`, and `updateWhenZooming: false` keep z16 out. Reduced motion fetches z17 only. |
+| Unit 3D code (rev 8) | ≤ 12 KB gzip | `unit3d.ts` plus `mergeGeometries`. Reuses the tier 2 `three` chunk and renderer. Loaded on the first UNIT entry with `has3d`; prefetched on idle from FLOOR. Zero bytes on tiers 0 and 1. |
+| Unit geometry (rev 8) | ≤ 20 KB raw per unit (BL05: 9 KB raw, 2.7 KB gzip) | JSON, dynamic import. |
+| Unit floor texture (rev 8) | AVIF ≤ 90 KB, WebP ≤ 110 KB (BL05 WebP: 105 KB), 1024 px wide | Loaded with the unit. Never on first load, so no LCP impact. |
+| Room images (rev 8, later) | AVIF ≤ 140 KB each, 1600 × 1067 | Only on room open, and only `approved: true`. |
 | Film music (rev 5) | ≤ 260 KB (Opus WebM 252 KB, AAC M4A fallback 258 KB) | Zero bytes until the first press of the sound toggle. Only one of the two files is ever fetched. |
 
 Targets: LCP ≤ 2.5 s and CLS ≤ 0.02 on Lighthouse mobile (slow 4G, Moto G Power); TBT ≤ 150 ms; INP ≤ 200 ms. Lighthouse scores per CLAUDE.md.
@@ -1228,12 +1394,33 @@ Rules:
   | `enquiry.copyFallback` | If the chat is empty, copy this message and paste it there. | ውይይቱ ባዶ ከሆነ ይህን መልዕክት ቀድተው እዚያ ይለጥፉት። |
 
   `{handle}` is always rendered as `<span dir="ltr" lang="en" translate="no">@user</span>`. Telegram, Google Maps, Esri and Leaflet stay untranslated in the attribution.
+- Rev 8 strings (EN / AM draft):
+
+  | Key | EN | AM (draft) |
+  |---|---|---|
+  | `unit3d.view3d` / `unit3d.viewPlan` | 3D / Plan | 3D / ፕላን |
+  | `unit3d.hint` | Drag to turn · Tap a room | ለማዞር ይጎትቱ · ክፍል ይንኩ |
+  | `unit3d.roomsTitle` | Rooms | ክፍሎች |
+  | `unit3d.closeRoom` | Close room | ክፍሉን ዝጋ |
+  | `unit3d.aiLabel` | Artist's impression; finishes may vary. | የአርቲስት ምናባዊ ሥዕል፤ ማጠናቀቂያዎች ሊለያዩ ይችላሉ። |
+  | `unit3d.planLabel` | From the floor plan | ከወለል ፕላኑ |
+  | `unit3d.altAi` | Artist's impression of the {room} in {code} | በ{code} ያለው {room} የአርቲስት ምናባዊ ሥዕል |
+  | `unit3d.altPlan` | Floor plan detail of the {room} in {code} | በ{code} ያለው {room} የወለል ፕላን ዝርዝር |
+  | `rooms3d.bedroom` | Bedroom | መኝታ ክፍል |
+  | `rooms3d.masterBedroom` | Master bedroom | ዋና መኝታ ክፍል |
+  | `rooms3d.shower` | Shower room | ሻወር ክፍል |
+  | `rooms3d.kitchen` | Kitchen | ማእድ ቤት |
+  | `rooms3d.store` | Store | ዕቃ ማስቀመጫ |
+  | `rooms3d.livingDining` | Living and dining room | ሳሎንና መመገቢያ ክፍል |
+  | `rooms3d.balcony` | Balcony | በረንዳ |
+
+  Reuse existing `rooms.*` strings where they already match. `{room}` is lower-case in the alt strings.
 
 ---
 
 ## 12. Open items for the client (`TODO(client)` in `src/data/site.ts`)
 
-Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
+Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), **window positions and sizes per room (rev 8: the plans dimension only the kitchen window, so the 3D façades are drawn solid)**, storey and ceiling heights (the 3D uses an illustrative 2.8 m), which unlabelled BL05 duct the 55 cm shaft is (shown as a plain solid), unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
 
 - Contact rows hide when unset.
 - The form shows a "being set up" message.
