@@ -42,6 +42,9 @@ Assets in `brand-source/`:
   - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
   - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
   - **Exact location:** https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9 (the client's pin; Google place id `0x164b81003f901365:0x2aba21e4438756c4`). Use this link for "Open in Google Maps" / "Get directions" instead of the "Haile Garment" search. Still no hand-typed coordinates; the location diagram stays "not to scale".
+  - **Coordinates (from the client's own pin, resolved 2026-11-14):** the link opens the Google place "Dar al Salam Real Estate" at **8.9356809, 38.7299505**. These replace "no coordinates": the location section may now show a real satellite map with a pin there, and "Get directions" can use `https://www.google.com/maps/dir/?api=1&destination=8.9356809,38.7299505`.
+  - **Satellite map (client request):** "realistic satellite image with a pin", e.g. Leaflet or Mapbox. No Mapbox token exists, so use a keyless imagery source with its required attribution (e.g. Esri World Imagery via Leaflet), loaded lazily only near the section, with a static fallback.
+  - **Telegram contacts (client request):** add a "Contact us on Telegram" block to the Book a visit section with **@abdulaziz_a12** and **@monur14** (links `https://t.me/abdulaziz_a12`, `https://t.me/monur14`). These are the first confirmed contacts, so the enquiry form can now send via Telegram. No names or roles are given for them; don't invent any.
   - **Building features (confirmed):** garbage chute on every floor, standby lift, underground water, parking. Basement parking is also shown on the plans. Use the wording "underground water"; don't specify borehole vs tank.
 - **Tower film:** `brand-source/video/` (rendered fly-through, 41 s, 640×352, H.264 with a music track). It's low resolution, so never show it full-bleed or stretched; see DESIGN for the treatment.
 - **Prices: do not publish.** Use "Request pricing". Payment is flexible (pay any amount over time until fully paid; a unit is reserved with an initial payment). It's OK to say "Flexible payment plans".
@@ -56,9 +59,9 @@ English (default) + Amharic toggle (`/am` or a client-side switch). Amharic copy
 3. The tower / story: "House of Peace", calm living in the heart of Garment.
 4. **Interactive tower model** (the "creative model"): a 3D or 2.5D massing of the tower; hover/tap a floor to select it, then the floor's key plan with the 9 apartments, then the apartment's plan + specs. Must have a lightweight non-WebGL fallback.
 5. Apartment types gallery: 9 plans with filters (2 bed / 3 bed), zoomable plan viewer.
-6. Location: stylised map + nearby landmarks; "Open in Google Maps" link (search "Haile Garment, Addis Ababa"; no invented coordinates).
+6. Location: real satellite map with a pin at the client's coordinates (see update) + nearby landmarks; "Open in Google Maps" and "Get directions".
 7. Why Dar Al Salam / payment flexibility.
-8. Enquiry form (name, phone, preferred unit, message) → opens WhatsApp/Telegram/mailto from config; no backend for now.
+8. Enquiry form (name, phone, preferred unit, message) → opens WhatsApp/Telegram/mailto from config; no backend for now. Plus a "Contact us on Telegram" block (@abdulaziz_a12, @monur14).
 9. Footer.
 
 ## Stack (coordinator's choice)
