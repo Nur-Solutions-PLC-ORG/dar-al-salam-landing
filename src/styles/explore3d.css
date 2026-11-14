@@ -14,14 +14,13 @@
 
 .viewtoggle__btn {
   min-width: 64px;
-  min-height: 40px;
+  min-height: 44px; /* review r6 #3: the tap-target minimum at every width */
   padding-inline: var(--space-4);
   border-radius: var(--radius-pill);
   color: var(--text-muted);
   font: 600 var(--fs-small) / 1 var(--font-body);
 }
 
-/* 40 px pill + 2 px padding each side = a 44 px tap row */
 .viewtoggle__btn[aria-checked='true'] {
   background: var(--navy-800);
   color: var(--ivory-50);
