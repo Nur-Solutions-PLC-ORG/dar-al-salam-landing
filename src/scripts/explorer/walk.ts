@@ -696,10 +696,9 @@ export function createWalk(
   const pose = (id: string) => {
     if (id.startsWith('hall-')) {
       // 0.9 m into the hall from that door, looking on into the hall
-      const d = doors.find((x) => `hall-${x.id}` === id);
-      const side = d?.plus === 'hall' ? 1 : -1;
-      const at = h.toWorld(d ? d.at(side * 0.9) : hall![0]!, EYE);
-      return { at, yaw: d ? yawTo(h.toWorld(d.m, EYE), at) : 0 };
+      const d = doors.find((x) => `hall-${x.id}` === id)!; // known() vouched for it
+      const at = h.toWorld(d.at((d.plus === 'hall' ? 1 : -1) * 0.9), EYE);
+      return { at, yaw: yawTo(h.toWorld(d.m, EYE), at) };
     }
     const sp = spaceList.get(id);
     if (sp) {
