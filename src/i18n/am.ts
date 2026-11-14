@@ -268,6 +268,7 @@ export const am: Dict = {
     template: 'ሰላም ዳር አል ሰላም፣ ስሜ {name} ነው ({phone})። በ{floor} {unit} ላይ ፍላጎት አለኝ። {message}',
     anyUnit: 'ማንኛውም ቤት',
     anyFloor: 'ማንኛውም ወለል',
+    floorIn: '{n}ኛ ወለል',
     subject: 'የጋርመንት ታወር ጥያቄ',
     contactLines: 'አድራሻ',
     required: 'የግድ',

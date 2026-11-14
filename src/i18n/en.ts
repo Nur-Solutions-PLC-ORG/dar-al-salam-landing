@@ -280,6 +280,8 @@ export const en = {
     template: "Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}",
     anyUnit: 'any home',
     anyFloor: 'any floor',
+    /** The floor inside the message sentence (review r5 #4): lower case, unlike the 'Floor {n}' labels. */
+    floorIn: 'floor {n}',
     subject: 'Garment Tower enquiry',
     contactLines: 'Contact',
     required: 'required',
