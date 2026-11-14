@@ -1,6 +1,7 @@
 /**
  * Hero background loop (DESIGN §5.1 rev 6). Runs at DOMContentLoaded (a deferred module), because the
- * background is the hero itself; the poster <img> is the LCP and paints first regardless.
+ * background is the hero itself; the poster <img> paints first regardless. Below 1024 px (phones, metered data:
+ * review r4 #1, design call) the sources wait for `load` + requestIdleCallback (2 s timeout) instead.
  *
  * Sources are added only when ALL hold: motion allowed, no Save-Data, effectiveType 4g or unknown, hero on
  * screen. Otherwise: poster only, zero video bytes, the pause toggle stays hidden.
@@ -32,6 +33,18 @@ export function initHeroBg() {
   const toggleLabel = toggle?.querySelector('[data-bg-toggle-label]');
 
   const allowed = !prefersReducedMotion() && connectionAllows();
+  // desktop: load at DOMContentLoaded; below 1024: only after load + idle
+  let gateOpen = window.matchMedia('(min-width: 1024px)').matches;
+  if (allowed && !gateOpen) {
+    const open = () => {
+      gateOpen = true;
+      update();
+    };
+    const idle = () =>
+      'requestIdleCallback' in window ? window.requestIdleCallback(open, { timeout: 2000 }) : setTimeout(open, 200);
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
+  }
   let visible = false;
   let userPaused = false;
   let dialogOpen = false;
@@ -87,7 +100,7 @@ export function initHeroBg() {
 
   function update() {
     if (!allowed) return;
-    if (visible && !loaded) load();
+    if (visible && gateOpen && !loaded) load();
     const play = ready && visible && !document.hidden && !dialogOpen && !userPaused;
     if (play && video!.paused) void video!.play().catch(() => undefined);
     else if (!play && !video!.paused) video!.pause();
