@@ -346,6 +346,24 @@ export function createWalk(
 
   const view = { yaw: 0, pitch: 0 };
   let current: string | null = null;
+  /** Review r8 H1: the walk's live tweens, so an exit can stop a fly-in or glide midway; `seq` marks the newest move. */
+  const live = new Set<ReturnType<WalkHost['run']>>();
+  let seq = 0;
+  const run: WalkHost['run'] = (target, vars) => {
+    let tw: ReturnType<WalkHost['run']> | undefined = undefined;
+    const drop = () => tw && live.delete(tw);
+    tw = h.run(target, {
+      ...vars,
+      onComplete: () => (drop(), (vars.onComplete as (() => void) | undefined)?.()),
+      onInterrupt: () => (drop(), (vars.onInterrupt as (() => void) | undefined)?.()),
+    });
+    if (tw.progress() < 1) live.add(tw);
+    return tw;
+  };
+  const stopAll = () => {
+    [...live].forEach((t) => t.kill());
+    live.clear();
+  };
   let cutBefore: number[] = [];
 
   const apply = () => {
@@ -401,7 +419,7 @@ export function createWalk(
     if (!current) return;
     vel = velP = 0;
     const t = { y: view.yaw };
-    h.run(t, { y: view.yaw + dir * STEP, duration: h.reduced ? 0 : 0.3, ease: 'power2.out', onUpdate: () => ((view.yaw = t.y), clampPitch(), apply()) });
+    run(t, { y: view.yaw + dir * STEP, duration: h.reduced ? 0 : 0.3, ease: 'power2.out', onUpdate: () => ((view.yaw = t.y), clampPitch(), apply()) });
   };
   const onKey = (e: KeyboardEvent) => {
     if (!current || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
@@ -659,7 +677,7 @@ export function createWalk(
     const from = { at: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
     const t = { p: 0 };
     return new Promise<void>((resolve) => {
-      h.run(t, {
+      run(t, {
         p: 1,
         duration,
         ease: 'power2.inOut',
@@ -670,6 +688,7 @@ export function createWalk(
           camera.updateProjectionMatrix();
         },
         onComplete: resolve,
+        onInterrupt: resolve,
       });
     });
   };
@@ -682,7 +701,7 @@ export function createWalk(
       ceiling.visible = true;
     }
     const cut = { m: U.uModel.value };
-    h.run(cut, {
+    run(cut, {
       m: inside ? h.fullH : h.cutH,
       duration,
       delay,
@@ -696,7 +715,7 @@ export function createWalk(
         ceiling.visible = false;
       },
     });
-    h.run(ceilMat, { opacity: inside ? 1 : 0, duration, delay });
+    run(ceilMat, { opacity: inside ? 1 : 0, duration, delay });
   };
 
   /* ---------- B5: the panorama slot ---------- */
@@ -718,7 +737,7 @@ export function createWalk(
     if (strip) {
       strip = null;
       if (instant || h.reduced) camera.fov = FOV;
-      else h.run(camera, { fov: FOV, duration: 0.5, ease: 'power2.out', overwrite: true, onUpdate: apply });
+      else run(camera, { fov: FOV, duration: 0.5, ease: 'power2.out', overwrite: true, onUpdate: apply });
     }
     h.root.visible = true;
     chip.textContent = o.strings.geometryLabel ?? '';
@@ -731,7 +750,7 @@ export function createWalk(
       old.tex.dispose();
     };
     if (instant || h.reduced) bye();
-    else h.run(old.mat, { opacity: 0, duration: 0.5, onComplete: bye });
+    else run(old.mat, { opacity: 0, duration: 0.5, onComplete: bye, onInterrupt: bye });
   };
   /** The room's approved panorama, if any (else back to geometry). */
   const showPano = async (id: string) => {
@@ -767,11 +786,11 @@ export function createWalk(
       const v = Math.atan(arc / 6);
       const fov = Math.min(FOV * DEG, 2 * v - 8 * DEG);
       strip = { mid: pn.yawOffset * DEG, arc, pitch: Math.min(12 * DEG, v - fov / 2) };
-      h.run(camera, { fov: fov / DEG, duration: h.reduced ? 0 : 0.5, ease: 'power2.out', overwrite: true, onUpdate: () => (clampPitch(), apply()) });
+      run(camera, { fov: fov / DEG, duration: h.reduced ? 0 : 0.5, ease: 'power2.out', overwrite: true, onUpdate: () => (clampPitch(), apply()) });
     }
     chip.textContent = o.aiLabel;
     panoAlt.textContent = pn.alt;
-    h.run(mat, {
+    run(mat, {
       opacity: 1,
       duration: h.reduced ? 0 : 0.5,
       ease: 'power2.out',
@@ -786,6 +805,7 @@ export function createWalk(
   /** U10: through a door's centre to the next standpoint; the yaw eases to the direction of travel. */
   const through = async (door: { m: P2 }, to: string) => {
     if (h.reduced) return arrive(to, 0);
+    const my = ++seq;
     showRings(null);
     dropPano(false); // the glide happens in the geometry
     const p = pose(to);
@@ -800,7 +820,7 @@ export function createWalk(
     const t = { p: 0 };
     moveLamp(to);
     await new Promise<void>((resolve) =>
-      h.run(t, {
+      run(t, {
         p: 1,
         duration: 1.2,
         ease: 'power2.inOut',
@@ -812,15 +832,17 @@ export function createWalk(
           apply();
         },
         onComplete: resolve,
+        onInterrupt: resolve,
       }),
     );
+    if (my !== seq) return; // stopped (Esc / Back) or overtaken
     current = to;
     showRings(to);
     void showPano(to);
     o.onArrive(to);
   };
 
-  const arrive = async (id: string, glide: number) => {
+  const arrive = async (id: string, glide: number, my = ++seq) => {
     const p = pose(id);
     view.yaw = p.yaw;
     view.pitch = 0;
@@ -829,12 +851,14 @@ export function createWalk(
     showRings(id);
     if (h.reduced || glide === 0) {
       await fade(0);
+      if (my !== seq) return;
       camera.position.copy(p.at);
       camera.fov = FOV;
       apply();
       h.request();
       await fade(1);
     } else await fly({ at: p.at, quat: quatFor(view.yaw), fov: FOV }, glide);
+    if (my !== seq) return; // stopped (Esc / Back) or overtaken: no arrival
     void showPano(id);
     o.onArrive(id);
   };
@@ -855,13 +879,14 @@ export function createWalk(
         hint.hidden = false;
         setTimeout(() => (hint.hidden = true), 4000);
       }
+      const my = ++seq;
       if (h.reduced) {
         enclose(true, 0, 0);
-        await arrive(id, 0);
+        await arrive(id, 0, my);
         return;
       }
       enclose(true, 0.6, 1.0);
-      await arrive(id, 1.6);
+      await arrive(id, 1.6, my);
     },
     goTo(id) {
       if (known(id) && canStand(id)) return arrive(id, 0);
@@ -869,6 +894,8 @@ export function createWalk(
       return Promise.resolve();
     },
     async exit() {
+      const my = ++seq;
+      stopAll(); // a fly-in, glide or delayed cut still running
       const back = new PerspectiveCamera(30, camera.aspect);
       h.orbitPose(back);
       current = null;
@@ -886,6 +913,7 @@ export function createWalk(
         enclose(false, 0.4, 0);
         await fly({ at: back.position, quat: back.quaternion, fov: 30 }, 1.0);
       }
+      if (my !== seq) return; // stepped back in meanwhile
       h.spots.classList.remove('is-walking');
       inside(false);
       listen(false);

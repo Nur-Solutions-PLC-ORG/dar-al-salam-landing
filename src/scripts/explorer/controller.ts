@@ -631,6 +631,7 @@ export function createExplorer(root: HTMLElement) {
         lang,
         // a ring took the visitor elsewhere: the state (and hash) follow; the panel marks the room and announces it
         onArrive: (id) => {
+          if (!state.walk) return; // left the walk meanwhile (review r8 H1)
           if (state.walk !== id) go({ ...state, walk: id });
           rooms?.setWalk(id);
         },

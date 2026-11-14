@@ -595,6 +595,12 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
         done?.();
         request();
       },
+      // killed midway (review r8 H1: an exit stops a fly-in): keep the count balanced, or the loop never idles
+      onInterrupt() {
+        tweening--;
+        (vars.onInterrupt as (() => void) | undefined)?.();
+        request();
+      },
     });
   };
 
