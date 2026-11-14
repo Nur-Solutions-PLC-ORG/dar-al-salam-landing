@@ -289,7 +289,6 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     meshes[key] = mesh;
     root.add(mesh);
   }
-  const occluders = [meshes.wall, meshes.oak, meshes.counter].filter(Boolean) as Mesh[];
 
   /* floor (the plan texture), plinth, soft ground shadow */
   const tex = k(new Texture(o.image));
@@ -413,7 +412,9 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     camera.lookAt(cam.x, 0.6, cam.z);
   };
 
-  /* ---------- hotspots (HTML, projected per frame) ---------- */
+  /* ---------- hotspots (HTML, projected per frame). Rev 8.1 F: they float 0.35 m above the cut over each room's
+     label point, with a 1 px leader line down to the floor; no occlusion test, so all of them stay reachable. When two
+     dots come within 28 px, the one nearer the camera shows and the other goes inert until they separate. */
   const layer = document.createElement('div');
   layer.className = 'u3d-spots';
   stage.append(layer);
@@ -430,35 +431,44 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     b.addEventListener('pointerleave', () => setHl(null, false));
     b.addEventListener('focus', () => setHl(r.id, false));
     b.addEventListener('blur', () => setHl(null, false));
-    layer.append(b);
-    return { r, b, at: new Vector3(r.label[0] - cx, 0.05, r.label[1] - cz), hidden: false };
+    const line = document.createElement('span');
+    line.className = 'u3d-spot__line';
+    line.setAttribute('aria-hidden', 'true');
+    layer.append(line, b);
+    const [x, z] = sub(r.label);
+    return { r, b, line, top: new Vector3(x, WALL_H + 0.35, z), base: new Vector3(x, 0.05, z), hidden: false, sx: 0, sy: 0, d: 0 };
   });
 
   const ray = new Raycaster();
   const v = new Vector3();
-  const dir = new Vector3();
-  /** Hidden behind a wall or solid? Hits above a lowered side's clamp don't count. */
-  const occluded = (p: Vector3) => {
-    dir.subVectors(p, camera.position);
-    const len = dir.length();
-    ray.set(camera.position, dir.normalize());
-    ray.far = len - 0.05;
-    for (const hit of ray.intersectObjects(occluders, false)) {
-      const side = hit.object === meshes.wall ? (hit.object as Mesh).geometry.getAttribute('aSide').getX(hit.face!.a) : -1;
-      if (side < 0 || hit.point.y <= U.uCut.value[side]! + 0.01) return true;
-    }
-    return false;
-  };
+  const wp = new Vector3();
   const projectSpots = () => {
     const w = host.clientWidth;
     const h = host.clientHeight;
+    const px = (p: Vector3) => {
+      v.copy(p).project(camera);
+      return [((v.x + 1) / 2) * w, ((1 - v.y) / 2) * h] as const;
+    };
     for (const s of spots) {
-      v.copy(s.at).project(camera);
-      s.b.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
-      const hide = !ready || occluded(s.at);
+      const [tx, ty] = px(s.top);
+      const [bx, by] = px(s.base);
+      s.sx = tx;
+      s.sy = ty;
+      s.d = camera.position.distanceTo(root.localToWorld(wp.copy(s.top)));
+      s.b.style.transform = `translate(${tx}px, ${ty}px)`;
+      s.line.style.width = `${Math.hypot(bx - tx, by - ty)}px`;
+      s.line.style.transform = `translate(${tx}px, ${ty}px) rotate(${Math.atan2(by - ty, bx - tx)}rad)`;
+    }
+    // nearer dots win a 28 px overlap
+    const shown: typeof spots = [];
+    for (const s of [...spots].sort((a, b) => a.d - b.d)) {
+      const clash = shown.some((o) => Math.hypot(o.sx - s.sx, o.sy - s.sy) < 28);
+      if (!clash) shown.push(s);
+      const hide = !ready || clash;
       if (hide !== s.hidden) {
         s.hidden = hide;
         s.b.classList.toggle('is-hidden', hide);
+        s.line.classList.toggle('is-hidden', hide);
         s.b.inert = hide;
       }
     }

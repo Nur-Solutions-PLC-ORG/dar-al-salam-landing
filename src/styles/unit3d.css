@@ -34,6 +34,23 @@
   pointer-events: none;
 }
 
+/* rev 8.1 F: the leader from the floating dot down to the floor point */
+.u3d-spot__line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  background: var(--gold-500);
+  transform-origin: 0 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.u3d-spots.is-ready .u3d-spot__line:not(.is-hidden) {
+  opacity: 0.7;
+}
+
 .u3d-spot__dot {
   position: absolute;
   left: 15px;
