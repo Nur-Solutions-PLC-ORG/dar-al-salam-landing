@@ -2,8 +2,8 @@
  * Photoreal tower stage (DESIGN §9.7 A1, rev 9): the model adapter for the render + SVG bands
  * (src/components/explorer/TowerStage.astro). The controller owns state; this only lights bands and reports picks.
  * - Pointer: hover lights a band and shows the chip; click picks.
- * - Touch: the first tap previews (chip + "View floor n"), a second tap on the same band picks. A vertical drag that
- *   starts on the tower scrubs the preview floor.
+ * - Touch: the first tap previews (chip + "View floor n"), a second tap on the same band picks. A vertical swipe
+ *   scrolls the page (review r8 L8: the old scrub could never fire under touch-action pan-y, so it was removed).
  * - The ground storey shows a muted "Ground floor: commercial" chip and is never picked.
  * - A2, choosing a floor: the image pushes in (scale 2.4, the band's centre to 50% / 46% of the stage, 1.1 s
  *   power3.inOut) while navy veils over the floors above and below fade to 0.5; then a copy of the image clipped to the
@@ -82,25 +82,7 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
     cb.onGround(null);
   };
 
-  // touch: tap to preview, tap again to pick; a vertical drag that starts on the tower scrubs the preview
-  let dragFrom: number | null = null;
-  const onDown = (e: PointerEvent) => {
-    if (e.pointerType !== 'touch') return;
-    dragFrom = floorAt(e.target) !== null ? e.clientY : null;
-  };
-  const onTouchMove = (e: PointerEvent) => {
-    if (e.pointerType !== 'touch' || dragFrom === null) return;
-    const n = floorAt(document.elementFromPoint(e.clientX, e.clientY));
-    if (n !== null && n !== touchPreview) {
-      touchPreview = n;
-      show(n);
-      cb.onInteract();
-    }
-  };
-  const onUp = () => {
-    dragFrom = null;
-  };
-
+  // touch: tap to preview, tap again to pick (vertical swipes scroll the page)
   const onClick = (e: MouseEvent) => {
     const n = floorAt(e.target);
     cb.onInteract();
@@ -224,9 +206,6 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
 
   svg.addEventListener('pointermove', onMove);
   svg.addEventListener('pointerleave', onLeave);
-  svg.addEventListener('pointerdown', onDown);
-  svg.addEventListener('pointermove', onTouchMove);
-  window.addEventListener('pointerup', onUp);
   svg.addEventListener('click', onClick);
 
   return {
@@ -247,9 +226,6 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
     destroy() {
       svg.removeEventListener('pointermove', onMove);
       svg.removeEventListener('pointerleave', onLeave);
-      svg.removeEventListener('pointerdown', onDown);
-      svg.removeEventListener('pointermove', onTouchMove);
-      window.removeEventListener('pointerup', onUp);
       svg.removeEventListener('click', onClick);
       bands.forEach((p) => p.classList.remove('is-hover', 'is-selected'));
       tl?.kill();
