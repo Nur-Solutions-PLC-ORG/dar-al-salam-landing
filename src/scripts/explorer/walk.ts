@@ -20,7 +20,7 @@
  *   behind the camera or beyond 9 m hide. Reduced motion: 0.2 s cross-fades.
  * - B6 toolbar and minimap: "Back to 3D model" (and the gyro toggle) top-left; top-right the unit's plan at 132 px
  *   (96 px on phones) with a gold "you are here" dot and a 60° view cone; tapping a room jumps there. The minimap is
- *   aria-hidden (the room list is its accessible twin) and hides on stages under 360 px. A 4 s hint on first entry.
+ *   aria-hidden (the room list is its accessible twin) and hides on stages under 320 px. A 4 s hint on first entry.
  */
 import {
   BoxGeometry,
@@ -464,7 +464,7 @@ export function createWalk(
   });
   const updateMini = () => {
     const w = h.host.clientWidth;
-    mini.hidden = w < 360;
+    mini.hidden = w < 320; // coordinator: 320, so the 96 px minimap shows on common phones (390 px → a 358 px stage)
     if (mini.hidden) return;
     const p = camera.position;
     const [fx, fz] = toMini(p.x - h.root.position.x, p.z - h.root.position.z);
