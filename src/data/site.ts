@@ -50,17 +50,21 @@ export interface SiteConfig {
     mapsUrl: string;
     /** Fallback Google Maps search query when no pin is set. */
     mapsQuery: string;
-    /** The client's pin, resolved from mapsUrl (BRIEF update 2026-11-14). Used for the satellite map and directions. */
-    coords: { lat: number; lng: number };
+    /** The client's pin, resolved from mapsUrl (BRIEF update 2026-11-14): the satellite map's pin and directions. */
+    lat: number;
+    lng: number;
+    /** The Google place the pin opens. Reference only, never rendered (the map card uses i18n). */
+    placeName: string;
     landmarks: readonly LandmarkKey[];
   };
-  /** Satellite map (BRIEF update 2026-11-14). */
+  /** Satellite map (DESIGN §5.6 rev 7). */
   map: {
     /**
-     * Esri ArcGIS API key. Keyless World Imagery tiles are for non-commercial use only, so a commercial launch needs
-     * a key. Empty = the keyless tile URL. The Esri attribution shows either way.
+     * ArcGIS Location Platform API key. The keyless World Imagery tiles are for non-commercial use only (development
+     * and preview), so the public launch needs one; restrict it to the production domain in the Esri dashboard.
+     * Empty = the keyless tile URL. The Esri attribution shows either way.
      */
-    esriApiKey: string;
+    esriKey: string;
   };
   /** Confirmed building features, in display order; labels in src/i18n/*.ts under `features.items`. */
   features: readonly FeatureKey[];
@@ -99,11 +103,13 @@ export const site: SiteConfig = {
   location: {
     mapsUrl: 'https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9', // client's pin (BRIEF update 2026-11-14)
     mapsQuery: 'Haile Garment, Addis Ababa',
-    coords: { lat: 8.9356809, lng: 38.7299505 }, // client's pin (BRIEF update 2026-11-14)
+    lat: 8.9356809, // from the client's pin, BRIEF update 2026-11-14
+    lng: 38.7299505, // from the client's pin, BRIEF update 2026-11-14
+    placeName: 'Dar al Salam Real Estate',
     landmarks: ['haileGarmentRoundabout', 'garmentTaxiStation', 'laftoSquare', 'africaCdc'],
   },
   map: {
-    esriApiKey: '', // TODO(client): Esri ArcGIS API key for commercial use of World Imagery
+    esriKey: '', // TODO(client): ArcGIS Location Platform API key, needed before the public launch
   },
   features: ['garbageChute', 'standbyLift', 'undergroundWater', 'parking'],
   social: [], // TODO(client): social links
@@ -148,14 +154,17 @@ export const mailtoHref = (subject = '', body = '', email = site.contact.email) 
 export const mapsHref = (query = site.location.mapsQuery) =>
   site.location.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 
-/** Esri World Imagery tile template (Leaflet {z}/{y}/{x}); `?token=` only when a key is set. */
-export const esriTileUrl = (key = site.map.esriApiKey) =>
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' +
-  (key ? `?token=${encodeURIComponent(key)}` : '');
+/** Esri World Imagery tile template for Leaflet ({z}/{y}/{x}): the keyed basemap host when a key is set. */
+export const esriTileUrl = (key = site.map.esriKey) =>
+  key
+    ? `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${encodeURIComponent(key)}`
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
-/** Google Maps directions to the client's pin (BRIEF update 2026-11-14). */
-export const directionsHref = ({ lat, lng } = site.location.coords) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+/** Google Maps directions to the client's pin; '' (the button hides) when either coordinate is missing. */
+export const directionsHref = (lat = site.location.lat, lng = site.location.lng) =>
+  Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng)
+    ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+    : '';
 
 export type EnquiryChannel = 'whatsapp' | 'telegram' | 'email';
 

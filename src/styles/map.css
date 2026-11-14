@@ -1,0 +1,201 @@
+/* Satellite map (DESIGN §5.6 rev 7). Loaded with the map chunk only (src/scripts/location-map.ts). */
+
+.lmap {
+  z-index: 1;
+  opacity: 0;
+  font-family: var(--font-body);
+}
+
+.lmap.leaflet-container {
+  background: var(--sand-100); /* error tiles are transparent: a gap looks calm, not broken */
+}
+
+/* the arch would clip an outset ring, and the panes paint over an inset outline: an overlay instead */
+.lmap.leaflet-container:focus-visible {
+  outline: none;
+}
+
+.lmap.leaflet-container:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: 1001;
+  border: 2px solid var(--focus);
+  box-shadow: inset 0 0 0 2px var(--ivory-50); /* keeps the gold ring readable over the imagery */
+  pointer-events: none;
+}
+
+/* ---------- attribution: always visible, never covered ---------- */
+.lmap .leaflet-control-attribution {
+  margin: 0;
+  padding: 2px 6px;
+  background: rgb(251 247 242 / 0.88);
+  color: var(--navy-900);
+  font: 400 11px/1.35 var(--font-body);
+}
+
+.lmap .leaflet-control-attribution a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* ---------- controls: left, vertically centred, 44 px ---------- */
+.lmap__ctl {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  z-index: 1000;
+  display: grid;
+  gap: 6px;
+  transform: translateY(-50%);
+}
+
+.lmap__ctl button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-xs);
+  background: var(--ivory-50);
+  color: var(--navy-900);
+  cursor: pointer;
+}
+
+.lmap__ctl button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.lmap__ctl svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.lmap__ctl .fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* ---------- two-finger hint (touch) ---------- */
+.lmap__hint {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  z-index: 1000;
+  max-width: calc(100% - 140px);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgb(15 24 40 / 0.85);
+  color: var(--ivory-50);
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.lmap__hint.is-on {
+  opacity: 1;
+}
+
+/* ---------- pin: gold teardrop + keyhole, label card, ground ring ---------- */
+.lpin {
+  overflow: visible;
+}
+
+.lpin__drop {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 52px;
+  overflow: visible;
+  fill: var(--gold-500);
+  stroke: var(--ivory-50);
+  stroke-width: 2;
+  filter: drop-shadow(0 6px 14px rgb(11 18 32 / 0.35));
+}
+
+.lpin__key {
+  fill: var(--navy-900);
+  stroke: none;
+}
+
+.lpin__ring {
+  position: absolute;
+  left: 6px;
+  top: 47px;
+  width: 28px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  opacity: 0.5;
+}
+
+.lpin__card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--ivory-50);
+  color: var(--navy-900);
+  font: 600 13px/1.2 var(--font-body);
+  white-space: nowrap;
+  box-shadow: 0 6px 14px rgb(11 18 32 / 0.35);
+  transform: translateX(-50%);
+}
+
+.lpin__card span {
+  color: var(--gold-600);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lpin.is-dropping .lpin__drop {
+    animation: lpin-drop 0.55s var(--ease-out) both;
+  }
+
+  .lpin.is-dropping .lpin__card {
+    animation: lpin-card 0.4s var(--ease-out) 0.7s both;
+  }
+
+  .lpin.is-dropping .lpin__ring {
+    animation: lpin-pulse 2.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) 1.1s infinite both;
+  }
+
+  .lpin.is-paused .lpin__ring {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes lpin-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-28px);
+  }
+}
+
+@keyframes lpin-card {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}
+
+@keyframes lpin-pulse {
+  from {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}

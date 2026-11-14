@@ -1,13 +1,14 @@
 ---
 /**
- * Location (DESIGN §5.6). A stylised diagram, not a real map: positions are schematic, from the relative
- * layout of the brochure map (site west; taxi station north-east of the site; roundabout east; Lafto square
- * beside the roundabout; Africa CDC east past the ring road). No coordinates, distances or travel times.
- * Labels are HTML over the SVG (crisp at every width); the list below is the accessible version.
+ * Location (DESIGN §5.6 rev 7). The visual is a Leaflet satellite map (Esri World Imagery) with a pin at the client's
+ * coordinates, loaded by src/scripts/location-map.ts when the section is within 800 px. The server-rendered SVG
+ * diagram is the only fallback (no JS, before the map is ready, slow connection or Save-Data with a "Show the
+ * satellite map" pill, tile failure); the two never show together. Diagram positions are schematic (from the
+ * brochure map) and landmarks are never plotted on the satellite map. The list below is the accessible version.
  */
 import Eyebrow from '../ui/Eyebrow.astro';
 import { sections } from '../../data/sections';
-import { mapsHref, site } from '../../data/site';
+import { directionsHref, esriTileUrl, mapsHref, site } from '../../data/site';
 import { emph, getDict, type Lang } from '../../i18n';
 
 interface Props {
@@ -27,8 +28,26 @@ const nodes = [
 const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(2)}%`;
 // The client's pin (site.location.mapsUrl) wins; without it, search the office address if set, else the brief's query
 const mapsQuery = site.contact.address.length ? site.contact.address.join(', ') : site.location.mapsQuery;
-// rev 5 (DESIGN §5.6): the pin gets "Open exact location…"; the search fallback keeps "Open in Google Maps"
-const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.openMaps;
+const l = t.location;
+const ctas = [
+  { href: directionsHref(), label: l.directions, primary: true },
+  { href: mapsHref(mapsQuery), label: l.openMaps, primary: false },
+].filter((c) => c.href);
+// everything the map chunk needs, so it carries no dictionary of its own
+const mapConfig = {
+  lat: site.location.lat,
+  lng: site.location.lng,
+  tiles: esriTileUrl(),
+  t: {
+    region: l.mapRegion,
+    card: l.pinCard,
+    caption: l.captionMap,
+    two: l.twoFingers,
+    in: l.zoomIn,
+    out: l.zoomOut,
+    centre: l.recentre,
+  },
+};
 ---
 
 <section id="location" class="section section--alt location" aria-labelledby="location-title" data-header-theme="light">
@@ -37,9 +56,43 @@ const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.open
       <Eyebrow n={sections.location.n} label={t.location.eyebrow} />
       <h2 id="location-title" class="h2 location__title" data-split set:html={emph(t.location.title)} />
       <p class="lead" data-reveal>{t.location.lead}</p>
+      <div class="location__ctas">
+        {
+          ctas.map((c) => (
+            <a class:list={['btn', { 'btn--secondary': !c.primary }]} href={c.href} target="_blank" rel="noopener">
+              {c.primary ? (
+                <svg class="location__glyph" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <circle cx="4" cy="3.5" r="1.75" />
+                  <circle cx="12" cy="12.5" r="1.75" />
+                  <path d="M4 5.25v2.5a2 2 0 0 0 2 2h4a2 2 0 0 1 2 2v-.75" stroke-linecap="round" />
+                </svg>
+              ) : (
+                <svg class="location__glyph" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+                  <path d="M8 1.5a4.2 4.2 0 0 1 2.4 7.65L12 14.5H4l1.6-5.35A4.2 4.2 0 0 1 8 1.5Z" />
+                </svg>
+              )}
+              <span class="btn__inner">
+                <span class="btn__text">{c.label}</span>
+                <span class="btn__text btn__text--dup" aria-hidden="true">
+                  {c.label}
+                </span>
+              </span>
+              <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M7 4h9v9M16 4 5 15" />
+              </svg>
+              <span class="visually-hidden"> {t.a11y.newTab}</span>
+            </a>
+          ))
+        }
+      </div>
     </div>
 
-    <figure class="location__map arch arch--soft" data-map>
+    <figure
+      class="location__map arch arch--soft"
+      data-map
+      data-map-config={JSON.stringify(mapConfig)}
+      data-show-map={l.showMap}
+    >
       <div class="arch__media location__media">
         <div class="map" role="img" aria-label={t.location.mapLabel}>
           <svg class="map__svg" viewBox="0 0 400 500" aria-hidden="true" focusable="false">
@@ -94,7 +147,7 @@ const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.open
           </div>
         </div>
       </div>
-      <figcaption class="small muted location__caption">{t.location.caption}</figcaption>
+      <figcaption class="small muted location__caption" data-map-caption>{l.caption}</figcaption>
     </figure>
 
     <div class="location__aside">
@@ -102,19 +155,6 @@ const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.open
       <ul class="location__list" role="list" data-reveal="stagger">
         {site.location.landmarks.map((k) => <li>{t.location.landmarks[k]}</li>)}
       </ul>
-      <a class="btn btn--secondary location__maps" href={mapsHref(mapsQuery)} target="_blank" rel="noopener">
-        <svg class="location__pin" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
-          <path d="M8 1.5a4.2 4.2 0 0 1 2.4 7.65L12 14.5H4l1.6-5.35A4.2 4.2 0 0 1 8 1.5Z" />
-        </svg>
-        <span class="btn__inner">
-          <span class="btn__text">{mapsLabel}</span>
-          <span class="btn__text btn__text--dup" aria-hidden="true">{mapsLabel}</span>
-        </span>
-        <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M7 4h9v9M16 4 5 15"></path>
-        </svg>
-        <span class="visually-hidden"> {t.a11y.newTab}</span>
-      </a>
     </div>
   </div>
 </section>
@@ -296,21 +336,50 @@ const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.open
     font-size: 0.8125rem;
   }
 
-  /* the longer pin label may wrap at 360 rather than overflow */
-  .location__maps {
-    max-width: 100%;
-    white-space: normal;
-    padding-block: 0.55rem;
-    text-align: start;
+  /* phones: full width, stacked, Directions first; side by side from 640 */
+  .location__ctas {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
   }
 
-  .location__pin {
+  .location__ctas .btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .location__glyph {
     position: relative;
     z-index: 1;
     width: 16px;
     height: 16px;
     flex: none;
-    margin-inline-end: -0.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .location__ctas {
+      display: flex;
+      flex-wrap: wrap;
+    }
+  }
+
+  /* the live map fills the diagram's box (no layout shift); built by location-map.ts */
+  .location__media :global(.lmap) {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* slow connection / Save-Data: the diagram plus this pill over its lower third */
+  .location__media :global(.location__show) {
+    position: absolute;
+    left: 50%;
+    bottom: 18%;
+    z-index: 2;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    background: var(--ivory-50);
+    white-space: normal;
+    text-align: center;
   }
 
   .location__list {
@@ -355,9 +424,12 @@ const mapsLabel = site.location.mapsUrl ? t.location.openExact : t.location.open
 </style>
 
 <script>
-  // S14: the site pulse runs only while the map is on screen
+  import { initLocationMap } from '../../scripts/location-loader';
+
+  // S14: the diagram's site pulse runs only while it is on screen
   const map = document.querySelector<HTMLElement>('.map');
   if (map && 'IntersectionObserver' in window) {
     new IntersectionObserver(([e]) => map.toggleAttribute('data-onscreen', Boolean(e?.isIntersecting))).observe(map);
   }
+  initLocationMap();
 </script>

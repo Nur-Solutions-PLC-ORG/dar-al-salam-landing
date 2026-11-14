@@ -169,8 +169,16 @@ export const en = {
     site: 'Garment Tower',
     mapLabel: 'Diagram of Garment Tower and nearby landmarks',
     openMaps: 'Open in Google Maps',
-    /** When site.location.mapsUrl (the client's pin) is set. */
-    openExact: 'Open exact location in Google Maps',
+    /** Rev 7 satellite map (DESIGN §5.6, §11). */
+    directions: 'Get directions',
+    mapRegion: 'Satellite map showing where Garment Tower is',
+    pinCard: 'Dar Al Salam · Garment Tower',
+    captionMap: 'Satellite image. It may show the site before construction.',
+    showMap: 'Show the satellite map',
+    twoFingers: 'Use two fingers to move the map',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    recentre: 'Centre on the tower',
     nearby: 'Nearby',
     landmarks: {
       haileGarmentRoundabout: 'Haile Garment roundabout',

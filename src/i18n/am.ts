@@ -161,7 +161,16 @@ export const am: Dict = {
     site: 'ጋርመንት ታወር',
     mapLabel: 'የጋርመንት ታወርና በአቅራቢያው ያሉ ምልክቶች ሥዕላዊ መግለጫ',
     openMaps: 'በጎግል ካርታ ይክፈቱ',
-    openExact: 'ትክክለኛውን ቦታ በጎግል ካርታ ይክፈቱ',
+    // rev 7 strings: drafts from DESIGN §11, for the client to check
+    directions: 'አቅጣጫ ያግኙ',
+    mapRegion: 'ጋርመንት ታወር ያለበትን ቦታ የሚያሳይ የሳተላይት ካርታ',
+    pinCard: 'ዳር አል ሰላም · ጋርመንት ታወር',
+    captionMap: 'የሳተላይት ምስል። ቦታውን ከግንባታው በፊት ሊያሳይ ይችላል።',
+    showMap: 'የሳተላይት ካርታውን አሳይ',
+    twoFingers: 'ካርታውን ለማንቀሳቀስ ሁለት ጣቶችን ይጠቀሙ',
+    zoomIn: 'አጉላ',
+    zoomOut: 'አሳንስ',
+    recentre: 'ወደ ታወሩ ተመለስ',
     nearby: 'በአቅራቢያ',
     landmarks: {
       haileGarmentRoundabout: 'ኃይሌ ጋርመንት አደባባይ',
