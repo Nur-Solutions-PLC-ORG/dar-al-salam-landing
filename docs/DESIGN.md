@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -462,7 +462,7 @@ Without the curtain (repeat visit), the same keyframes start at t = 0.85 with ev
 | S6 | Body paragraphs and lists (`[data-reveal]`) | opacity 0, y 24 → 1, 0, children stagger 0.08 | block · `top 85%` | once | 0.8 / power3.out |
 | S7 | Story arch | wrapper `clip-path: inset(18% 0 0 0)` → `inset(0)`; media scale 1.2 → 1 | arch · `top 85%` → `top 35%` | `0.6` | none |
 | S8 | Story arch parallax | media yPercent −6 → 6 | arch · `top bottom` → `bottom top` | `true` | none |
-| S9 | Dusk transition into explorer | fixed `.dusk-veil` (navy-900, full viewport, `pointer-events:none`) opacity 0 → 1, then the section's own navy background takes over and the veil resets | `#explore` · `top 90%` → `top 30%` | `true` | none |
+| S9 | Dusk transition into explorer | **Static, no JS** (rev 3; the fixed veil dimmed the end of the story copy). `#explore::before`: `position:absolute; left:0; right:0; bottom:100%; height:32svh; background:linear-gradient(to bottom, rgb(15 24 40 / 0), var(--navy-900)); pointer-events:none`. `#story` gets `padding-bottom: calc(var(--section-y) + 32svh)` so no story content ever sits in the gradient | — | — | — |
 | S10 | Explorer intro (desktop ≥1024) | **pin** `#explore` for `+=60%`: camera rises from ground level (y 8 m, looking up) to the 3/4 view, the model rotates −25° → 0°, and the panel slides in x 40 → 0 with opacity. After the pin releases, the model is fully interactive and scroll is never captured again. | `#explore` · `top top` → `+=60%` | `0.8` | none |
 | S10m | Explorer intro (mobile and tablet) | no pin; the model fades and rises (y 40 → 0) once | `#explore` · `top 75%` | once | 1.0 / power3.out |
 | S11 | Homes cards | opacity 0, y 40 → 1, 0, `ScrollTrigger.batch` with interval 0.1, batchMax 3 | each card · `top 88%` | once | 0.9 / power3.out, stagger 0.08 |
@@ -618,13 +618,14 @@ Floor outline (union of the units and cores, for the 3D slab):
   - Slabs: `MeshLambertMaterial` in ivory `#F3ECE2`.
   - Floor edges: `EdgesGeometry` → `LineSegments` in gold-500 at 0.55 opacity.
   - Glazing band: a slightly inset second extrusion (0.5 m tall at the top of each floor) in navy-600, which suggests window bands.
-  - Ground plane: navy-800 disc, radius 60 m, with a soft radial shadow texture (one 256 px canvas texture).
+  - Ground plane: **no visible disc edge** (rev 3). Radius 30 m, colour = the section background (navy-900), carrying only the soft radial shadow texture (one 256 px canvas texture), so the frame may crop it invisibly. It must not drive the camera fit.
+  - Glazing band (rev 3): `#ABB0BC` (navy-600 mixed 40% into ivory) instead of navy-600, so the floors read as a maquette with glass, not dark stripes. Gold edge lines at opacity 0.7.
   - Lights: `HemisphereLight` (sky `#FBF7F2`, ground `#1A273F`, 0.9) plus one `DirectionalLight` (warm `#F5E6C8`, 0.8) from the upper left. **No real-time shadows.**
-- **Camera**: `PerspectiveCamera` with fov 28 (architectural, low distortion), a 3/4 view matching the render (azimuth about −35°, elevation about 18°), framing the whole tower at 85% of the canvas height. **No zoom.** Orbit only horizontally (±40° of the default) by drag, with damped inertia. `touch-action: pan-y` on the canvas, so vertical swipes still scroll the page. **The wheel always scrolls the page.**
+- **Camera**: `PerspectiveCamera` with fov 28 (architectural, low distortion), a 3/4 view matching the render (azimuth about −35°, elevation about 18°), framing rule (rev 3): fit the tower's **projected bounding box** (outline corners at y = 0 and y = H ≈ 50.5 m) across the whole orbit range (default azimuth ±40°) so it fills **80% of the canvas height and at most 84% of its width**. No extra padding term, and the ground disc is not part of the fit. The look-at target is **y ≈ 0.415·H ≈ 21 m**, not H/2: at 18° elevation the roof pushes the visual mass up, and 21 m centres the projected box. Reference results (fov 28): 497×520 stage → distance 167.5 m; 536×760 → 180.5 m; 370×600 → 205.5 m; 328×385 → 167.5 m. Implement it as a fitting loop (step the distance and project the 8 extreme corners) or as a closed form; then centre the projected box vertically to within ±2% of the canvas centre. **No zoom.** Orbit only horizontally (±40° of the default) by drag, with damped inertia. `touch-action: pan-y` on the canvas, so vertical swipes still scroll the page. **The wheel always scrolls the page.**
 - **Interaction**:
   - Raycast on `pointermove` (rAF-throttled) against the 14 floor meshes.
   - Hover sets the slab colour to gold-300, sets its emissive to gold-500 × 0.15, sets its edges to opacity 1, lightens the others slightly, and positions an HTML tooltip at the slab's screen-projected right edge: "Floor 7 · 9 homes".
-  - Click selects the floor: the slab slides out 3 m toward the camera (0.6 s `power3.out`), the camera eases its look-at to that floor's height (0.9 s `power2.inOut`), and the panel moves to FLOOR(n).
+  - Click selects the floor: the slab slides out 3 m toward the camera (0.6 s `power3.out`), the camera eases its look-at **partway** toward that floor: `lookY = 0.415·H + (floorMid − H/2) × 0.35` (0.9 s `power2.inOut`), so even floor 14 or floor 1 keeps the whole tower in frame, and the panel moves to FLOOR(n).
   - Selecting a floor from the list or stepper triggers the same animation.
   - The selected floor stays pulled out while you browse units; changing floors slides the old slab back in.
 - **Accessibility**: `<canvas aria-hidden="true">`. All control goes through the floor list, stepper and hotspots, which share state with the canvas. The canvas has no tab stop.
