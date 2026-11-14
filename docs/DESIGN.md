@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14/15 Nov 2026, rev 8.4: other-unit data format notes (illegible areas → `null`; `corridor` room; shared tracer) (§9.6.1). BL01 data delivered. Rev 8.3 (review round 6 #5): the 3D panel's rooms list goes to 2 columns only from 1200 px (§9.6.7 E). Rev 8.2 (re-check of rev 8.1, §9.6.8): stronger camera fill, greige-oak wardrobes, floor texture v1.5. Rev 8.1 (review of 4e7da27): §9.6.7 accepts impl's deviations 1–5. Hotspots now float above the cut, with leader lines. A camera fill light keeps wall faces cream. The model is cut at 2.4 m with a 60° default elevation, and the fit is 100%. BL05 gains 17 furniture blocks whose tops reuse the plan texture. The panel puts the actions above a 2-column room list. Rev 7.1 (round 5 review): the Save-Data/slow opt-in map opens at z17 with no fly; the two-finger hint moves to 70% height; the map glue budget is now 4 KB (§5.6, §10). Rev 8 (BRIEF "3D apartments", 40c474f): new §9.6, the unit dollhouse. When a unit has 3D geometry, its plan lifts into a Three.js cutaway with room hotspots, a slim side panel and a room card with the AI interior slot (placeholder: the room's plan crop). The pilot is BL05: `docs/design/units/bl05.json` plus its floor texture, check overlay and tracing script. Also §9.2 UNIT, §8, §10, §11, §12. Rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 15 Nov 2026, rev 8.5 (user requests, BRIEF 761faf2): R1 the Location section always shows the satellite map, with a navy fallback card in place of the SVG diagram, its caption and the opt-in pill (§5.6). R2 the Telegram enquiry is a multi-line message that skips empty fields (§5.8). R3 the "Contact us on Telegram" card and its divider are removed (§5.8). All nine unit data sets are delivered (§9.6.1). 14/15 Nov 2026, rev 8.4: other-unit data format notes (illegible areas → `null`; `corridor` room; shared tracer) (§9.6.1). BL01 data delivered. Rev 8.3 (review round 6 #5): the 3D panel's rooms list goes to 2 columns only from 1200 px (§9.6.7 E). Rev 8.2 (re-check of rev 8.1, §9.6.8): stronger camera fill, greige-oak wardrobes, floor texture v1.5. Rev 8.1 (review of 4e7da27): §9.6.7 accepts impl's deviations 1–5. Hotspots now float above the cut, with leader lines. A camera fill light keeps wall faces cream. The model is cut at 2.4 m with a 60° default elevation, and the fit is 100%. BL05 gains 17 furniture blocks whose tops reuse the plan texture. The panel puts the actions above a 2-column room list. Rev 7.1 (round 5 review): the Save-Data/slow opt-in map opens at z17 with no fly; the two-finger hint moves to 70% height; the map glue budget is now 4 KB (§5.6, §10). Rev 8 (BRIEF "3D apartments", 40c474f): new §9.6, the unit dollhouse. When a unit has 3D geometry, its plan lifts into a Three.js cutaway with room hotspots, a slim side panel and a room card with the AI interior slot (placeholder: the room's plan crop). The pilot is BL05: `docs/design/units/bl05.json` plus its floor texture, check overlay and tracing script. Also §9.2 UNIT, §8, §10, §11, §12. Rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -458,6 +458,16 @@ Desktop
 
 ### 5.6 Location (`#location`, sand): rev 7, a real satellite map with a pin
 
+> **Rev 8.5 (user request R1, BRIEF 761faf2) overrides parts of this section.** The Location section **always shows the satellite map**.
+> - **Removed:** the SVG diagram, its caption "Diagram, not to scale.", the "Show the satellite map" pill, and the Save-Data / slow-connection opt-in. The map loads for everyone when the section is near the viewport. On Save-Data or a slow connection it opens straight at z17 with no fly (rev 7.1), to keep the download down.
+> - **Fallback (no JS, or tile failure):** a small navy card fills the map frame, in the same box, so nothing shifts.
+>   - Navy-900 background, with the gold keyhole-pin glyph (40 px) centred.
+>   - The place name "Dar Al Salam · Garment Tower" in ivory, Manrope 600 at 17 px.
+>   - The two links: **Get directions** (gold primary on dark) and **Open in Google Maps** (secondary on dark). Both are plain links, so they work with no JS.
+>   - The card is server-rendered inside the frame. The live map covers it once tiles load, and it stays if they don't (same failure test: no `load` within 10 s, or `tileerror` on more than half of the first tiles).
+> - The caption under the frame is now always "Satellite image. It may show the site before construction." It is hidden while only the fallback card shows.
+> - Everything else below stands: tiles and licence, map options, pin, card, controls, entrance, the two CTAs in the text column, and the landmark list. In the "What shows when" table, read every "SVG diagram" cell as the fallback card, and ignore the pill row.
+
 Rev 7 replaces the rev 5 rules "Stylised diagram map (not a real map)", "No coordinates" and "Get directions: not yet". The client's pin resolves to the Google place "Dar al Salam Real Estate" at **8.9356809, 38.7299505** (BRIEF, Update 2026-11-14). These are the only coordinates on the page. **Landmarks are not plotted on the satellite map**: we have no coordinates for them, and placing them by eye would be inventing facts. They stay in the text list.
 
 - H2 "Easy to *live*." and the lead are unchanged.
@@ -626,7 +636,44 @@ Desktop (rev 7)                                       Mobile (rev 7)
 - Submit builds the text `"Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}"` and hands it to the chosen channel: WhatsApp (`https://wa.me/{number}?text=`), Telegram (rev 7, below) or `mailto:`. **If no channel is configured** (all `TODO(client)`), hide the radio and show "Our contact lines are being set up. Please check back soon.", with the submit button disabled. Never post the form anywhere.
 - **Reply via (rev 7).** With **two or more** channels configured, the radio shows them as before. With **exactly one**, there's no radio: the submit label names the channel, and a muted helper line sits under the button. Today Telegram is the only channel, so it reads **"Send on Telegram"** with "Opens Telegram to @abdulaziz_a12" under it. That handle is `dir="ltr"`, `translate="no"`.
 
-**Contact us on Telegram (rev 7).** The client's first confirmed contacts are `site.contact.telegram = ['abdulaziz_a12', 'monur14']`, in display order. **Show the usernames only**: no names, roles or "sales team" wording, because none are given (BRIEF).
+> **Rev 8.5 (user requests R2 and R3, BRIEF 761faf2) overrides parts of the Telegram text below.**
+> - **R3: the "Contact us on Telegram" card is removed** from this section, with its mobile divider "or send us your details". The form's hand-off replaces it. The header and footer Telegram rows stay. The helper line under the submit button stays ("Opens Telegram to @abdulaziz_a12").
+> - **Desktop left column without the card:** eyebrow, H2, then the balconies arch, then "Contact lines" only if any non-Telegram line is set. The arch grows to fill the space: `width: min(100%, 320px)` (was 240 px), aspect 4:5. The column is `align-self: start` and sticky at `top: calc(var(--header-h) + 32px)` from 1024 px up, so it stays beside the form and the column never looks empty. Mobile: the arch stays hidden below 768 px, as now; H2, then the form.
+> - **R2: the Telegram message is multi-line**, and lines for empty fields are skipped:
+>
+>   ```
+>   Hello Dar Al Salam 👋
+>   My name is {name}, and I'd like to know more about Garment Tower.
+>
+>   📞 Phone: {phone}
+>   🏠 Home: {unit}
+>   🏢 Floor: {floor}
+>   💬 Message: {message}
+>
+>   Sent from the Dar Al Salam website
+>   ```
+>
+>   - Name and phone are required, so those lines always show. Skip the Home line when the home is "Any", the Floor line when the floor is "Any", and the Message line when it is empty.
+>   - `{unit}` keeps the rev 5 rule: "BL01 (to be confirmed)" on a TBC floor.
+>   - Build it with real `\n` line breaks and pass it through `encodeURIComponent` (line breaks become `%0A`). The same text goes to the clipboard and to the fallback textarea, which keeps the line breaks.
+>   - WhatsApp, when configured, uses the same multi-line text. `mailto:` keeps the text without emoji in the subject; the body is the same.
+>   - Amharic (design-checked; the spelling "መልዕክት" and the terms "ወለል" and "ስልክ" match the rest of /am):
+>
+>   ```
+>   ሰላም ዳር አል ሰላም 👋
+>   ስሜ {name} ነው፤ ስለ ጋርመንት ታወር የበለጠ ማወቅ እፈልጋለሁ።
+>
+>   📞 ስልክ፦ {phone}
+>   🏠 ቤት፦ {unit}
+>   🏢 ወለል፦ {floor}
+>   💬 መልዕክት፦ {message}
+>
+>   ከዳር አል ሰላም ድረ-ገጽ የተላከ
+>   ```
+>
+> The hand-off mechanics below (open synchronously, copy too, the "Finish in Telegram" panel) are unchanged.
+
+**Contact us on Telegram (rev 7; removed in rev 8.5, kept for history).** The client's first confirmed contacts are `site.contact.telegram = ['abdulaziz_a12', 'monur14']`, in display order. **Show the usernames only**: no names, roles or "sales team" wording, because none are given (BRIEF).
 
 - **Placement:**
   - Desktop: the left column, under the balconies arch, in place of the Telegram rows of "Contact lines". Telegram is removed from that list here, so nothing is listed twice. The footer and header menu keep their Telegram rows.
@@ -1179,6 +1226,9 @@ BRIEF "3D apartments" (approved 14 Nov 2026). The reference is the user's video,
   - `area` may be **`null`** when the plan's label is illegible, for example hidden under a dimension (BL01 kitchen and living room). The room then has a `note` with what it looks like. The UI shows the room name **without m²**, both on the hotspot and in the list, until the client confirms it (§12). Never show the reading in the note.
   - `hall` may be `null` when the plan labels its circulation space as a room, for example BL01's "Corridor 6.84 m²", which is a normal room with `name: "corridor"`.
   - New room name key `corridor`: EN "Corridor", AM draft "ኮሪደር".
+  - Areas print as the plan writes them: `5` shows as "5 m²" and `1.9` as "1.9 m²", never padded to two decimals.
+  - Some plans have an unlabelled space (BL03, BL06, BL09). It is in the `footprint`, with its walls, doors and railings, but has no `rooms[]` entry, so no hotspot and no list row.
+  - All nine units are delivered: `bl01`–`bl09` `.json`, `-floor.webp` and `-check.jpg`.
   - The shared tracer is `docs/design/units/trace_lib.py`, with one `trace-bl0X.py` per unit that writes `{id}.json`, `{id}-check.jpg` and `{id}-floor.webp` (cleaned like BL05 v1.5).
 
 
@@ -1472,7 +1522,7 @@ Rules:
 
 ## 12. Open items for the client (`TODO(client)` in `src/data/site.ts`)
 
-Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), **window positions and sizes per room (rev 8: the plans dimension only the kitchen window, so the 3D façades are drawn solid)**, storey and ceiling heights (the 3D uses an illustrative 2.8 m), which unlabelled BL05 duct the 55 cm shaft is (shown as a plain solid), the BL01 kitchen and living-room areas (their labels are hidden under dimensions), **BL01's floor finish: its plan labels the bedrooms and living room "PARQUET ff", while the brief says ceramic tile**, unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
+Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), **window positions and sizes per room (rev 8: the plans dimension only the kitchen window, so the 3D façades are drawn solid)**, storey and ceiling heights (the 3D uses an illustrative 2.8 m), which unlabelled BL05 duct the 55 cm shaft is (shown as a plain solid), **room areas whose plan labels are hidden under other text (shown without m² until confirmed): BL01 and BL04 kitchen and living room; BL02 en-suite shower, kitchen and living room; BL06 living room, master bedroom and kitchen; BL07 master bedroom and en-suite shower; BL08 living room**, how BL08's 1.6 m² balcony is reached (the plan draws no opening), what the unlabelled areas are (BL03 top-left tiled area, BL06 top-right ledge, BL09 wet room off the kitchen), **BL01's floor finish: its plan labels the bedrooms and living room "PARQUET ff", while the brief says ceramic tile**, unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
 
 - Contact rows hide when unset.
 - The form shows a "being set up" message.
