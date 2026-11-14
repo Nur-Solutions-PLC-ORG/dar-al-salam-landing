@@ -9,7 +9,7 @@
  * Positioning: .tstage__frame is a cover-fit box at object-position 50% 40% (container-query units), and both the image
  * and the SVG (viewBox = the crop) fill it, so the bands stay on the façade at every stage size.
  */
-import { Picture } from 'astro:assets';
+import { getImage, Picture } from 'astro:assets';
 import towerStage from '../../assets/generated/tower-stage.jpg';
 import bands from '../../data/tower-floors.json';
 import { getDict, type Lang } from '../../i18n';
@@ -21,25 +21,50 @@ const { lang } = Astro.props;
 const t = getDict(lang);
 const [x0 = 0, y0 = 0] = bands.cropPx as number[];
 const pts = (poly: number[][]) => poly.map(([x = 0, y = 0]) => `${x - x0},${y - y0}`).join(' ');
+
+// Coordinator (review r8 call 1): the image is gated in JS, so Lighthouse's lazy-load distance on phones no longer pulls
+// ~119 KB at page load. The srcsets wait in data-* attributes; src/scripts/explorer/loader.ts swaps them in about
+// 800 px before the section (or at once for a deep link). No JS: the <noscript> copy shows the same picture.
+const widths = [...[600, 900, 1200].filter((w) => w < towerStage.width), towerStage.width];
+const sizes = '(min-width: 1024px) 50vw, 100vw';
+const set = async (format: 'avif' | 'webp') =>
+  (await Promise.all(widths.map(async (w) => `${(await getImage({ src: towerStage, format, width: w, quality: 60 })).src} ${w}w`))).join(', ');
+const [avif, webp, fallback] = await Promise.all([set('avif'), set('webp'), getImage({ src: towerStage, format: 'webp', width: 1200, quality: 60 })]);
 ---
 
 <div class="tstage" data-tstage data-ground-label={t.tower.ground}>
   <div class="tstage__frame">
     <div class="tstage__zoom" data-tstage-zoom>
-      <Picture
-        src={towerStage}
-        formats={['avif', 'webp']}
-        widths={[600, 900, 1200, 1600]}
-        width={1200}
-        quality={60}
-        fallbackFormat="webp"
-        sizes="(min-width: 1024px) 50vw, 100vw"
-        alt={t.tower.alt}
-        loading="lazy"
-        decoding="async"
-        class="tstage__img"
-        data-tstage-img
-      />
+      <picture>
+        <source type="image/avif" data-srcset={avif} sizes={sizes} />
+        <source type="image/webp" data-srcset={webp} sizes={sizes} />
+        <img
+          data-src={fallback.src}
+          data-srcset={webp}
+          sizes={sizes}
+          width={fallback.attributes.width}
+          height={fallback.attributes.height}
+          alt={t.tower.alt}
+          decoding="async"
+          class="tstage__img"
+          data-tstage-img
+        />
+      </picture>
+      <noscript>
+        <Picture
+          src={towerStage}
+          formats={['avif', 'webp']}
+          widths={widths}
+          width={1200}
+          quality={60}
+          fallbackFormat="webp"
+          sizes={sizes}
+          alt={t.tower.alt}
+          loading="lazy"
+          decoding="async"
+          class="tstage__img"
+        />
+      </noscript>
       <svg class="tstage__svg" viewBox="0 0 1350 1850" aria-hidden="true" focusable="false" data-tstage-svg>
         <defs>
           <filter id="tband-feather" x="-5%" y="-30%" width="110%" height="160%">
@@ -90,6 +115,17 @@ const pts = (poly: number[][]) => poly.map(([x = 0, y = 0]) => `${x - x0},${y - 
     display: block;
     width: 100%;
     height: 100%;
+  }
+
+  /* not yet revealed (or no JS, where the <noscript> copy shows): no alt text or broken-image box */
+  .tstage__img[data-src]:not([src]) {
+    visibility: hidden;
+  }
+
+  /* no JS: the <noscript> picture takes the gated one's place */
+  .tstage__zoom :global(noscript picture) {
+    position: absolute;
+    inset: 0;
   }
 
   .tstage__svg {

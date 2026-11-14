@@ -14,8 +14,16 @@ export function initExplorerLoader() {
   if (!root) return;
   let ready = false;
   let queued: EventTarget | null = null;
+  // review r8 call 1: the tower photo's srcsets are swapped in ~800 px out (TowerStage.astro), before the controller
+  const reveal = () =>
+    root.querySelectorAll<HTMLElement>('[data-tstage] [data-srcset]').forEach((el) => {
+      if (el instanceof HTMLImageElement && el.dataset.src) el.src = el.dataset.src;
+      el.setAttribute('srcset', el.dataset.srcset ?? '');
+      el.removeAttribute('data-srcset');
+    });
+  whenNear(root, reveal, '800px 0px');
   const load = () =>
-    (pending ??= import('./controller').then((m) => {
+    (reveal(), pending ??= import('./controller').then((m) => {
       const x = m.createExplorer(root);
       ready = true;
       return x;

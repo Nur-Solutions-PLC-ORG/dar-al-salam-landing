@@ -132,7 +132,7 @@ export function createExplorer(root: HTMLElement) {
     tooltip.setAttribute('data-muted', '');
     placeTooltip(at);
   };
-  const usePhoto = () => Boolean(photo && photoImg && !(photoImg.complete && photoImg.naturalWidth === 0));
+  const usePhoto = () => Boolean(photo && photoImg && !(photoImg.getAttribute('src') && photoImg.complete && photoImg.naturalWidth === 0)); // no src yet = still gated
   /** A model that does nothing (no visual stage): the floor list and stepper keep working. */
   const noModel: ModelAdapter = { preview() {}, select() {}, anchor: () => null, destroy() {} };
   let model: ModelAdapter = usePhoto() ? createPhotoModel(photo!, stage, { ...callbacks, onGround: ground }) : noModel;
