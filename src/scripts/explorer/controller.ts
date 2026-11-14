@@ -144,6 +144,9 @@ export function createExplorer(root: HTMLElement) {
       })
       .catch((err: unknown) => {
         console.warn('[explorer] 3D unavailable, keeping the SVG model', err);
+        // review r6 #2b: no tier 2 means no unit 3D either: stop offering the toggle
+        failed3d = true;
+        renderToggle();
         return false;
       })));
   if (webgl && !prefersLightweight()) loadScene();
@@ -421,7 +424,8 @@ export function createExplorer(root: HTMLElement) {
   }
 
   async function enter3d(code: Code, job: number) {
-    if (!(await loadScene()) || job !== viewJob) return;
+    if (!(await loadScene())) throw new Error('tier 2 unavailable'); // review r6 #2b: → fail3d → the plan
+    if (job !== viewJob) return;
     const tier = model;
     if (!tier.renderer || !tier.suspend) throw new Error('no tier 2 renderer');
     strings ??= fetch(`/i18n/unit3d.${lang}.json`).then((r) => r.json());
