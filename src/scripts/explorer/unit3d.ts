@@ -56,7 +56,7 @@ const EL_MIN = 52 * DEG;
 const EL_MAX = 68 * DEG;
 const ORBIT = 5 * DEG; // per second
 const RESUME = 5000;
-const FILL = 2.8; // rev 8.1 A: camera fill intensity, tuned so camera-facing walls read #F3ECE2–#D9CFC0
+const FILL = 3.4; // rev 8.1 A + 8.2 G: camera fill, tuned so camera-facing walls read #D9CFC0 or lighter
 
 export interface DollhouseOpts {
   renderer: WebGLRenderer;
