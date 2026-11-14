@@ -13,6 +13,7 @@ import { gsap, ScrollTrigger, prefersReducedMotion, scrollToTarget } from '../mo
 import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
 import { createSvgModel } from './svg-model';
 import { createPhotoModel } from './photo-model';
+import { toast } from '../toast';
 import type { Anchor, Level, ModelAdapter, ModelCallbacks } from './types';
 import css3d from '../../styles/explore3d.css?inline';
 
@@ -263,6 +264,8 @@ export function createExplorer(root: HTMLElement) {
 
   // context loss → the photo stage (pushed in on the floor) stays; no WebGL for the rest of the session
   stage.addEventListener('explorer:fallback', () => {
+    // review r8 L6: the dollhouse or the walk was on screen → say so (§9.8 "3D view stopped")
+    if (dh || state.walk) void strings?.then((s) => toast((s as unknown as { walk: Record<string, string> }).walk.stopped ?? ''));
     fail3d();
     gl?.destroy();
     gl = null;
