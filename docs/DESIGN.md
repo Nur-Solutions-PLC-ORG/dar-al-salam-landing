@@ -2,7 +2,7 @@
 
 Owner: `realstate-frontend-design`. Inputs: `docs/BRIEF.md` (facts and the quality bar) and `CLAUDE.md`. If this spec and the brief disagree on a fact, the brief wins. Everything here is direction and can be refined. If you change direction, say so in this file so the reviewer has something to check against.
 
-**Changelog.** 14 Nov 2026, rev 6 (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
+**Changelog.** 14 Nov 2026, rev 7 (client, BRIEF Update 2026-11-14 and ea0501e): Location becomes a real Leaflet + Esri World Imagery satellite map with a branded pin at 8.9356809, 38.7299505. The SVG diagram is now only the static fallback (no JS, slow or Save-Data until opted in, tile failure), and "Diagram, not to scale." shows only with it. "Get directions" is switched on; there is an optional Esri key, and the attribution is always visible (§5.6 rewritten, §7.3 S13–S14, §8, §10). A "Contact us on Telegram" card shows the two usernames only. The form hands off to Telegram with a prefilled draft, a copy fallback and a persistent "Finish in Telegram" panel (§5.8). Strings with draft Amharic are in §11, open items in §12. Rev 6 (user decision) (user decision): the film becomes the full hero background with a verified shade, grain, a play control and pause/sound controls (§5.1 rewritten, §5.11, §7.2, §7.3 S1, §8, §10). The rev 5 film card is removed. The Story arch now shows the whole tower (§5.3), and the Enquire arch takes the balconies detail. Rev 5 (BRIEF "Update 2026-11-14"): the tower film and its sound toggle (new §5.11, the hero card in §5.1, §7.2, §7.3 S1, §8, §10); building features band (§5.7: three pillars plus four features); 16 floors (§5.1, §5.2, §9.2); BL01 "to be confirmed" off floors 4, 6, 8, 10, 11 (§5.5, §5.8, §9.1–§9.3); the exact Maps pin (§5.6). Each rev 5 change is tagged "rev 5" where it lives, so later client facts can be slotted in one place at a time. Rev 4: §10 HTML budget raised to 40 KB gzipped (inline CSS by choice). Rev 3 (M2 visual QA): S9 dusk is now a static gradient (the fixed veil dimmed the story copy); §9.4 camera framing numbers, ground disc, look-at clamp, glazing colour. 12 Nov 2026, rev 2: applied review findings 1–10 (`.theme-paper`, `--input-border`, no colour tweens, copy fixes, CSS-only hero reveal, server-rendered hotspot hrefs, font subsetting, blocks internal only, pillar and payment copy, mark as `<symbol>`).
 
 **Design assets this spec relies on (all in the repo):**
 
@@ -455,14 +455,94 @@ Desktop
 - Prev/next arrows step through the current filter set. Keys: ←/→ step, +/− zoom, 0 resets, Esc closes. Focus returns to the card that opened the dialog.
 - The high-resolution image (the original 1604–2000 px, as WebP at quality 82) loads only when the dialog opens. A blurred thumbnail shows until then.
 
-### 5.6 Location (`#location`, sand)
+### 5.6 Location (`#location`, sand): rev 7, a real satellite map with a pin
 
-- H2 "Easy to *live*." (an echo of the brochure). Lead: "In the heart of Garment, close to Haile Garment roundabout, the Garment taxi station, Lafto square and the Africa CDC headquarters."
-- **Stylised diagram map (inline SVG, not a real map)**: roads drawn as 2 px `--line-strong` strokes, the Haile Garment roundabout as a ring, labelled nodes for the four landmarks, and the site as a gold keyhole pin with a slow 2.4 s pulse ring. Positions are schematic, taken from the relative layout in the brochure map: site west; taxi station north-east of the site; roundabout east; Lafto square beside the roundabout; Africa CDC east, past the ring road. Caption: "Diagram, not to scale." **No coordinates, distances or travel times.**
-- CTA (rev 5): **"Open exact location in Google Maps"** → `site.location.mapsUrl`, the client's pin `https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9`. Secondary pill style, with a 16 px keyhole-pin glyph before the label and an external-link arrow after it. New tab, `rel="noopener"`, with a visually hidden "(opens in a new tab)". If `mapsUrl` is ever empty, fall back to the search link with the label "Open in Google Maps" (`mapsHref()` already does this).
-- **"Get directions": not yet.** The Maps URLs API can target a directions destination exactly only with coordinates or a `ChIJ…` place ID. We have neither: the ID in the brief is the internal hex form, which the URLs API doesn't accept, and we never hand-type coordinates. A "Get directions" button would therefore either repeat the pin link or route to an approximate search result, so leave it out. The pin page already has Google's own Directions button one tap away. It is ready to switch on later: if `site.location.placeId` (a `ChIJ…` ID) is ever added, show a text link "Get directions" after the CTA, pointing to `https://www.google.com/maps/dir/?api=1&destination=Garment%20Tower&destination_place_id={placeId}`.
-- The site pin on the diagram stays where it is and keeps its "Diagram, not to scale." caption. The exact pin changes the link only, not the drawing.
-- Desktop: map in cols 1–8 inside a soft arch frame, text and landmark list in cols 9–12. Mobile: text, then map (aspect 4:5), then the list.
+Rev 7 replaces the rev 5 rules "Stylised diagram map (not a real map)", "No coordinates" and "Get directions: not yet". The client's pin resolves to the Google place "Dar al Salam Real Estate" at **8.9356809, 38.7299505** (BRIEF, Update 2026-11-14). These are the only coordinates on the page. **Landmarks are not plotted on the satellite map**: we have no coordinates for them, and placing them by eye would be inventing facts. They stay in the text list.
+
+- H2 "Easy to *live*." and the lead are unchanged.
+- **Decision: the satellite map replaces the diagram as the visual.** The SVG diagram stays in the markup as the **static fallback**, and nothing else. The two never show side by side, because a schematic "not to scale" drawing next to a true-scale image makes both look wrong.
+
+**What shows when**
+
+| Case | Visual in the frame | Caption under the frame |
+|---|---|---|
+| No JS | The SVG diagram (server-rendered, as today) | "Diagram, not to scale." |
+| JS, before the map is ready or before it is near the viewport | The SVG diagram | "Diagram, not to scale." |
+| Save-Data, or `effectiveType` is `slow-2g`, `2g` or `3g` | The SVG diagram, plus a centred secondary pill **"Show the satellite map"** over its lower third. Pressing it loads the map and moves focus to the map. | "Diagram, not to scale." |
+| Map loaded | The Leaflet satellite map, cross-faded in over the diagram. The diagram then gets `hidden`. | "Satellite image. It may show the site before construction." |
+| Tile failure: no first `load` event within 10 s, or `tileerror` on more than half of the first view's tiles | The SVG diagram. The map container is removed and no error is shown. | "Diagram, not to scale." |
+
+- **The caption:** "Diagram, not to scale." belongs to the diagram only. It shows whenever the diagram shows and is swapped out when the map takes over. The caption is one `<figcaption>`; JS swaps its text from `data-caption-map`. The map caption is needed because Esri's imagery of Addis predates the tower: checked at z17, the pin falls on a cleared plot with foundations, west of the Haile Garment roundabout and the ring road. Without the caption, visitors would read the empty plot as a mistake.
+- The pill test reuses the rev 6 hero helper, but with `3g` counted as slow (about 0.6 MB of tiles is too much to fetch unasked). The `?map-debug` query flag skips the connection check, so headless QA (which reports `3g`) sees the live map.
+
+**Tiles and licence**
+
+| | Value |
+|---|---|
+| Library | Leaflet **1.9.4** (npm), imported dynamically with its CSS. No plugins, and no esri-leaflet. |
+| Imagery with a key | `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token={key}` |
+| Imagery without a key | `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}` |
+| Key | `site.map.esriKey`, `''` with `TODO(client)`. When it is set, impl uses the keyed URL. |
+| Labels overlay | **None.** Esri's Boundaries and Places and Transportation reference tiles are blank around the site at z17 (checked: every tile came back as an empty 872-byte PNG). The landmark list does that job. |
+| Attribution | Leaflet's attribution control, bottom-right, **always visible**. Exact HTML: `Powered by <a href="https://www.esri.com">Esri</a> \| Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community`, with prefix `<a href="https://leafletjs.com">Leaflet</a>`. 11 px Manrope, navy-900 on ivory at 0.88, padding 2 px 6 px. It may wrap to two lines on phones. Nothing may cover it: not the pin card, the controls, or the "two fingers" hint. Never hidden, collapsed or faded. |
+
+The keyless endpoint is for non-commercial use only (review, and Esri's own guidance). Treat it as **development and preview only**: the public launch needs the client's ArcGIS Location Platform API key (§12). The key ships in client JS, as every browser map key does, so the client should restrict it to the production domain (an allowed referrer) in the Esri dashboard. The site has no server and no proxy.
+
+**Map options (Leaflet)**
+
+- `center` [8.9356809, 38.7299505]. Zoom range: `minZoom` 14, `maxZoom` 19 (Esri has imagery here to z19).
+- Bounds: `maxBounds` is the centre ± 0.02° (about 2.2 km), with `maxBoundsViscosity: 1`.
+- Controls: `zoomControl: false` (custom controls below), `attributionControl: true`.
+- **No page-scroll trap:**
+  - `scrollWheelZoom: false`.
+  - On `(pointer: coarse)`: `dragging: false` and `touchZoom: true`. Leaflet's `.leaflet-touch-zoom` class then sets `touch-action: pan-x pan-y`, so one finger scrolls the page and two fingers pinch to zoom and pan.
+  - On a fine pointer: `dragging: true`. Mouse dragging doesn't trap scroll.
+- Other handlers: `doubleClickZoom: true`, `boxZoom: false`, `keyboard: true` (arrows pan, + and − zoom once the map has focus).
+- Tile layer: `detectRetina: false`, `keepBuffer: 1`, `updateWhenIdle: true`, `updateWhenZooming: false`, `maxNativeZoom: 19`. These keep bytes down: the fly-in reuses the z15 tiles scaled up and fetches only z17 at the end. `errorTileUrl` is a 1×1 transparent GIF data URI over the sand container background, so a gap looks calm, not broken.
+- **Two-finger hint (touch):** a one-finger `touchstart` inside the map shows a centred pill, "Use two fingers to move the map". The pill is navy-900 at 0.85 with ivory 14 px text, `pointer-events: none`, and `aria-hidden`, because it only explains a gesture. It fades in over 0.2 s, holds 1.4 s and fades out, at most once every 4 s. It sits at 40% height, clear of the attribution.
+
+**Pin, label card and controls**
+
+- **Pin:** an `L.divIcon` with `iconSize [40, 52]` and `iconAnchor [20, 52]` (the tip):
+  - A gold-500 teardrop with a 2 px ivory stroke and shadow `0 6px 14px rgb(11 18 32 / .35)`.
+  - A navy-900 keyhole inside, the same path as the diagram pin, scaled 1.4. It is the brand's "located here" motif (§3.4).
+  - At the tip, a flattened gold ground ring (28 × 10 ellipse) pulses scale 1 → 2.2 and opacity 0.5 → 0 over 2.4 s, repeating. It is paused off-screen and when `document.hidden`, like S14.
+  - The marker has `keyboard: false` and `interactive: false`. It is decorative; the region label carries the meaning.
+- **Label card:** ivory, navy-900 Manrope 600 at 13/1.2, padding 6 × 10, `--radius-xs`, shadow as the pin. It is centred 10 px above the pin, `white-space: nowrap`. Text: **"Dar Al Salam · Garment Tower"**, with the "·" in gold-600. The card is `aria-hidden`; the same words are in the region's `aria-label`.
+- **Controls:** a custom vertical stack, `left: 12px; top: 50%; translateY(-50%)`. It sits clear of the `.arch--soft` cap (28%) and of the attribution. Three 44 × 44 ivory buttons, navy-900 glyphs, 1 px `--input-border`, `--radius-xs`, and the standard focus ring:
+  - "Zoom in" (+)
+  - "Zoom out" (−)
+  - "Centre on the tower" (keyhole glyph): `flyTo` back to the pin at z17 over 0.8 s, or `setView` with reduced motion.
+
+  Each is a `<button>` with a localised `aria-label`. Leaflet's own zoom control isn't used because its titles are English-only.
+- **The map region:** the Leaflet container gets `role="region"` and `aria-label` "Satellite map showing where Garment Tower is". It has `tabindex="0"`, which Leaflet sets, and the 2 px `--focus` ring at an inset of 2 px, because the arch would clip an outset ring. The Location landmarks `<ul>` stays the accessible text alternative.
+
+**Entrance (S13, rev 7).** Loading starts when an IntersectionObserver on `#location` fires with a `rootMargin` of 800 px: a preconnect is added to the tile host, then `import('leaflet')` and its CSS, then the map is created at **z15**, at opacity 0, above the diagram. The entrance runs once **both** the first tile `load` has happened **and** the map is at `top 75%` (whichever comes last):
+
+1. The map fades opacity 0 → 1 over 0.6 s (power2.out), over the diagram. The diagram is then `hidden` and the caption swaps.
+2. `flyTo(center, 17, { duration: 2.0 })`. The view pushes in on the plot.
+3. On `moveend`, the pin drops y −28 → 0 and opacity 0 → 1 over 0.55 s (power3.out). The label card follows 0.15 s later (y 6 → 0, opacity 0 → 1, 0.4 s). Then the ground ring starts pulsing.
+
+Nothing animates on scroll after that, and nothing re-runs.
+
+**Calls to action (in the text column).**
+1. **"Get directions"**: primary pill (navy on sand). Links to `directionsHref()` = `https://www.google.com/maps/dir/?api=1&destination=8.9356809,38.7299505`. A 16 px route glyph comes before the label.
+2. **"Open in Google Maps"**: secondary pill. Links to `site.location.mapsUrl` (the client's link `https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9`), with the 16 px keyhole-pin glyph. This replaces the rev 5 label "Open exact location in Google Maps": the map on the page already shows the exact spot. If `mapsUrl` is ever empty, `mapsHref()`'s search fallback keeps the same label.
+
+Both open in a new tab with `rel="noopener"`, an external-link arrow, and a visually hidden "(opens in a new tab)". On phones, both are full width and stacked, Directions first. On desktop they sit side by side. Both work with no JS, because they are plain links.
+
+**Layout and landmarks.** Unchanged:
+- Desktop: the map sits in cols 1–8 inside the `.arch--soft` frame, at `aspect-ratio: 4 / 5`, with the text, CTAs and landmark list in cols 9–12.
+- Mobile: text and CTAs, then the map (4:5), then the list.
+
+The live map fills the same box as the diagram (`position: absolute; inset: 0`), so the swap causes **no layout shift**. The "Nearby" landmark list and its keyhole bullets stay exactly as they are.
+
+**`src/data/site.ts` (rev 7):**
+- `location.lat: 8.9356809` and `location.lng: 38.7299505`, commented "from the client's pin, BRIEF update 2026-11-14".
+- `location.placeName: 'Dar al Salam Real Estate'`, for reference only and never rendered (the card uses the i18n string).
+- `map.esriKey: ''` with `TODO(client)`.
+- `directionsHref()` returns `''` when either coordinate is missing; the button then hides.
+- `mapsHref()` is unchanged.
 
 ### 5.7 Why Dar Al Salam + flexible payment (`#payment`, navy)
 
@@ -520,25 +600,65 @@ CTA "Request pricing" (gold primary). Small print: "Prices on request." **No num
 ### 5.8 Enquiry (`#enquire`, ivory)
 
 ```
-Desktop                                              Mobile
-┌──────────────────────────┬─────────────────────┐   ┌────────────────────┐
-│ 05 — ENQUIRE             │ Name                │   │ Book a visit or    │
-│ Book a visit or request  │ [______________]    │   │ request plans…     │
-│ floor plans & pricing.   │ Phone               │   │ Name  [_________]  │
-│                          │ [+251 __________]   │   │ Phone [_________]  │
-│ ╭─────╮ balconies arch   │ Preferred home      │   │ Home  [Any ▾]      │
-│ │     │                  │ [Any ▾] [Floor: Any▾]│  │ Floor [Any ▾]      │
-│ ╰─────╯                  │ Reply via           │   │ Reply ( )WA ( )TG  │
-│ Contact lines (if set)   │ (•)WhatsApp ( )Telegram (  )Email│ Message [____]│
-│                          │ Message [_________] │   │ [ Send enquiry ]   │
-│                          │ [ Send enquiry → ]  │   └────────────────────┘
-└──────────────────────────┴─────────────────────┘
+Desktop (rev 7)                                       Mobile (rev 7)
+┌──────────────────────────┬──────────────────────┐   ┌────────────────────┐
+│ 05 — ENQUIRE             │ Name                 │   │ Book a visit or    │
+│ Book a visit or request  │ [______________]     │   │ request plans…     │
+│ floor plans & pricing.   │ Phone                │   │┌ Contact us on ───┐│
+│                          │ [+251 __________]    │   ││  Telegram        ││
+│ ╭─────╮ balconies arch   │ Preferred home       │   ││ ✈ @abdulaziz_a12↗││
+│ │     │                  │ [Any ▾] [Floor: Any▾]│   ││ ✈ @monur14     ↗ ││
+│ ╰─────╯                  │ Message [_________]  │   │└──────────────────┘│
+│┌ Contact us on Telegram ┐│                      │   │ ── or send us your │
+││ Tap a username to chat.││ [ Send on Telegram ] │   │    details ──      │
+││ ✈ @abdulaziz_a12     ↗ ││ Opens Telegram to    │   │ Name  [_________]  │
+││ ✈ @monur14           ↗ ││ @abdulaziz_a12       │   │ Phone [_________]  │
+│└────────────────────────┘│                      │   │ Home / Floor / Msg │
+│ Contact lines (if set)   │                      │   │ [Send on Telegram] │
+└──────────────────────────┴──────────────────────┘   └────────────────────┘
 ```
 
 - Fields: name (required, `autocomplete="name"`); phone (required, `type="tel"`, `inputmode="tel"`, `autocomplete="tel"`, placeholder `+251 9…`, lenient validation of ≥ 9 digits); preferred home (`select`: Any, BL01 – 2 bedroom, BL02 – 3 bedroom, …); floor (`select`: Any, 1–14); reply via (radio, showing **only channels configured** in `site.ts`); message (optional textarea, 4 rows).
 - Labels sit above inputs and are always visible. Inputs are 52 px tall with 16 px text, a 1 px `--input-border` border, and `--radius-xs`. Focus shows a 2 px `--focus` outline at 2 px offset. Errors appear inline under the field in `--danger-600` with an icon, `aria-describedby`, and one summary sentence in an `aria-live="polite"` region.
-- Submit builds the text `"Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}"` and opens WhatsApp (`https://wa.me/{number}?text=`), Telegram (`https://t.me/{username}`, with the text copied to the clipboard and a toast "Message copied, paste it in Telegram"), or `mailto:`. **If no channel is configured** (all `TODO(client)`), hide the radio and show: "Our contact lines are being set up. Please check back soon." with the submit button disabled. Never post the form anywhere.
-- Success: the mark (`<use href="#mark">`, cropped by viewBox to the dove) lifts 24 px and fades. Status text reads "Opening WhatsApp…".
+- Submit builds the text `"Hello Dar Al Salam, I'm {name} ({phone}). I'm interested in {unit} on {floor}. {message}"` and hands it to the chosen channel: WhatsApp (`https://wa.me/{number}?text=`), Telegram (rev 7, below) or `mailto:`. **If no channel is configured** (all `TODO(client)`), hide the radio and show "Our contact lines are being set up. Please check back soon.", with the submit button disabled. Never post the form anywhere.
+- **Reply via (rev 7).** With **two or more** channels configured, the radio shows them as before. With **exactly one**, there's no radio: the submit label names the channel, and a muted helper line sits under the button. Today Telegram is the only channel, so it reads **"Send on Telegram"** with "Opens Telegram to @abdulaziz_a12" under it. That handle is `dir="ltr"`, `translate="no"`.
+
+**Contact us on Telegram (rev 7).** The client's first confirmed contacts are `site.contact.telegram = ['abdulaziz_a12', 'monur14']`, in display order. **Show the usernames only**: no names, roles or "sales team" wording, because none are given (BRIEF).
+
+- **Placement:**
+  - Desktop: the left column, under the balconies arch, in place of the Telegram rows of "Contact lines". Telegram is removed from that list here, so nothing is listed twice. The footer and header menu keep their Telegram rows.
+  - Mobile: DOM order puts it right after the H2 and before the form. A divider follows it, a hairline with the centred muted text "or send us your details", and then the form. People who just want to chat get there in one tap.
+- **Card:**
+  - Ivory on the ivory section, with a 1 px `--input-border` border, `--radius-sm` and 20 px padding. The width is the column (desktop) or the container (mobile).
+  - An H3, "Contact us on Telegram", in Manrope 600 at `--fs-h4`, with the muted line "Tap a username to open a chat." under it.
+  - Then a `<ul role="list">` of rows, split by hairlines.
+- **Row:** an `<a href="https://t.me/{user}" target="_blank" rel="noopener">`, min-height 52 px and full width. Inside, a flex row:
+  - a 36 px navy-900 circle with an ivory 18 px paper-plane glyph (`aria-hidden`; our glyph, not the Telegram logo, so it stays in palette)
+  - the handle `@abdulaziz_a12` in Manrope 600 at 17 px, navy-900, in a `<span dir="ltr" lang="en" translate="no">`
+  - the spacer and a 16 px external arrow ↗
+
+  The accessible name is "@abdulaziz_a12, Telegram (opens in a new tab)", using visually hidden text. On hover, the row background is gold-500 at 0.12 and the arrow moves 2 px up and right over 0.2 s. Focus uses the standard ring. With no JS it is a plain link.
+- **Render rule:** the card renders only when `telegramAccounts()` is non-empty. It is a list, so a third account, or one removed, needs no design change.
+
+**Telegram hand-off from the form (rev 7).** Telegram does support a prefilled draft to a username: `https://t.me/{user}?text={urlencoded}` (core.telegram.org/api/links, "public username links"). Older clients ignore `text`, so we prefill **and** copy:
+1. On a valid submit, compose the text. Then, **synchronously in the same submit handler, with no `await` before it**:
+   - start `navigator.clipboard?.writeText(text)` and keep the promise without awaiting it;
+   - call `window.open('https://t.me/' + user + '?text=' + encodeURIComponent(text), '_blank', 'noopener')`.
+
+   Awaiting the clipboard first, as the current code does, loses the user activation, and Safari then blocks the pop-up.
+2. `user` is `telegramAccounts()[0].user`: **the first account receives form enquiries**. The client can reorder the list in `site.ts`; that choice is in §12. The form doesn't ask the visitor to pick a person.
+3. Status (the existing `aria-live`): "Opening Telegram…". The dove success motion plays as before.
+4. When the clipboard promise settles:
+   - **Resolved:** toast "Message copied too, in case Telegram doesn't fill it in."
+   - **Rejected or unavailable:** no toast.
+5. **Persistent panel**, which replaces the status line under the submit button and stays until the form is edited. The visitor has usually switched to the Telegram app and will come back to it. Text:
+
+   > **Finish in Telegram.** Your message should already be in the chat with @abdulaziz_a12. Press send there.
+
+   It has two small actions: **"Open Telegram again"** (the same URL, as a link) and **"Copy message"** (a button; on success its label becomes "Copied" for 2 s). If the clipboard write failed, the panel also shows the message in a read-only, auto-sized `<textarea>` (16 px, selectable), with the line "If the chat is empty, copy this message and paste it there." The panel is an `aria-live="polite"` region, and its first sentence is announced.
+6. The message template and `{unit}` and `{floor}` rules (rev 5 TBC) are unchanged. Name and phone go into the draft only because the visitor sends it themselves.
+
+- Success: the mark (`<use href="#mark">`, cropped by viewBox to the dove) lifts 24 px and fades. Status text reads "Opening {channel}…", and for Telegram the panel above follows.
 - Explorer, gallery and viewer CTAs deep-link here with `?unit=BL05&floor=7` (hash-safe), which prefills the selects and focuses Name.
 - **BL01 and floors (rev 5).** The BL01 option keeps its label "BL01 – 2 bedroom". When BL01 is chosen with a floor that is not 4, 6, 8, 10 or 11, show a **hint, not an error** under the Floor field: small, `--text-muted`, linked with `aria-describedby`, and it never blocks submit. It reads: "BL01 is a 2-bedroom home on floors 4, 6, 8, 10 and 11. On floor 7 this home is still to be confirmed." In that case the message template names the unit "BL01 (to be confirmed)" instead of "BL01 – 2 bedroom". The explorer's "Ask about this home" CTA for a to-be-confirmed position deep-links `?unit=BL01&floor=7`, which lands in exactly this state. The floor select stays 1–14; 15 and 16 are not offered.
 
@@ -817,8 +937,8 @@ Without the curtain (repeat visit), the same keyframes start at t = 0.85 with ev
 | S10m | Explorer intro (mobile and tablet) | no pin; the model fades and rises (y 40 → 0) once | `#explore` · `top 75%` | once | 1.0 / power3.out |
 | S11 | Homes cards | opacity 0, y 40 → 1, 0, `ScrollTrigger.batch` with interval 0.1, batchMax 3 | each card · `top 88%` | once | 0.9 / power3.out, stagger 0.08 |
 | S12 | Homes card media | inner image scale 1.1 → 1 (in the same batch) | — | — | 1.2 / expo.out |
-| S13 | Location map | road group `clip-path: inset(0 100% 0 0)` → `inset(0)`, then landmark pins scale 0 → 1 (`back.out(2)`, stagger 0.1), then labels fade | map · `top 75%` | once | roads 1.4 / power2.inOut; pins 0.5 |
-| S14 | Location site pin | pulse ring scale 1 → 2.2 with opacity 0.5 → 0, repeating; **paused offscreen** (ScrollTrigger `onToggle`) | — | — | 2.4 / power1.out, repeat −1 |
+| S13 | Location map (rev 7) | **Live map:** opacity 0 → 1 over the diagram, then Leaflet `flyTo` z15 → z17, then the pin drop and card (full sequence in §5.6). **Diagram (fallback only):** road group `clip-path: inset(0 100% 0 0)` → `inset(0)`, then landmark pins scale 0 → 1 (`back.out(2)`, stagger 0.1), then labels fade | map · `top 75%`, and for the live map also the first tile `load` | once | live: fade 0.6 / power2.out, fly 2.0, pin 0.55 / power3.out; diagram: roads 1.4 / power2.inOut, pins 0.5 |
+| S14 | Location site pin | pulse ring scale 1 → 2.2 with opacity 0.5 → 0, repeating, on whichever pin is showing (the diagram's or the map's ground ring); **paused offscreen** (ScrollTrigger `onToggle`) and when `document.hidden` | — | — | 2.4 / power1.out, repeat −1 |
 | S15 | Payment pillars | icons stroke-draw via clip-path inset left → right, text follows, stagger 0.12 | grid · `top 80%` | once | 0.9 / power3.out |
 | S16 | Payment timeline | hairline scaleX 0 → 1 tied to scroll; each step dot fills (scale 0 → 1) as the line passes it | timeline · `top 75%` → `bottom 55%` | `true` | none |
 | S17 | Enquire arch image | as S7 | — | `0.6` | — |
@@ -842,6 +962,8 @@ The scroll pace varies on purpose: fast and light through the facts; slow and ed
 - Explorer: no camera fly. Floor and unit changes cross-fade over 0.2 s. No auto-rotate. The drag-to-turn control stays, because it is user-initiated.
 - Flip filtering is instant. Dialogs open without scale.
 - Hero (rev 6): **the poster only**: no video sources, no curtain, no `.hero__bg` scale, no S1, no play-disc breath, and the pause toggle is hidden. The shade and grain stay, because they are static. The play control and the sound toggle work; the sound toggle shows static bars instead of the equaliser animation. The film dialog cross-fades in and out over 0.2 s with no FLIP, and the film plays only because the user opened it.
+- Location map (rev 7): the map still loads, because it is content, but it opens straight at z17 with `setView` (no fly, so no z15 tiles), with `fadeAnimation: false`. It cross-fades in over 0.2 s. The pin and card are placed at once, the ground ring doesn't pulse, and "Centre on the tower" uses `setView`. Zoom animations the user starts with the buttons, double-tap or pinch stay.
+- Telegram card (rev 7): no hover nudge on the arrow.
 - `scroll-behavior: auto`. Anchor jumps are instant.
 - Use `gsap.matchMedia()` conditions `{ motion: "(prefers-reduced-motion: no-preference)" }` so everything is set up once and reverts cleanly when the setting changes.
 
@@ -1044,6 +1166,9 @@ Floor outline (union of the units and cores, for the 3D slab):
 | Key-plan duotone | ≤ 120 KB at 1100w WebP | Lazy; loads with the explorer section. |
 | Full film (rev 5) | 3.8 MB H.264 + AAC (faststart), plus a ≤ 35 KB poster | `preload="none"`. Fetched only when the dialog opens. Faststart means it plays progressively. |
 | Film JS (rev 5, rev 6) | ≤ 4 KB | Part of the app bundle: background loader, dialog, circle reveal, sound toggle. Uses GSAP, which is already loaded. No video or audio library. |
+| Leaflet (rev 7) | ≤ 45 KB JS (1.9.4 is about 42 KB) + ≤ 4 KB CSS | Dynamic `import()` when `#location` is within 800 px. Zero bytes with no JS, or until the "Show the satellite map" pill is pressed on slow or Save-Data connections. Not in the initial bundle. |
+| Map glue JS (rev 7) | ≤ 3 KB | Loader, entrance, custom controls, two-finger hint, failure fallback. |
+| Satellite tiles, first view (rev 7) | ≤ 1 MB (about 22 KB per 256 px JPEG, checked) | z15 view plus z17 view, at 1×. `detectRetina: false`, `keepBuffer: 1`, and `updateWhenZooming: false` keep z16 out. Reduced motion fetches z17 only. |
 | Film music (rev 5) | ≤ 260 KB (Opus WebM 252 KB, AAC M4A fallback 258 KB) | Zero bytes until the first press of the sound toggle. Only one of the two files is ever fetched. |
 
 Targets: LCP ≤ 2.5 s and CLS ≤ 0.02 on Lighthouse mobile (slow 4G, Moto G Power); TBT ≤ 150 ms; INP ≤ 200 ms. Lighthouse scores per CLAUDE.md.
@@ -1074,13 +1199,41 @@ Rules:
   - sound: "Film music", "Sound on", "Sound off", "Sound couldn't start"
   - features: the four feature labels
   - TBC: "To be confirmed", the TBC body, "Ask about this home", "See BL01 on floor {n}", the form hint
-  - location: "Open exact location in Google Maps"
+  - location: "Open exact location in Google Maps" (rev 5; retired in rev 7, see below)
+- Rev 7 strings (EN, then a draft AM for the client to check):
+
+  | Key (suggested) | EN | AM (draft) |
+  |---|---|---|
+  | `location.directions` | Get directions | አቅጣጫ ያግኙ |
+  | `location.openMaps` (existing) | Open in Google Maps | በጎግል ካርታ ይክፈቱ |
+  | `location.mapRegion` | Satellite map showing where Garment Tower is | ጋርመንት ታወር ያለበትን ቦታ የሚያሳይ የሳተላይት ካርታ |
+  | `location.pinCard` | Dar Al Salam · Garment Tower | ዳር አል ሰላም · ጋርመንት ታወር |
+  | `location.captionMap` | Satellite image. It may show the site before construction. | የሳተላይት ምስል። ቦታውን ከግንባታው በፊት ሊያሳይ ይችላል። |
+  | `location.caption` (existing) | Diagram, not to scale. | (existing) |
+  | `location.showMap` | Show the satellite map | የሳተላይት ካርታውን አሳይ |
+  | `location.twoFingers` | Use two fingers to move the map | ካርታውን ለማንቀሳቀስ ሁለት ጣቶችን ይጠቀሙ |
+  | `location.zoomIn` | Zoom in | አጉላ |
+  | `location.zoomOut` | Zoom out | አሳንስ |
+  | `location.recentre` | Centre on the tower | ወደ ታወሩ ተመለስ |
+  | `enquiry.tgTitle` | Contact us on Telegram | በቴሌግራም ያግኙን |
+  | `enquiry.tgHint` | Tap a username to open a chat. | ውይይት ለመጀመር የተጠቃሚ ስሙን ይንኩ። |
+  | `enquiry.tgOr` | or send us your details | ወይም ዝርዝር መረጃዎን ይላኩልን |
+  | `enquiry.submitVia` | Send on {channel} | በ{channel} ይላኩ |
+  | `enquiry.opensTo` | Opens Telegram to {handle} | ቴሌግራምን ወደ {handle} ይከፍታል |
+  | `enquiry.copied` (changed) | Message copied too, in case Telegram doesn't fill it in. | መልዕክቱ ተቀድቷል፤ ቴሌግራም ባይሞላው ይለጥፉት። |
+  | `enquiry.tgDoneTitle` | Finish in Telegram. | በቴሌግራም ይጨርሱ። |
+  | `enquiry.tgDoneBody` | Your message should already be in the chat with {handle}. Press send there. | መልዕክትዎ ከ{handle} ጋር ባለው ውይይት ውስጥ ሊኖር ይገባል። እዚያ ላይ ይላኩ። |
+  | `enquiry.tgAgain` | Open Telegram again | ቴሌግራምን እንደገና ክፈት |
+  | `enquiry.copy` / `enquiry.copiedShort` | Copy message / Copied | መልዕክቱን ቅዳ / ተቀድቷል |
+  | `enquiry.copyFallback` | If the chat is empty, copy this message and paste it there. | ውይይቱ ባዶ ከሆነ ይህን መልዕክት ቀድተው እዚያ ይለጥፉት። |
+
+  `{handle}` is always rendered as `<span dir="ltr" lang="en" translate="no">@user</span>`. Telegram, Google Maps, Esri and Leaflet stay untranslated in the attribution.
 
 ---
 
 ## 12. Open items for the client (`TODO(client)` in `src/data/site.ts`)
 
-Phone, WhatsApp number, Telegram username, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, a `ChIJ…` place ID (only needed to switch on "Get directions", §5.6), unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
+Phone, WhatsApp number, email, office address, social links, completion date, what sits in the BL01 position off floors 4, 6, 8, 10 and 11, plans for floors 15–16, **an ArcGIS Location Platform API key (`site.map.esriKey`, rev 7): needed before the public launch, because the keyless Esri tiles are non-commercial only**, **which Telegram account should receive form enquiries (today the first, @abdulaziz_a12, §5.8)**, names or roles for the two Telegram contacts (optional; until given, usernames only), unit numbering convention, availability per unit, amenities beyond the plans, and a cleaner high-res render (one without the collage sky) if one exists. The design degrades gracefully when any of these are missing:
 
 - Contact rows hide when unset.
 - The form shows a "being set up" message.
