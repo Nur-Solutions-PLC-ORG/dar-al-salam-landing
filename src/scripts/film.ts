@@ -224,7 +224,12 @@ function initSound(hero: HTMLElement, btn: HTMLButtonElement) {
     }
     if (audio.paused) {
       void ctx?.resume();
-      audio.play().catch(fail);
+      // a pause() while play() is still pending (hero left view, tab hidden, dialog opened, off pressed during
+      // loading) rejects with AbortError: that is not a failure. Real failures (NotAllowedError,
+      // NotSupportedError, the media `error` event) still switch the toggle off with the toast.
+      audio.play().catch((e: unknown) => {
+        if ((e as DOMException | null)?.name !== 'AbortError' && on) fail();
+      });
     }
     ramp(0.8, ms);
   };
