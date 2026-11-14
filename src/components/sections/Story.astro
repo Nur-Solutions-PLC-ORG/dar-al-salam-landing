@@ -43,6 +43,13 @@ const t = getDict(lang);
     <div class="story__body prose" data-reveal>
       <p class="lead">{t.story.p1}</p>
       <p>{fmt(t.story.p2, { floors: floorList(twoBedFloors, lang) })}</p>
+      <!-- rev 5: a second way into the film dialog, not a second player (no video here) -->
+      <p class="story__film">
+        <a class="link story__film-link" href="/video/film.mp4" aria-haspopup="dialog" data-film-open>
+          <span class="story__film-disc" aria-hidden="true"></span>
+          <span>{t.film.watch} · <span class="tabular">{t.film.duration}</span></span>
+        </a>
+      </p>
     </div>
 
     <figure class="story__keyplan" data-reveal>
@@ -65,6 +72,40 @@ const t = getDict(lang);
 </section>
 
 <style>
+  .story__film-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tap-min);
+    font-weight: 600;
+  }
+
+  /* the underline runs under the words, not the disc */
+  .story__film-link::after {
+    left: calc(20px + var(--space-3));
+  }
+
+  .story__film-disc {
+    position: relative;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--gold-500);
+  }
+
+  .story__film-disc::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 7px;
+    height: 8px;
+    transform: translateX(1px);
+    background: var(--navy-950);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+
   /* room for the dusk gradient (#explore::before) below the story's last line */
   .story {
     padding-bottom: calc(var(--section-y) + 32svh);
