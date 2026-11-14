@@ -37,7 +37,7 @@ Assets in `brand-source/`:
 | BL08 | 3 bedroom | 167.63 | 117.66 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 | BL09 | 3 bedroom | 168.55 | 118.54 | living/dining, master, 2 beds, kitchen, 2 baths, store |
 
-  Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01 (2-bed) labels its bedrooms and living/dining "PARQUET ff"**, with ceramic in the kitchen, corridor, showers and balconies.
+  Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01 and BL04 label their bedrooms and living/dining "PARQUET ff"** (BL04 shares BL01's artwork), with ceramic in the kitchen, corridor, showers and balconies.
 - **Update 2026-11-14 (from the client, via the user):**
   - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
   - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
