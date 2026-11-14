@@ -246,11 +246,11 @@ const contactLinks = [
     }
   }
 
-  /* intro: header enters last (DESIGN §7.2, t = 1.70 s) */
+  /* intro: header enters last (t = 1.70 s with the curtain: t0 0.35 + 1.35) */
   @media (prefers-reduced-motion: no-preference) {
     .site-header__inner {
       animation: header-in 0.5s var(--ease-out) both;
-      animation-delay: calc(var(--t0, 0s) + 0.85s);
+      animation-delay: calc(var(--t0, 0s) + 1.35s);
     }
   }
 

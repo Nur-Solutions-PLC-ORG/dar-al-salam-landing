@@ -24,7 +24,7 @@ import Mark from './ui/Mark.astro';
     place-items: center;
     background: var(--ivory-50);
     pointer-events: none;
-    animation: curtain-lift 0.9s var(--ease-door) 0.85s both;
+    animation: curtain-lift 0.55s var(--ease-door) 0.35s both; /* done by 0.9 s (LCP, item 6) */
   }
 
   .intro__mark {
@@ -36,11 +36,11 @@ import Mark from './ui/Mark.astro';
   }
 
   :global(html.intro) .intro :global(.mark__body) {
-    animation: mark-draw 0.7s var(--ease-out) both;
+    animation: mark-draw 0.45s var(--ease-out) both;
   }
 
   :global(html.intro) .intro :global(.mark__dove) {
-    animation: dove-in 0.6s var(--ease-out) 0.25s both;
+    animation: dove-in 0.35s var(--ease-out) 0.1s both;
   }
 
   @keyframes curtain-lift {

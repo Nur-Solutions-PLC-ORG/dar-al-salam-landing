@@ -534,9 +534,10 @@ html.lenis body {
   }
 }
 
-/* Intro clock: hero/header entrances start after the curtain begins to lift (DESIGN §7.2). */
+/* Intro clock: hero/header entrances start as the curtain begins to lift (DESIGN §7.2).
+   Item 6 (LCP): the curtain lifts at 0.35 s and is gone by 0.9 s, so the H1/lead paint by ~0.5 s. */
 html.intro {
-  --t0: 0.85s;
+  --t0: 0.35s;
 }
 
 /* ---------- Toast (src/scripts/toast.ts) ---------- */
