@@ -57,6 +57,7 @@ class Unit:
         self.plan = ROOT + f'brand-source/plans/{uid}.jpg'
         self.walls, self.openings, self.railings, self.solids, self.rooms = [], [], [], [], []
         self.hall_poly, self.foot, self.protect, self.extra = None, None, [], []
+        self.finishes, self.fixtures_note = {}, None
 
     # px -> metres
     def m(self, x, y):
@@ -113,6 +114,21 @@ class Unit:
     def nightstand(self, id, r): self.box(id, 'furniture', r, 0.55, side='#6E4E33')
     def furniture(self, id, r, h, side): self.box(id, 'furniture', r, h, side=side)
 
+    # rev 10 F2: fixtures the plan draws, rugs, and floor finish
+    FIX_H = {'shower': 0.08, 'basin': 0.85, 'wc': 0.42, 'hob': 0.92, 'sink': 0.92, 'fridge': 1.8, 'rug': 0.01}
+
+    def fixture(self, id, kind, r, on=None):
+        x0, y0, x1, y1 = r
+        d = {'id': id, 'kind': kind, 'poly': [self.m(x0, y0), self.m(x1, y0), self.m(x1, y1), self.m(x0, y1)], 'h': self.FIX_H[kind]}
+        if on: d['on'] = on
+        self.solids.append(d)
+
+    def rug(self, id, r): self.fixture(id, 'rug', r)
+
+    def finish(self, value, *room_ids):
+        """Set the floor finish the plan labels for these rooms ('parquet'); every other room is 'tile'."""
+        for i in room_ids: self.finishes[i] = value
+
     def room(self, id, name, area, poly, label, note=None):
         """area: the plan's label verbatim, or None when the label is illegible (then `note` says what it looks like)."""
         d = {'id': id, 'name': name, 'area': area, 'poly': [self.m(*p) for p in poly], 'label': self.m(*label)}
@@ -125,8 +141,13 @@ class Unit:
     # ---------- outputs ----------
     def build(self):
         c = self.crop
+        PIECE = (('-ns', 'nightstand'), ('f-bed', 'bed'), ('f-mbed', 'bed'), ('f-sofa', 'sofa'), ('f-dining', 'dining'), ('f-chair', 'chair'), ('f-tv', 'tvUnit'), ('f-side', 'sideTable'))
+        for s_ in self.solids:
+            if s_['kind'] == 'furniture': s_['piece'] = next((v for k, v in PIECE if k in s_['id']), 'block')
+        for r in self.rooms: r['finish'] = self.finishes.get(r['id'], 'tile')
+        blockers = [s_ for s_ in self.solids if s_['kind'] not in ('rug', 'shower', 'hob', 'sink')]
         for r in self.rooms + self.extra:
-            sp = stand_point(r['poly'], self.solids)
+            sp = stand_point(r['poly'], blockers)
             if sp: r['stand'] = sp[:2]; r['standClearance'] = sp[2]
         data = {
             'unit': self.code, 'type': self.typ, 'grossM2': self.gross, 'netM2': self.net,
@@ -139,6 +160,7 @@ class Unit:
                         'note': 'UV = ((x-minX)/(maxX-minX), 1-(z-minZ)/(maxZ-minZ)); the texture is the crop resized to 1024 px wide'},
             'defaults': {'wallH': 2.8, 'modelCutH': 2.4, 'cutawayH': 1.0, 'doorHead': 2.1,
                          'note': 'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
+            'fixturesNote': self.fixtures_note,
             'footprint': [self.m(*p) for p in self.foot], 'walls': self.walls, 'openings': self.openings,
             'railings': self.railings, 'solids': self.solids, 'rooms': self.rooms,
             'walkable': self.extra,
@@ -161,7 +183,7 @@ class Unit:
         for e in self.extra: d.polygon([P(p) for p in e['poly']], fill=(255, 200, 0, 40), outline=(200, 150, 0, 255))
         f = [P(self.m(*p)) for p in self.foot]; d.line(f + [f[0]], fill=(0, 0, 0, 255), width=3)
         for s in self.solids:
-            d.polygon([P(p) for p in s['poly']], fill=(255, 0, 200, 90) if s['kind'] == 'furniture' else (140, 0, 255, 90))
+            d.polygon([P(p) for p in s['poly']], fill=(255, 0, 200, 90) if s['kind'] == 'furniture' else (0, 220, 120, 170) if s['kind'] in ('shower', 'basin', 'wc', 'hob', 'sink', 'fridge') else (255, 255, 0, 60) if s['kind'] == 'rug' else (140, 0, 255, 90))
         for r in self.rooms + self.extra:
             if 'stand' in r:
                 x, y = P(r['stand']); d.ellipse((x - 9, y - 9, x + 9, y + 9), fill=(255, 255, 255, 255), outline=(0, 0, 0, 255), width=3)
@@ -184,7 +206,7 @@ class Unit:
             if r['name'] in CLEAN_ROOMS: A.polygon([sh(P(p)) for p in r['poly']], fill=255)
         if self.hall_poly: A.polygon([sh(P(self.m(*p))) for p in self.hall_poly], fill=255)
         for s in self.solids:
-            if s['kind'] in ('furniture', 'counter', 'wardrobe'):
+            if s['kind'] in ('furniture', 'counter', 'wardrobe', 'rug'):
                 pts = [sh(P(p)) for p in s['poly']]; xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
                 A.rectangle((min(xs) - 10, min(ys) - 10, max(xs) + 10, max(ys) + 10), fill=0)
         for r in self.protect: A.rectangle((r[0] - CX, r[1] - CY, r[2] - CX, r[3] - CY), fill=0)

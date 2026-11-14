@@ -61,6 +61,12 @@ u.furniture('f-dining', (785, 1000, 945, 1145), 0.75, '#4A3A2C')
 u.furniture('f-chairs-n', (790, 945, 945, 1000), 0.45, '#B79B74'); u.furniture('f-chairs-s', (790, 1145, 945, 1175), 0.45, '#B79B74')
 u.furniture('f-chair-w', (730, 1020, 790, 1090), 0.45, '#B79B74')
 u.protect = [(345, 905, 710, 1165)]  # rug
+# rev 10 F2: fixtures the plan draws, the rug, floor finishes
+u.fixture('x-shower1-basin', 'basin', (272, 318, 330, 380)); u.fixture('x-shower1-tray', 'shower', (245, 512, 325, 598)); u.fixture('x-shower1-wc', 'wc', (255, 430, 350, 470))
+u.fixture('x-shower2-basin', 'basin', (1155, 395, 1215, 440)); u.fixture('x-shower2-tray', 'shower', (1345, 392, 1430, 472)); u.fixture('x-shower2-wc', 'wc', (1250, 396, 1295, 451))
+u.fixture('x-kitchen-hob', 'hob', (1150, 728, 1205, 795), on='k-left'); u.fixture('x-kitchen-sink', 'sink', (1155, 880, 1205, 950), on='k-left')
+u.rug('x-living-rug', (345, 905, 710, 1165))
+u.fixtures_note = 'Fixtures are only those the plan draws clearly: a tray, a WC and a basin in each shower room (the WCs sit partly under the room labels), and a hob and a sink in the kitchen. No fridge is drawn.'
 # rooms (plan labels verbatim)
 u.room('mbed', 'masterBedroom', 15.82, [(400, 80), (840, 80), (840, 448), (421, 448), (421, 270), (400, 270)], (640, 300))
 u.room('bed2', 'bedroom', 9.74, [(945, 80), (1410, 80), (1410, 371), (1015, 371), (1015, 250), (945, 250)], (1200, 300))

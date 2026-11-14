@@ -108,6 +108,7 @@ def X(id,kind,r,h,**kw):
     x0,y0,x1,y1=r; d={'id':id,'kind':kind,'poly':[m(x0,y0),m(x1,y0),m(x1,y1),m(x0,y1)],'h':h}; d.update(kw); solids.append(d)
 X('x-shower1-tray','shower',(620,52,715,140),0.08)
 X('x-shower1-basin','basin',(620,285,678,355),0.85)
+X('x-shower1-wc','wc',(615,197,725,242),0.42)  # partly under the room label, but drawn
 X('x-shower2-basin','basin',(525,1515,600,1566),0.85)
 X('x-shower2-wc','wc',(648,1490,692,1560),0.42)
 X('x-shower2-tray','shower',(733,1475,830,1565),0.08)
@@ -152,7 +153,7 @@ data={
             'plane':{'minX':m(crop[0],crop[1])[0],'minZ':m(crop[0],crop[1])[1],'maxX':m(crop[2],crop[3])[0],'maxZ':m(crop[2],crop[3])[1]},
             'note':'UV = ((x-minX)/(maxX-minX), 1-(z-minZ)/(maxZ-minZ)); the texture is the crop resized to 1024 px wide'},
  'defaults':{'wallH':2.8,'modelCutH':2.4,'cutawayH':1.0,'doorHead':2.1,'note':'Heights are not on the plans: 2.8 m storey wall, 2.1 m door head, sills as listed. Illustrative.'},
- 'fixturesNote':'Fixtures are only those the plan draws clearly. The first shower room shows a tray and a basin; no WC is legible there, so none is modelled. The kitchen shows a hob and a sink and no fridge.','footprint':footprint,'walls':walls,'openings':openings,'walkable':[],'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
+ 'fixturesNote':'Fixtures are only those the plan draws clearly. Each shower room shows a tray, a WC and a basin (in the first room the WC sits partly under the room label). The kitchen shows a hob and a sink and no fridge.','footprint':footprint,'walls':walls,'openings':openings,'walkable':[],'railings':railings,'solids':solids,'rooms':rooms,'hall':hall,
 }
 s=json.dumps(data,separators=(',',':'),ensure_ascii=False)
 open(ROOT+'docs/design/units/bl05.json','w').write(s)

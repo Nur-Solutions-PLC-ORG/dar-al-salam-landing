@@ -56,6 +56,13 @@ u.furniture('f-dining', (510, 1060, 690, 1200), 0.75, '#4A3A2C')
 u.furniture('f-chairs-n', (510, 1010, 690, 1060), 0.45, '#B79B74'); u.furniture('f-chairs-s', (510, 1200, 690, 1255), 0.45, '#B79B74')
 u.furniture('f-chair-e', (690, 1080, 745, 1170), 0.45, '#B79B74')
 u.protect = [(820, 960, 1195, 1230)]  # rug
+# rev 10 F2: fixtures the plan draws, the rug, floor finishes
+u.fixture('x-shower1-tray', 'shower', (95, 355, 180, 440)); u.fixture('x-shower1-wc', 'wc', (118, 462, 205, 520)); u.fixture('x-shower1-basin', 'basin', (95, 590, 145, 655))
+u.fixture('x-shower2-basin', 'basin', (1172, 320, 1240, 362)); u.fixture('x-shower2-wc', 'wc', (1318, 400, 1362, 490)); u.fixture('x-shower2-tray', 'shower', (1395, 405, 1475, 495))
+u.fixture('x-kitchen-sink', 'sink', (298, 250, 348, 330), on='k-left'); u.fixture('x-kitchen-hob', 'hob', (295, 418, 350, 485), on='k-left')
+u.rug('x-living-rug', (820, 960, 1195, 1230))
+u.finish('parquet', 'bed1', 'bed2', 'living')
+u.fixtures_note = 'Fixtures are only those the plan draws: a tray, a WC and a basin in each shower room, and a sink and a hob in the kitchen. No fridge is drawn.'
 # rooms (plan labels verbatim)
 u.room('balcony1', 'balcony', 1.31, [(145, 160), (262, 160), (262, 330), (145, 330)], (200, 245))
 u.room('kitchen', 'kitchen', None, [(286, 160), (573, 160), (573, 668), (286, 668)], (430, 560), note='Area label hidden under the "230" dimension; reads like 8.84 m². Confirm with the client.')
