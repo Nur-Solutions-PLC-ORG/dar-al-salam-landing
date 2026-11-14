@@ -250,7 +250,9 @@ export function createRoomsPanel(o: {
       rows.forEach((r) => {
         const room = geo.rooms.find((x) => x.id === r.id)!;
         const name = nameOf(room.name);
-        r.b.firstElementChild!.textContent = at ? s.walk.goTo.replace('{room}', o.lang === 'en' ? name.toLowerCase() : name) : name;
+        const ledge = !!at && (room.standClearance ?? 1) < 0.3; // rev 9.4: no walk destination
+        r.b.firstElementChild!.textContent = at && !ledge ? s.walk.goTo.replace('{room}', o.lang === 'en' ? name.toLowerCase() : name) : name;
+        r.b.toggleAttribute('aria-disabled', ledge);
         if (at === r.id) r.b.setAttribute('aria-current', 'location');
         else r.b.removeAttribute('aria-current');
       });

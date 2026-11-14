@@ -175,6 +175,16 @@
   font-weight: 600;
 }
 
+/* rev 9.4: while walking, a ledge (no clear floor) can't be visited */
+.u3d-room[aria-disabled] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.u3d-room[aria-disabled]:hover {
+  background: none;
+}
+
 .u3d-room:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 0;

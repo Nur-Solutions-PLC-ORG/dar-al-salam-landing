@@ -112,7 +112,11 @@ export function createWalk(
   /* ---------- B4: where each door leads ---------- */
   const hall = data.hall?.poly ?? null;
   /** Rev 9.2: unlabelled spaces to stand in, as locations 'w-<id>'. */
-  const spaces = new Map((data.walkable ?? []).map((w) => [`w-${w.id}`, w.poly]));
+  const spaceList = new Map((data.walkable ?? []).map((w) => [`w-${w.id}`, w]));
+  const spaces = new Map([...spaceList].map(([k, w]) => [k, w.poly]));
+  /** Rev 9.4: a space with under 0.3 m of clear floor (a ledge) is no walk destination. */
+  const known = (loc: string) => rooms.has(loc) || spaceList.has(loc) || (loc.startsWith('hall-') && !!hall && data.openings.some((op) => `hall-${op.id}` === loc));
+  const canStand = (loc: string) => loc.startsWith('hall-') || ((spaceList.get(loc) ?? rooms.get(loc))?.standClearance ?? 1) >= 0.3;
   /** The room, 'hall' or walkable space containing a plan point (tested in that order), else null (outside). */
   const where = (q: P2): string | null =>
     data.rooms.find((r) => insidePoly(q, r.poly))?.id ?? (hall && insidePoly(q, hall) ? 'hall' : ([...spaces].find(([, p]) => insidePoly(q, p))?.[0] ?? null));
@@ -138,11 +142,22 @@ export function createWalk(
         const side = d.plus === areaOf(loc) ? 1 : -1;
         const other = side > 0 ? d.minus! : d.plus!;
         return { door: d, at: d.at(side * 0.7), to: other === 'hall' ? `hall-${d.id}` : other };
-      });
+      })
+      .filter((r) => canStand(r.to));
   const nameOf = (loc: string) => {
-    const key = rooms.get(loc)?.name ?? 'hall'; // the hall and walkable spaces read "Hall"
+    const sp = spaceList.get(loc);
+    if (sp) return o.strings[sp.name] ?? sp.name; // rev 9.4: "the lobby", "the room off the kitchen"
+    const key = rooms.get(loc)?.name ?? 'hall';
     const n = o.names[key] ?? key;
     return o.lang === 'en' ? n.toLowerCase() : n;
+  };
+  /** Rev 9.4: ring labels are unique in a view; same-named rooms add their place in plan order ("1 of 2"). */
+  const goTo = (loc: string, n = 0, total = 0) => {
+    const r = rooms.get(loc);
+    const same = r ? data.rooms.filter((x) => x.name === r.name) : [];
+    if (same.length > 1) [n, total] = [same.indexOf(r!) + 1, same.length];
+    const f = (s: string) => s.replace('{room}', nameOf(loc)).replace('{n}', String(n)).replace('{total}', String(total));
+    return f((total ? o.strings.goToN : o.strings.goTo) ?? '');
   };
 
   // ceiling: the footprint at full storey height, fading in at the end of the fly-in
@@ -279,7 +294,7 @@ export function createWalk(
         });
         const g = new ExtrudeGeometry(s2, { depth: 0.18, bevelEnabled: false }).rotateX(-Math.PI / 2);
         g.translate(0, f.h, 0);
-        steps.push(g.toNonIndexed());
+        steps.push(g); // extrusions are already non-indexed
       } else if (Math.abs(f.h - 0.8) < 0.03) heads.push(seg(a, b, 0, 0.75, 0.2, inward * -0.1));
     } else if (f.kind === 'counter') {
       const c = centroidOf(f.poly);
@@ -292,7 +307,7 @@ export function createWalk(
       });
       const g = new ExtrudeGeometry(s3, { depth: 0.03, bevelEnabled: false }).rotateX(-Math.PI / 2);
       g.translate(0, f.h, 0);
-      steps.push(g.toNonIndexed());
+      steps.push(g);
     }
   }
   mesh(heads, new MeshLambertMaterial({ color: '#CFC3B1' }));
@@ -422,11 +437,14 @@ export function createWalk(
     ringLayer.replaceChildren();
     rings = [];
     if (!loc) return;
-    for (const r of ringsAt(loc)) {
+    const list = ringsAt(loc);
+    // several doors into the hall from one room: number those within the view
+    const halls = list.filter((r) => r.to.startsWith('hall-'));
+    for (const r of list) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'walk-ring';
-      const label = (o.strings.goTo ?? '').replace('{room}', nameOf(r.to));
+      const label = halls.length > 1 && halls.includes(r) ? goTo(r.to, halls.indexOf(r) + 1, halls.length) : goTo(r.to);
       b.setAttribute('aria-label', label);
       b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span>';
       b.lastElementChild!.textContent = label;
@@ -483,7 +501,7 @@ export function createWalk(
     const r = mini.getBoundingClientRect();
     const q: P2 = [minX + ((e.clientX - r.left) / r.width) * (maxX - minX), minZ + ((e.clientY - r.top) / r.height) * (maxZ - minZ)];
     const at = where(q);
-    if (!at) return;
+    if (!at || !canStand(at)) return;
     // a tap in the hall lands at its nearest door standpoint
     const to = at === 'hall' ? `hall-${[...doors].filter((d) => d.plus === 'hall' || d.minus === 'hall').sort((a, b) => Math.hypot(a.m[0] - q[0], a.m[1] - q[1]) - Math.hypot(b.m[0] - q[0], b.m[1] - q[1]))[0]?.id}` : at;
     if (to !== current) o.onPick(to);
@@ -594,15 +612,15 @@ export function createWalk(
       const at = h.toWorld(d ? d.at(side * 0.9) : hall![0]!, EYE);
       return { at, yaw: d ? yawTo(h.toWorld(d.m, EYE), at) : 0 };
     }
-    const sp = spaces.get(id);
+    const sp = spaceList.get(id);
     if (sp) {
-      // a walkable space: stand at its centroid, looking at its farthest door
-      const at = h.toWorld(centroidOf(sp), EYE);
+      // a walkable space: stand at its `stand` point, looking at its farthest door
+      const at = h.toWorld(sp.stand ?? centroidOf(sp.poly), EYE);
       const far = ringsAt(id).sort((a, b) => h.toWorld(b.door.m, EYE).distanceTo(at) - h.toWorld(a.door.m, EYE).distanceTo(at))[0];
       return { at, yaw: far ? yawTo(at, h.toWorld(far.door.m, EYE)) : 0 };
     }
     const r = rooms.get(id)!;
-    const stand = (r as typeof r & { stand?: P2 }).stand ?? r.label;
+    const stand = r.stand ?? r.label; // rev 9.4: never the label (it can sit in a bed or against a sofa)
     const at = h.toWorld(stand, EYE);
     // face the balcony opening if the room has one, else the middle of its longest wall
     const balconies = data.rooms.filter((x) => x.name === 'balcony');
@@ -826,6 +844,8 @@ export function createWalk(
       return current;
     },
     async enter(id) {
+      // a ledge or an unknown id (an old link) starts in the living room instead
+      if (!known(id) || !canStand(id)) id = (data.rooms.find((r) => r.name === 'livingDining' && canStand(r.id)) ?? data.rooms.find((r) => canStand(r.id)))!.id;
       h.spots.classList.add('is-walking');
       h.setDriver(driver);
       listen(true);
@@ -844,7 +864,9 @@ export function createWalk(
       await arrive(id, 1.6);
     },
     goTo(id) {
-      return arrive(id, 0);
+      if (known(id) && canStand(id)) return arrive(id, 0);
+      if (current) o.onArrive(current); // not a destination: stay, and put the state back
+      return Promise.resolve();
     },
     async exit() {
       const back = new PerspectiveCamera(30, camera.aspect);

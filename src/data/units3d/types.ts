@@ -27,11 +27,12 @@ export interface Unit3d {
    * `area` is exactly the plan's label; never compute one from the polygon. `label` is the hotspot anchor.
    * Rev 8.4: `area` is null when the plan's label is illegible; the UI then shows the name only (never the `note`).
    */
-  rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2 }[];
+  /** `stand` (rev 9.4): the walk camera's point, the most clear floor around; under 0.3 m `standClearance` it is no walk destination. */
+  rooms: { id: string; name: Room3dKey; area: number | null; note?: string; poly: P2[]; label: P2; stand?: P2; standClearance?: number }[];
   /** The unlabelled hall (walk standpoints only, rev 9). */
   hall?: { poly: P2[] } | null;
   /** Rev 9.2: other unlabelled spaces a visitor can stand in (no hotspot, no list row; announced as "Hall"). */
-  walkable?: { id: string; poly: P2[]; note?: string }[];
+  walkable?: { id: string; name: string; poly: P2[]; note?: string; stand?: P2; standClearance?: number }[];
 }
 
 /**

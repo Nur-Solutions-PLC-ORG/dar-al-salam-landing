@@ -190,6 +190,11 @@ export const en = {
     lookLeft: 'Look left',
     lookRight: 'Look right',
     goTo: 'Go to the {room}',
+    goToN: 'Go to the {room}, {n} of {total}',
+    // rev 9.4: unlabelled spaces, by position (ring labels only)
+    lobby: 'lobby',
+    offKitchen: 'room off the kitchen',
+    terrace: 'terrace',
     useMotion: 'Use motion',
     geometryLabel: 'Simplified 3D model from the floor plan',
     panoAlt: "Artist's impression of the {room}, seen from inside",
