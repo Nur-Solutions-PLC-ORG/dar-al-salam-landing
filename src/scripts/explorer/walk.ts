@@ -115,7 +115,8 @@ export function createWalk(
   const spaceList = new Map((data.walkable ?? []).map((w) => [`w-${w.id}`, w]));
   const spaces = new Map([...spaceList].map(([k, w]) => [k, w.poly]));
   /** Rev 9.4: a space with under 0.3 m of clear floor (a ledge) is no walk destination. */
-  const known = (loc: string) => rooms.has(loc) || spaceList.has(loc) || (loc.startsWith('hall-') && !!hall && data.openings.some((op) => `hall-${op.id}` === loc));
+  // review r8 M3: a hall standpoint must name a door that opens onto the hall (`doors` is defined below; called later)
+  const known = (loc: string) => rooms.has(loc) || spaceList.has(loc) || doors.some((d) => `hall-${d.id}` === loc && (d.plus === 'hall' || d.minus === 'hall'));
   const canStand = (loc: string) => loc.startsWith('hall-') || ((spaceList.get(loc) ?? rooms.get(loc))?.standClearance ?? 1) >= 0.3;
   /** The room, 'hall' or walkable space containing a plan point (tested in that order), else null (outside). */
   const where = (q: P2): string | null =>
@@ -450,7 +451,25 @@ export function createWalk(
   const ringLayer = document.createElement('div');
   ringLayer.className = 'walk-rings';
   ui.append(ringLayer);
-  let rings: { b: HTMLButtonElement; at: Vector3; edge: Vector3 }[] = [];
+  let rings: { b: HTMLButtonElement; at: Vector3; edge: Vector3; arrow: HTMLElement }[] = [];
+  /** H2: a ring closer than 1.8 m to the standpoint sits on the threshold instead (else it hides under the camera). */
+  const ringAt = (loc: string, r: { door: { m: P2 }; at: P2 }) => {
+    const at = h.toWorld(r.at, 0.02);
+    const st = pose(loc).at;
+    return Math.hypot(at.x - st.x, at.z - st.z) < 1.8 ? h.toWorld(r.door.m, 0.02) : at;
+  };
+  /** Rev 10.4: arrive facing the nearest way on (not the door just used), pitched down until its ring shows. */
+  const arrivalView = (id: string, via?: string) => {
+    const p = pose(id);
+    const opts = ringsAt(id).map((r) => ({ id: r.door.id, at: ringAt(id, r) }));
+    const pick = opts.filter((r) => r.id !== via).sort((a, b) => a.at.distanceTo(p.at) - b.at.distanceTo(p.at))[0] ?? opts[0];
+    if (!pick) return { yaw: p.yaw, pitch: 0 };
+    const dx = pick.at.x - p.at.x;
+    const dz = pick.at.z - p.at.z;
+    const under = Math.atan2(EYE - 0.02, Math.hypot(dx, dz)); // the ring's angle below the horizon
+    const room = Math.atan(Math.tan((FOV * DEG) / 2) * (1 - 150 / (h.host.clientHeight || 600))); // ≥ 60 px above the bottom
+    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(20 * DEG, Math.max(0, under - room)) };
+  };
   const showRings = (loc: string | null) => {
     ringLayer.replaceChildren();
     rings = [];
@@ -464,35 +483,87 @@ export function createWalk(
       b.className = 'walk-ring';
       const label = halls.length > 1 && halls.includes(r) ? goTo(r.to, halls.indexOf(r) + 1, halls.length) : goTo(r.to);
       b.setAttribute('aria-label', label);
-      b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span>';
+      b.innerHTML = '<span class="walk-ring__dot" aria-hidden="true"></span><span class="walk-ring__arrow" aria-hidden="true"></span><span class="walk-ring__label" aria-hidden="true"></span>';
       b.lastElementChild!.textContent = label;
       b.addEventListener('click', () => void through(r.door, r.to));
       ringLayer.append(b);
-      const at = h.toWorld(r.at, 0.02);
-      rings.push({ b, at, edge: at.clone().add(new Vector3(0.45, 0, 0)) });
+      const at = ringAt(loc, r);
+      rings.push({ b, at, edge: at.clone().add(new Vector3(0.45, 0, 0)), arrow: b.children[1] as HTMLElement });
     }
   };
   const pv = new Vector3();
-  const fwd = new Vector3();
+  const cv = new Vector3();
+  /**
+   * Review r8 H2 / rev 10.4: a ring always offers a way on. On the floor in view it is the ring (≤ 160 px); off the
+   * stage, behind the camera or under it, the same button becomes a 44 px chip pinned to the nearest edge with an
+   * arrow, stacked 8 px apart (sides: the middle band, clear of the toolbar and minimap; bottom: above the controls).
+   */
   const projectRings = () => {
     if (!rings.length) return;
     camera.updateMatrixWorld();
-    camera.getWorldDirection(fwd);
     const w = h.host.clientWidth;
     const hh = h.host.clientHeight;
+    const chips: { r: (typeof rings)[number]; edge: 'l' | 'r' | 'b'; k: number }[] = [];
     for (const r of rings) {
-      const toR = pv.copy(r.at).sub(camera.position);
-      const hide = toR.dot(fwd) <= 0.2 || toR.length() > 9;
-      r.b.classList.toggle('is-hidden', hide);
-      r.b.inert = hide;
-      if (hide) continue;
-      pv.copy(r.at).project(camera);
-      const x = ((pv.x + 1) / 2) * w;
-      const y = ((1 - pv.y) / 2) * hh;
-      pv.copy(r.edge).project(camera);
-      const size = Math.max(44, Math.abs(((pv.x + 1) / 2) * w - x) * 2);
-      r.b.style.setProperty('--size', `${size}px`);
-      r.b.style.transform = `translate(${x}px, ${y}px)`;
+      const c = cv.copy(r.at).applyMatrix4(camera.matrixWorldInverse); // camera space: −z is ahead
+      let x = 0, y = 0;
+      if (c.z < -0.3) {
+        pv.copy(r.at).project(camera);
+        x = ((pv.x + 1) / 2) * w;
+        y = ((1 - pv.y) / 2) * hh;
+      }
+      const onStage = c.z < -0.3 && x > 24 && x < w - 24 && y > 24 && y < hh - 60;
+      r.b.classList.toggle('is-chip', !onStage);
+      r.b.classList.remove('is-hidden');
+      r.b.inert = false;
+      if (onStage) {
+        pv.copy(r.edge).project(camera);
+        const size = Math.min(160, Math.max(44, Math.abs(((pv.x + 1) / 2) * w - x) * 2));
+        r.b.style.setProperty('--size', `${size}px`);
+        r.b.style.transform = `translate(${x}px, ${y}px)`;
+        continue;
+      }
+      // ahead but below the frame → the bottom edge; otherwise the side it lies toward
+      const below = c.z < -0.3 && x > 24 && x < w - 24;
+      const edge = below ? 'b' : c.x < 0 ? 'l' : 'r';
+      chips.push({ r, edge, k: below ? x : Math.atan2(c.x, -c.z) });
+      r.arrow.textContent = edge === 'b' ? '↓' : edge === 'l' ? '←' : '→';
+    }
+    if (w < 640 && chips.length) {
+      // phones: two labelled chips can't share a row edge to edge, so they flow in centred rows from the bottom up
+      const sized = chips.sort((p, q) => (p.edge === q.edge ? p.k - q.k : p.edge < q.edge ? -1 : 1)).map((q) => ({ q, s: q.r.b.offsetWidth || 120 }));
+      const lines: (typeof sized)[] = [[]];
+      for (const c of sized) {
+        const line = lines.at(-1)!;
+        if (line.length && line.reduce((a, x) => a + x.s + 8, 0) + c.s > w - 24) lines.push([c]);
+        else line.push(c);
+      }
+      lines.forEach((line, i) => {
+        let x = (w - line.reduce((a, c) => a + c.s + 8, -8)) / 2;
+        for (const c of line) {
+          c.q.r.b.style.transform = `translate(${Math.max(12, x)}px, ${hh - 76 - (lines.length - 1 - i) * 52}px)`;
+          x += c.s + 8;
+        }
+      });
+      return;
+    }
+    for (const edge of ['l', 'r', 'b'] as const) {
+      const row = chips.filter((q) => q.edge === edge).sort((a, b) => a.k - b.k);
+      if (!row.length) continue;
+      const sizes = row.map((q) => q.r.b.offsetWidth || 120);
+      if (edge === 'b' && sizes.reduce((a, b) => a + b + 8, 0) > w - 16) {
+        // too many for one row (phones): a column above the bottom controls
+        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, (w - sizes[i]!) / 2)}px, ${hh - 76 - (row.length - 1 - i) * 52}px)`));
+      } else if (edge === 'b') {
+        // centred on their own x where possible, then pushed apart 8 px and kept inside the stage
+        const xs = row.map((q, i) => q.k - sizes[i]! / 2);
+        for (let i = 0, min = 12; i < xs.length; i++) min = (xs[i] = Math.max(xs[i]!, min)) + sizes[i]! + 8;
+        for (let i = xs.length - 1, max = w - 12; i >= 0; i--) max = (xs[i] = Math.min(xs[i]!, max - sizes[i]!)) - 8;
+        row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, xs[i]!)}px, ${hh - 76}px)`));
+      } else {
+        const y0 = Math.max(hh * 0.3, hh / 2 - (row.length * 52) / 2);
+        row.forEach((q, i) => (q.r.b.style.transform = `translate(${edge === 'l' ? 12 : w - 12 - sizes[i]!}px, ${Math.min(hh - 128, y0 + i * 52)}px)`));
+      }
     }
   };
   // B6: "Back to 3D model" first in the toolbar
@@ -803,8 +874,8 @@ export function createWalk(
   const fade = (to: number) => h.host.animate([{ opacity: to ? 0 : 1 }, { opacity: to }], { duration: 200, fill: 'forwards' }).finished;
 
   /** U10: through a door's centre to the next standpoint; the yaw eases to the direction of travel. */
-  const through = async (door: { m: P2 }, to: string) => {
-    if (h.reduced) return arrive(to, 0);
+  const through = async (door: { m: P2; id: string }, to: string) => {
+    if (h.reduced) return arrive(to, 0, ++seq, door.id);
     const my = ++seq;
     showRings(null);
     dropPano(false); // the glide happens in the geometry
@@ -815,8 +886,11 @@ export function createWalk(
     const b = mid.distanceTo(p.at);
     const split = a / (a + b || 1);
     const yaw0 = view.yaw;
-    let yaw1 = yawTo(mid, p.at);
-    yaw1 = yaw0 + Math.atan2(Math.sin(yaw1 - yaw0), Math.cos(yaw1 - yaw0)); // the short way round
+    const pitch0 = view.pitch;
+    const v = arrivalView(to, door.id);
+    const short = (from: number, a: number) => from + Math.atan2(Math.sin(a - from), Math.cos(a - from)); // the short way round
+    const yawGo = short(yaw0, yawTo(mid, p.at)); // through the door facing the way of travel…
+    const yaw1 = short(yawGo, v.yaw); // …then turn to the way on
     const t = { p: 0 };
     moveLamp(to);
     await new Promise<void>((resolve) =>
@@ -827,8 +901,8 @@ export function createWalk(
         onUpdate: () => {
           if (t.p < split) camera.position.lerpVectors(start, mid, t.p / split);
           else camera.position.lerpVectors(mid, p.at, (t.p - split) / (1 - split || 1));
-          view.yaw = yaw0 + (yaw1 - yaw0) * t.p;
-          view.pitch *= 0.9;
+          view.yaw = t.p < split ? yaw0 + (yawGo - yaw0) * (t.p / split) : yawGo + (yaw1 - yawGo) * ((t.p - split) / (1 - split || 1));
+          view.pitch = pitch0 + (v.pitch - pitch0) * t.p;
           apply();
         },
         onComplete: resolve,
@@ -842,10 +916,11 @@ export function createWalk(
     o.onArrive(to);
   };
 
-  const arrive = async (id: string, glide: number, my = ++seq) => {
+  const arrive = async (id: string, glide: number, my = ++seq, via?: string) => {
     const p = pose(id);
-    view.yaw = p.yaw;
-    view.pitch = 0;
+    const v = arrivalView(id, via);
+    view.yaw = v.yaw;
+    view.pitch = v.pitch;
     current = id;
     moveLamp(id);
     showRings(id);
@@ -857,7 +932,7 @@ export function createWalk(
       apply();
       h.request();
       await fade(1);
-    } else await fly({ at: p.at, quat: quatFor(view.yaw), fov: FOV }, glide);
+    } else await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide);
     if (my !== seq) return; // stopped (Esc / Back) or overtaken: no arrival
     void showPano(id);
     o.onArrive(id);
