@@ -1050,7 +1050,8 @@ export function createExplorer(root: HTMLElement) {
       // rev 9: the photo stage takes the maquette's place in the intro
       if (photo) tl.fromTo(photo, { scale: 0.94, y: 30, transformOrigin: '50% 100%' }, { scale: 1, y: 0 }, 0);
       ScrollTrigger.refresh();
-    } else {
+    } else if (state.level === 'idle') {
+      // (a deep link opens straight on a floor, unit or walk: the stage shows at once, no fade — review r9b N1)
       gsap.from(modelCol, {
         opacity: 0,
         y: 40,
