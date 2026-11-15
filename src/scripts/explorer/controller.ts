@@ -250,6 +250,7 @@ export function createExplorer(root: HTMLElement) {
       .then((m) =>
         m.createTower(photo, stage, {
           ...callbacks,
+          label: (n) => f(t.floorTooltip, { n, mix: mixOf(n) }),
           onFail: () => {
             tower?.destroy();
             tower = null;

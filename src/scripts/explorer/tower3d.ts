@@ -36,14 +36,13 @@ import {
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedMesh,
-  LineBasicMaterial,
   LineDashedMaterial,
   LineSegments,
   Material,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
-  NoColorSpace,
   Object3D,
   PCFShadowMap,
   PerspectiveCamera,
@@ -142,7 +141,11 @@ const gradient = (w: number, h: number, paint: (c: CanvasRenderingContext2D) => 
   return t;
 };
 
-export async function createTower(host: HTMLElement, stage: HTMLElement, cb: ModelCallbacks & { onFail: () => void }): Promise<TowerAdapter> {
+export async function createTower(
+  host: HTMLElement,
+  stage: HTMLElement,
+  cb: ModelCallbacks & { onFail: () => void; label: (floor: number) => string },
+): Promise<TowerAdapter> {
   const d: Tower3d = (await import('../../data/tower3d.json')).default;
   const hi = matchMedia('(pointer: fine)').matches && innerWidth >= 1024;
   const reduced = prefersReducedMotion();
@@ -320,7 +323,7 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     s.fragmentShader = s.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\nif (!gl_FrontFacing) diffuseColor.rgb *= 0.25;');
   };
   // T4 hook: a per-floor "lit" amount warms and lights the glazing
-  const lit = new Color(fs.glass.litColour);
+  const lit = new Color('#FFC46B'); // design T4 fix 3: the reference's amber, obvious at a glance
   const uSkip = { value: -1 }; // the unit whose glazing stays dark (BL01 off its two-bedroom floors)
   for (const m of [mats.traced, mats.illus]) {
     m.onBeforeCompile = (s) => {
@@ -331,7 +334,7 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
       s.fragmentShader = s.fragmentShader
         .replace('#include <common>', `#include <common>\nvarying float vLit;\nconst vec3 LIT = vec3(${lit.r.toFixed(3)}, ${lit.g.toFixed(3)}, ${lit.b.toFixed(3)});`)
         .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor = mix(diffuseColor, vec4(LIT, 1.0), vLit);')
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += LIT * vLit * 0.9;');
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += LIT * vLit * 1.6;');
     };
   }
 
@@ -449,17 +452,20 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
   /* ---------- T2: city context (generic) ---------- */
   const cx2 = d.context;
   const R = cx2.ground.radius;
-  const fade = k(
-    gradient(256, 256, (x) => {
-      const g = x.createRadialGradient(128, 128, 128 * 0.6, 128, 128, 128); // fades to the navy over its outer 40%
-      g.addColorStop(0, '#fff');
-      g.addColorStop(1, '#000');
-      x.fillStyle = g;
-      x.fillRect(0, 0, 256, 256);
-    }),
-  );
-  fade.colorSpace = NoColorSpace;
-  solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), std(cx2.ground.colour, { alphaMap: fade, transparent: true }), false).renderOrder = -1; // writes depth: the lowered storeys sink out of sight (T4)
+  /** Design T4 fix 5: the context fades into the section's navy with distance from the tower (a clear canvas). */
+  const fadeOut = <M extends MeshStandardMaterial>(m: M, r0: number, r1: number) => {
+    m.transparent = true;
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec2 vFadeXZ;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvec4 fw = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nfw = instanceMatrix * fw;\n#endif\nvFadeXZ = (modelMatrix * fw).xz;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec2 vFadeXZ;')
+        .replace('#include <dithering_fragment>', `#include <dithering_fragment>\ngl_FragColor.a *= 1.0 - smoothstep(${r0.toFixed(1)}, ${r1.toFixed(1)}, length(vFadeXZ));`);
+    };
+    return m;
+  };
+  solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), fadeOut(std('#8E8A82'), R * 0.3, R * 0.6), false).renderOrder = -1; // writes depth: the lowered storeys sink out of sight (T4)
   // the two street faces' longest edges set the roads' directions
   const longest = (f: (e: (typeof edges)[number]) => boolean) => edges.filter(f).sort((p, q) => q.l - p.l)[0]!;
   const roadSides = [longest((e) => e.n[1] > 0.7), longest((e) => e.n[0] < -0.7)];
@@ -477,8 +483,8 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     road.push(box(A, B, 0, 0.02 + i * 0.004, rw, side * (pw + rw / 2)));
     roadLines.push({ p: [m[0] + e.n[0] * (pw + rw / 2), m[1] + e.n[1] * (pw + rw / 2)], n: e.n });
   });
-  solid(mergeGeometries(road)!, std(cx2.road.colour, { roughness: 0.95 }), false);
-  solid(mergeGeometries(walk)!, std(cx2.pavement.colour), false);
+  solid(mergeGeometries(road)!, fadeOut(std('#2E3138', { roughness: 0.95 }), R * 0.3, R * 0.6), false);
+  solid(mergeGeometries(walk)!, fadeOut(std('#A39E95'), R * 0.3, R * 0.6), false);
   [...road, ...walk].forEach((x) => x.dispose());
   const nearRoad = (p: P2, w: number) => roadLines.some((r) => Math.abs((p[0] - r.p[0]) * r.n[0] + (p[1] - r.p[1]) * r.n[1]) < w);
   const insideTower = (p: P2, w: number) => p[0] > x0 - w && p[0] < x1 + w && p[1] > z0 - w && p[1] < z1 + w;
@@ -499,7 +505,7 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     if (boxes.some((q) => Math.hypot(q.p[0] - p[0], q.p[1] - p[1]) < (q.w + w) / 2 + 4)) continue;
     boxes.push({ p, w, dd, h: bl.minH + rand() * (bl.maxH - bl.minH) });
   }
-  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), std('#CFC9BE', { transparent: true, opacity: 0.8 }), boxes.length); // quieter than the tower (fix 6)
+  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), fadeOut(std('#CFC9BE', { opacity: 0.8 }), R * 0.55, R * 0.95), boxes.length); // quieter than the tower (fix 6)
   const dummy = new Object3D();
   boxes.forEach((b, i) => {
     dummy.position.set(b.p[0], 0, b.p[1]);
@@ -513,8 +519,8 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
 
   // palms along the two street faces' pavements; trees scattered beyond the roads
   const plant = (n: number, trunkG: BufferGeometry, crownG: BufferGeometry, trunkC: string, crownC: string, spots: { p: P2; s: number }[]) => {
-    const t = new InstancedMesh(k(trunkG), std(trunkC), n);
-    const cr = new InstancedMesh(k(crownG), std(crownC, { flatShading: true, side: DoubleSide }), n);
+    const t = new InstancedMesh(k(trunkG), fadeOut(std(trunkC), R * 0.45, R * 0.8), n);
+    const cr = new InstancedMesh(k(crownG), fadeOut(std(crownC, { flatShading: true, side: DoubleSide }), R * 0.45, R * 0.8), n);
     spots.slice(0, n).forEach(({ p, s }, i) => {
       dummy.position.set(p[0], 0, p[1]);
       dummy.rotation.set(0, rand() * 6.28, 0);
@@ -596,8 +602,10 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     const ax = out[0] * s * p;
     const az2 = out[1] * s * p;
     const ay = ty + (midY(part.floor) - ty) * p;
-    const dd = dist + (near - dist) * p;
-    const el = EL + 10 * DEG * p;
+    // push: in toward the floor at the street-corner angle; slide: on to the slid-out floor, rising to 52°
+    const sl = part.slide;
+    const dd = dist + (dist * 0.6 - dist) * p + (near - dist * 0.6) * sl;
+    const el = EL + 6 * DEG * p * (1 - sl) + (52 * DEG - EL) * sl;
     camera.position.set(ax + Math.sin(az) * Math.cos(el) * dd, ay + Math.sin(el) * dd, az2 + Math.cos(az) * Math.cos(el) * dd);
     camera.lookAt(ax, ay, az2);
     camera.updateMatrixWorld();
@@ -628,13 +636,14 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
       const m = (a + b) / 2;
       place(m, rest.ty);
       const e = extent();
-      if (e.h > 0.82 || e.w > 0.9) a = m;
+      if (e.h > 0.82 || e.w > 0.86) a = m;
       else b = m;
     }
     rest.dist = b;
     for (let i = 0; i < 3; i++) {
       place(rest.dist, rest.ty);
-      rest.ty += extent().mid * Math.tan((camera.fov * DEG) / 2) * rest.dist; // raise the aim if the tower sits high
+      // centre it in the room under the hint chip (56 px): aim so its mid sits 28 px below the stage's middle
+      rest.ty += (extent().mid + 56 / h) * Math.tan((camera.fov * DEG) / 2) * rest.dist;
     }
     view.az = az;
     fitFloor();
@@ -644,7 +653,7 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     canvas.style.setProperty('--glow-y', `${(((1 - v3.y) / 2) * 100).toFixed(1)}%`);
   };
 
-  /** T4: the push-in distance where the slid-out floor fills about 30% of the stage height (≤ 90% of its width). */
+  /** T4: the distance where the slid-out floor, seen from 52°, spans 70% of the stage width. */
   function fitFloor() {
     const l = typical.find((x) => x.floor === part.floor) ?? typical[0]!;
     const pts = [l.y0, l.y0 + l.h].flatMap((y) => outline.map(([x, z]) => new Vector3(x + out[0] * 14, y, z + out[1] * 14)));
@@ -656,7 +665,7 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
       near = (a + b) / 2;
       place();
       const e = extent(pts);
-      if (e.h > 0.3 || e.w > 0.9) a = near;
+      if (e.w > 0.7 || e.h > 0.85) a = near; // its bounding box at 70% of the stage width (design T4 fix 2)
       else b = near;
     }
     near = b;
@@ -669,27 +678,35 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
   const arrange = () => {
     const k2 = part.slide;
     const c = ci();
+    // above: 1.6 m with the slide, then on up out of the frame as the camera rises to 52° (it would hide the floor)
+    const up = 1.6 * k2 + 60 * Math.max(0, (k2 - 0.35) / 0.65) ** 2;
     for (const im of ims) {
       typical.forEach((l, i) => {
-        const dy = c < 0 ? 0 : (i > c ? 1.6 : i < c ? -1.6 : 0) * k2;
+        const dy = c < 0 ? 0 : i > c ? up : i < c ? -1.6 * k2 : 0;
         const s = i === c ? 14 * k2 : 0;
         im.setMatrixAt(i, m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
       });
       im.instanceMatrix.needsUpdate = true;
     }
-    for (const o2 of above) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : 1.6 * k2);
+    for (const o2 of above) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : up);
     for (const o2 of below) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
     if (finMesh) finMesh.visible = k2 < 0.02; // the fins run through every storey; they step aside while it's apart
+    lid.visible = c >= 0 && k2 > 0.01;
+    if (lid.visible) lid.position.set(out[0] * 14 * k2, typical[c]!.y0, out[1] * 14 * k2);
     edge.position.set(c >= 0 && litFloor === part.floor ? out[0] * 14 * k2 : 0, (typical.find((l) => l.floor === litFloor)?.y0 ?? 0) + (c < 0 || litFloor === part.floor ? 0 : 1.6 * k2 * Math.sign(typical.findIndex((l) => l.floor === litFloor) - c)), c >= 0 && litFloor === part.floor ? out[1] * 14 * k2 : 0);
   };
   ims.forEach((im) => (im.frustumCulled = false)); // instances move; the tower is always in view
 
   /* ---------- T4: lit glazing (0.25 s), gold slab edge ---------- */
-  const edgeG = k(new BufferGeometry());
-  edgeG.setAttribute('position', new Float32BufferAttribute(outline.flatMap((a, i) => [a[0], SL + 0.02, a[1], outline[(i + 1) % outline.length]![0], SL + 0.02, outline[(i + 1) % outline.length]![1]]), 3));
-  const edge = new LineSegments(edgeG, k(new LineBasicMaterial({ color: '#D9B979' })));
+  // the lit floor's slab edge turns gold (design T4 fix 3): a thin band just proud of the slab
+  const edge = new Mesh(k(mergeGeometries(edges.map((e) => box(e.a, e.b, -0.02, SL + 0.02, 0.06, side * 0.05)))!), k(new MeshBasicMaterial({ color: '#D9A441' })));
   edge.visible = false;
   scene.add(edge);
+  // until T5 fills it, the slid-out floor gets a plain slab top so it isn't see-through (design T4 fix 2)
+  const lid = new Mesh(k(prism(outline, FH - 0.04, 0.04)), std('#DAD4C8'));
+  lid.visible = false;
+  lid.castShadow = true;
+  scene.add(lid);
   const litAmt = new Float32Array(typical.length);
   let litFloor: number | null = null;
   const BL01 = UNITS.indexOf('BL01');
@@ -735,6 +752,8 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     b2.tabIndex = -1;
     b2.className = 'tower-pin';
     b2.dataset.floor = String(n);
+    b2.innerHTML = '<span class="tower-pin__card"></span>';
+    b2.firstElementChild!.textContent = cb.label(n); // "Floor 8 · 1 × 2-bed · 8 × 3-bed" (design T4 fix 4)
     b2.addEventListener('click', () => cb.onPick(n));
     b2.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && hoverFloor(n));
     b2.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && hoverFloor(null));
@@ -760,18 +779,16 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
       const F = toStage(p.from);
       p.b.style.transform = `translate(${A.x}px, ${A.y}px)`;
       p.b.classList.toggle('is-on', litFloor === p.n);
+      // the card flips to the dot's left when it would cross the stage's right edge
+      p.b.classList.toggle('is-flip', A.x + 30 + (p.b.firstElementChild as HTMLElement).offsetWidth > stage.clientWidth - 12);
       p.line.setAttribute('x1', String(A.x));
       p.line.setAttribute('y1', String(A.y));
       p.line.setAttribute('x2', String(F.x));
       p.line.setAttribute('y2', String(F.y));
     }
   };
-  /** The tooltip anchor for floor n: its pin, else the street corner at that floor (stage px). */
-  const anchor = (n: number) => {
-    const p = pins.find((x) => x.n === n);
-    const A = toStage(p ? p.at : v3.set(corner[0], midY(n), corner[1]).clone());
-    return { x: A.x + 26, y: A.y };
-  };
+  /** The chip anchor for floor n: the street corner at that floor (stage px); a pinned floor shows its own card. */
+  const anchor = (n: number) => (PINS.includes(n) ? null : ((A) => ({ x: A.x + 26, y: A.y }))(toStage(v3.set(corner[0], midY(n), corner[1]).clone())));
 
   /* ---------- T4: hover and picking by raycast (an invisible prism of the typical floors) ---------- */
   const hit = new Mesh(k(prism(outline, f1.y0, top.y0 + top.h - f1.y0)), mats.slab);
@@ -791,7 +808,8 @@ export async function createTower(host: HTMLElement, stage: HTMLElement, cb: Mod
     if (selected !== null || n === hovered) return;
     hovered = n;
     setLit(n);
-    cb.onHover(n, n ? anchor(n) : undefined);
+    cb.onHover(null); // drop the previous chip (a pinned floor shows its card instead)
+    if (n) cb.onHover(n, anchor(n) ?? undefined);
   };
 
   /* ---------- render loop ---------- */
