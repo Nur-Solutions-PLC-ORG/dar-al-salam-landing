@@ -220,7 +220,7 @@ export function createWalk(
     }
   }
   mesh(frames, new MeshLambertMaterial({ color: '#D9CFC0' }));
-  mesh(jambs, new MeshBasicMaterial({ color: '#1A273F' }));
+  mesh(jambs, new MeshBasicMaterial({ color: '#1E2226' })); // F4: black, like the dollhouse mullions
   // fake ambient occlusion: 0.35 m gradient strips on the floor along each wall face, and in the ceiling corners
   const ao = document.createElement('canvas');
   ao.width = 1;

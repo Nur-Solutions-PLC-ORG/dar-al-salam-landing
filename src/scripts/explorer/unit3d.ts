@@ -28,6 +28,7 @@ import {
   MeshBasicMaterial,
   MeshDepthMaterial,
   MeshLambertMaterial,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   PCFShadowMap,
   RepeatWrapping,
@@ -270,13 +271,20 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     return k(m);
   };
 
+  const glassTier = !matchMedia('(pointer: coarse)').matches && ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8;
   const mat = {
     wall: inject(new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.92 })), // F3: plaster normal + roughness
     oak: inject(new MeshStandardMaterial({ color: '#B5A08A', roughness: 0.6 })), // rev 8.2 H: greige oak
     counter: inject(new MeshStandardMaterial({ color: '#E4DACB', roughness: 0.6 })),
     top: inject(new MeshStandardMaterial({ color: '#B9AE9E', roughness: 0.35 })),
-    glass: inject(new MeshBasicMaterial({ color: '#CFE0EA', transparent: true, opacity: 0.28, depthWrite: false, side: DoubleSide })),
-    dark: inject(new MeshBasicMaterial({ color: '#1A273F' })),
+    // F4: desktop glass reflects the environment (a physical pane; `transmission` was tried and dropped: its extra
+    // render pass washed out the whole frame with the GTAO composer in r187); phones a plain pane at 0.25
+    glass: inject(
+      glassTier
+        ? new MeshPhysicalMaterial({ color: '#DCE7EE', transparent: true, opacity: 0.3, roughness: 0.04, metalness: 0, reflectivity: 0.6, envMapIntensity: 1.4, depthWrite: false, side: DoubleSide })
+        : new MeshBasicMaterial({ color: '#CFE0EA', transparent: true, opacity: 0.25, depthWrite: false, side: DoubleSide }),
+    ),
+    dark: inject(new MeshStandardMaterial({ color: '#1E2226', roughness: 0.45, metalness: 0.3 })), // black frames and rails
   };
   // shadows follow the rise; perimeter walls never cast (the cutaway would leave stale shadows)
   const depth = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false);
@@ -319,9 +327,17 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     if (op.type === 'window' || op.type === 'glazed-door') {
       const y0 = op.type === 'window' ? op.sill : 0;
       pieces.push({ g: seg(op.a, op.b, y0, head, 0, true), m: 'glass', mid: m, side });
-      // 3 cm navy frame: head and sill lines
-      pieces.push({ g: seg(op.a, op.b, head - 0.03, head, 0.04), m: 'dark', mid: m, side });
-      pieces.push({ g: seg(op.a, op.b, y0, y0 + 0.03, 0.04), m: 'dark', mid: m, side });
+      // rev 10 F4: black mullions, as in the reference — a 4 cm frame (head, sill, jambs) and a vertical every 0.9 m
+      const L = Math.hypot(op.b[0] - op.a[0], op.b[1] - op.a[1]);
+      const at = (d: number): P2 => [op.a[0] + ((op.b[0] - op.a[0]) / L) * d, op.a[1] + ((op.b[1] - op.a[1]) / L) * d];
+      const F = 0.04;
+      pieces.push({ g: seg(op.a, op.b, head - F, head, 0.05), m: 'dark', mid: m, side });
+      pieces.push({ g: seg(op.a, op.b, y0, y0 + F, 0.05), m: 'dark', mid: m, side });
+      const n = Math.max(1, Math.round(L / 0.9));
+      for (let i = 0; i <= n; i++) {
+        const d = Math.min(L - F, Math.max(0, (L / n) * i - F / 2));
+        pieces.push({ g: seg(at(d), at(d + F), y0, head, 0.05), m: 'dark', mid: m, side });
+      }
     }
   }
   for (const r of data.railings) {
