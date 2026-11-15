@@ -661,9 +661,14 @@ export async function createTower(
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
-    // the distance where the tower fills 82% of the height (and ≤ 90% of the width), then centre it
+    // the distance where the tower fills 82% of the height (and ≤ 86% of the width), then centre it. Measured at
+    // rest (review r9a H1: a refit while a floor is out used to fold the push-in into the rest view)
     const az = view.az;
+    const was = { push: part.push, slide: part.slide, unit: part.unit, sway: view.sway };
+    Object.assign(part, { push: 0, slide: 0, unit: 0 });
     view.az = AZ;
+    view.sway = 0;
+    rest.ty = towerTop / 2;
     let a = 30, b = 600;
     for (let i = 0; i < 24; i++) {
       const m = (a + b) / 2;
@@ -679,6 +684,8 @@ export async function createTower(
       rest.ty += (extent().mid + 56 / h) * Math.tan((camera.fov * DEG) / 2) * rest.dist;
     }
     view.az = az;
+    Object.assign(part, { push: was.push, slide: was.slide, unit: was.unit });
+    view.sway = was.sway;
     fitFloor();
     // the CSS glow sits at the tower's mid-height on screen
     place();
