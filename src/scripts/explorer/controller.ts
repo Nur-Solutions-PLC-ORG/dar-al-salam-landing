@@ -820,6 +820,14 @@ export function createExplorer(root: HTMLElement) {
     'keydown',
     (e) => {
       if ((e.target as Element | null)?.closest('.u3d-render') && e.key !== 'Escape') return;
+      // review F7 L1 (2nd pass): Escape during a render only cancels it; the page's Esc (leave the walk or the unit)
+      // must not also run
+      if (e.key === 'Escape' && (still || stillBtn?.hasAttribute('data-busy'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        stopStill();
+        return;
+      }
       if (cameraKey.test(e.key)) stopStill();
     },
     true,
