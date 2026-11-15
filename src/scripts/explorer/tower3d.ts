@@ -52,6 +52,7 @@ import {
   RepeatWrapping,
   Scene,
   Shape,
+  ShapeGeometry,
   SRGBColorSpace,
   Vector2,
   Vector3,
@@ -109,10 +110,13 @@ const pane = (a: P2, b: P2, y0: number, y1: number, off = 0) => {
   return g;
 };
 /** A polygon extruded from y0 up by h. */
-const prism = (p: P2[], y0: number, h: number) => {
+const shapeOf = (p: P2[]) => {
   const s = new Shape();
   p.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z)));
-  const g = new ExtrudeGeometry(s, { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2);
+  return s;
+};
+const prism = (p: P2[], y0: number, h: number) => {
+  const g = new ExtrudeGeometry(shapeOf(p), { depth: h, bevelEnabled: false }).rotateX(-Math.PI / 2);
   g.translate(0, y0, 0);
   return g;
 };
@@ -703,7 +707,7 @@ export async function createTower(
     canvas.style.setProperty('--glow-y', `${(((1 - v3.y) / 2) * 100).toFixed(1)}%`);
   };
 
-  /** T4: the distance where the slid-out floor, seen from 52°, spans 70% of the stage width. */
+  /** T4/T5: the distance where the slid-out floor, seen from 52°, fills 85% of the stage's limiting dimension. */
   function fitFloor() {
     const l = typical.find((x) => x.floor === part.floor) ?? typical[0]!;
     const pts = [l.y0, l.y0 + l.h].flatMap((y) => outline.map(([x, z]) => new Vector3(x + out[0] * 14, y, z + out[1] * 14)));
@@ -715,7 +719,7 @@ export async function createTower(
       near = (a + b) / 2;
       place();
       const e = extent(pts);
-      if (e.w > 0.7 || e.h > 0.85) a = near; // its bounding box at 70% of the stage width (design T4 fix 2)
+      if (e.w > 0.85 || e.h > 0.85) a = near; // its bounding box at 85% of the limiting dimension (design T5 fix 6)
       else b = near;
     }
     near = b;
@@ -731,23 +735,26 @@ export async function createTower(
     // above: 1.6 m with the slide, then on up out of the frame as the camera rises to 52° (it would hide the floor)
     const up = 1.6 * k2 + 60 * Math.max(0, (k2 - 0.35) / 0.65) ** 2;
     const keep3 = c < 0 ? 1 : 1 - Math.min(1, Math.max(0, (k2 - 0.35) / 0.45)); // the floors above dissolve as they leave
-    for (const im of ims) {
+    const cutK = part.cut;
+    ims.forEach((im, ki) => {
       typical.forEach((l, i) => {
         const dy = c < 0 ? 0 : i > c ? up : i < c ? -1.6 * k2 : 0;
         const s = i === c ? 14 * k2 : 0;
-        // gone entirely once dissolved (no stray shadow from above the frame)
-        if (i > c && c >= 0 && keep3 < 0.02) im.setMatrixAt(i, m4.makeScale(0, 0, 0));
-        else im.setMatrixAt(i, m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
+        // gone entirely once dissolved (no stray shadow): the floors above as they leave; at the end of the cutaway the
+        // floors below and the chosen floor's façade (design: only the assembled floor stays in this view)
+        const gone = c >= 0 && ((i > c && keep3 < 0.02) || (cutK > 0.99 && (i < c || (i === c && ki > 0))));
+        im.setMatrixAt(i, gone ? m4.makeScale(0, 0, 0) : m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
       });
       im.instanceMatrix.needsUpdate = true;
-    }
+    });
     fades.forEach((fa, k3) => {
       // T5 cutaway: the chosen floor keeps its slab (k3 = 0); its façade, balconies and glass dissolve as the plate comes in
-      typical.forEach((_, i) => (fa.array[i] = c >= 0 && i > c ? keep3 : c >= 0 && i === c && k3 > 0 ? 1 - part.cut : 1));
+      typical.forEach((_, i) => (fa.array[i] = c < 0 ? 1 : i > c ? keep3 : i < c || k3 > 0 ? 1 - part.cut : 1));
       fa.needsUpdate = true;
     });
     if (plate) {
       plate.group.visible = c >= 0 && part.cut > 0.01;
+      sharedMat.opacity = part.cut;
       plate.group.position.set(out[0] * 14 * k2, (typical[c]?.y0 ?? 0) + SL, out[1] * 14 * k2);
       for (const u of plate.units) {
         const other = chosenUnit !== null && u.code !== chosenUnit;
@@ -763,7 +770,10 @@ export async function createTower(
     }
     for (const m of ctxMats) m.opacity = (m.userData.base as number) * (1 - k2);
     for (const x of ctxMeshes) x.visible = k2 < 0.98; // gone, they cast no shadow either
-    for (const o2 of below) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
+    for (const o2 of below) {
+      o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
+      o2.visible = c < 0 || part.cut < 0.5; // the podium (and its canopy) leave with the floors below
+    }
     if (finMesh) finMesh.visible = k2 < 0.02; // the fins run through every storey; they step aside while it's apart
     lid.visible = c >= 0 && k2 > 0.01 && part.cut < 0.5;
     if (lid.visible) lid.position.set(out[0] * 14 * k2, typical[c]!.y0, out[1] * 14 * k2);
@@ -919,12 +929,17 @@ export async function createTower(
   };
 
   /* ---------- T5: the assembled floor (its own chunk, with the nine unit JSONs) ---------- */
+  const sharedMat = std('#BFB9AE', { transparent: true, opacity: 0, side: DoubleSide });
   const loadPlate = () =>
     (plateJob ??= import('./tower-floor')
       .then((m) => m.buildFloor(d))
       .then((f) => {
         if (destroyed) return f.dispose();
         plate = f;
+        // the shared plate between the homes (corridors, cores) in a darker tone, so the nine homes read as nine shapes
+        const sp = new Mesh(k(new ShapeGeometry(shapeOf(outline)).rotateX(-Math.PI / 2).translate(0, 0.005, 0)), sharedMat);
+        sp.receiveShadow = true;
+        f.group.add(sp);
         f.group.visible = false;
         f.setTbc(tbcSet);
         scene.add(f.group);

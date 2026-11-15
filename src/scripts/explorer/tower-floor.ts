@@ -78,9 +78,10 @@ const paint = (g: BufferGeometry, hex: string, uv = false) => {
 };
 
 // flat floor colours by room kind (no textures in this view); bedrooms oak where the plan says parquet
-const FLOOR: Record<string, string> = { livingDining: '#D9D3C8', corridor: '#D9D3C8', bedroom: '#E2DDD4', masterBedroom: '#E2DDD4', kitchen: '#C3C8CB', shower: '#BCC2C6', store: '#D3CEC5', balcony: '#B8B2A8' };
-const PIECE: Record<string, string> = { bed: '#ECE7DE', nightstand: '#8B6A4A', sofa: '#9A9389', dining: '#8B6A4A', chair: '#8B6A4A', tvUnit: '#5A5550', sideTable: '#8B6A4A' };
-const KIND: Record<string, string> = { column: '#EFEBE5', shaft: '#EFEBE5', wardrobe: '#B08A5E', counter: '#D9D4CC', shower: '#E8EBED', basin: '#F4F4F2', wc: '#F4F4F2', hob: '#2E2E2E', sink: '#C9CDD0', rug: '#B9A98F' };
+// design's T5 look fix (rev 10): warm floors under white walls, so the rooms read apart
+const FLOOR: Record<string, string> = { livingDining: '#CFC8BB', corridor: '#CFC8BB', bedroom: '#D8BC94', masterBedroom: '#D8BC94', kitchen: '#C4C0B8', shower: '#B7BEC2', store: '#C9C2B6', balcony: '#BDB6AA' };
+const OAK = '#C9A77C'; // furniture blocks (F1 replaces them); wardrobes in the dollhouse's greige oak
+const KIND: Record<string, string> = { column: '#F3ECE2', shaft: '#F3ECE2', wardrobe: '#B5A08A', counter: '#D9D4CC', shower: '#E8EBED', basin: '#F4F4F2', wc: '#F4F4F2', hob: '#2E2E2E', sink: '#C9CDD0', rug: '#B9A98F' };
 
 export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
   const [cx, cz] = d.centre as P2;
@@ -123,11 +124,11 @@ export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
       if (op.type === 'window' && op.sill > 0.01) walls.push(box(T(op.a), T(op.b), 0, op.sill, op.t));
       if (op.type !== 'open' && op.head < CUT) walls.push(box(T(op.a), T(op.b), op.head, CUT, op.t));
     }
-    const floors = geo.rooms.map((rm) => paint(flat(TP(rm.poly), 0.02), rm.finish === 'parquet' ? '#C9A57A' : (FLOOR[rm.name] ?? '#D9D3C8'), true));
-    const solids = geo.solids.map((s) => paint(prism(TP(s.poly), Math.min(s.h, CUT)), s.kind === 'furniture' ? (PIECE[s.piece ?? ''] ?? '#CFC7BB') : (KIND[s.kind] ?? '#CFC7BB')));
+    const floors = geo.rooms.map((rm) => paint(flat(TP(rm.poly), 0.02), rm.finish === 'parquet' ? '#D8BC94' : (FLOOR[rm.name] ?? '#CFC8BB'), true));
+    const solids = geo.solids.map((s) => paint(prism(TP(s.poly), Math.min(s.h, CUT)), s.kind === 'furniture' ? OAK : (KIND[s.kind] ?? '#CFC7BB')));
     for (const rl of geo.railings) solids.push(paint(box(T(rl.a), T(rl.b), 0, rl.h, 0.05), '#3A3A3A'));
 
-    const wallMat = new MeshStandardMaterial({ color: '#F2EEE8', roughness: 0.9, transparent: true });
+    const wallMat = new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.9, transparent: true });
     const floorMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: DoubleSide, transparent: true });
     const solidMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, transparent: true });
     const ug = new Group();
