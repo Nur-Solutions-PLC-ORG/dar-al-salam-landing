@@ -801,7 +801,17 @@ export function createExplorer(root: HTMLElement) {
   // any camera movement returns to the live view at once
   stage.addEventListener('pointerdown', (e) => (e.target as Element | null)?.closest('.u3d-render') || stopStill(), true);
   stage.addEventListener('wheel', () => stopStill(), { capture: true, passive: true });
-  stage.addEventListener('keydown', () => stopStill(), true);
+  // review F7 M2: only keys that move the camera (and Escape) cancel; Enter or Space on the button itself would cancel
+  // here and then restart on its click
+  const cameraKey = /^(Arrow(Left|Right|Up|Down)|PageUp|PageDown|Home|End|Escape|\+|-|=|_)$/;
+  stage.addEventListener(
+    'keydown',
+    (e) => {
+      if ((e.target as Element | null)?.closest('.u3d-render') && e.key !== 'Escape') return;
+      if (cameraKey.test(e.key)) stopStill();
+    },
+    true,
+  );
 
   /* ---------- rev 9 (B1–B6): walk-in mode, "Step inside" ---------- */
   let walk: import('./walk').Walk | null = null;
