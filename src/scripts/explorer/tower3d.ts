@@ -160,6 +160,7 @@ export async function createTower(
 ): Promise<TowerAdapter> {
   const d: Tower3d = (await import('../../data/tower3d.json')).default;
   const hi = matchMedia('(pointer: fine)').matches && innerWidth >= 1024;
+  const coarse = matchMedia('(pointer: coarse)').matches;
   const reduced = prefersReducedMotion();
 
   const renderer = new WebGLRenderer({ antialias: hi || devicePixelRatio < 2, alpha: true, powerPreference: 'high-performance' });
@@ -1008,7 +1009,9 @@ export async function createTower(
       vel *= 0.92;
       again = true;
     }
-    if (!reduced && !dragging && part.push === 0) {
+    // the idle sway (coordinator, review r9a L7): never on phones (they render on demand), and on desktop it stops,
+    // with the rendering, after 20 s without interaction; a hidden tab or an off-screen stage pauses it anyway
+    if (!reduced && !coarse && !dragging && part.push === 0 && now - idleSince < 20000) {
       // the sway eases in after a second of rest
       const k2 = Math.min(1, (now - idleSince) / 2000);
       view.sway += (Math.sin((now / 24000) * Math.PI * 2) * SWAY * k2 - view.sway) * 0.05;
@@ -1048,6 +1051,7 @@ export async function createTower(
   let touchPick: number | null = null;
   const onDown = (e: PointerEvent) => {
     if (!mine()) return; // the slab or the dollhouse holds the shared canvas
+    idleSince = performance.now();
     cb.onInteract();
     dragging = true;
     downX = lastX = e.clientX;
@@ -1057,6 +1061,10 @@ export async function createTower(
   };
   const onMove = (e: PointerEvent) => {
     if (!mine()) return;
+    if (e.pointerType === 'mouse' && !coarse && performance.now() - idleSince > 20000) {
+      idleSince = performance.now(); // back from a long rest: the sway resumes
+      request();
+    }
     if (!dragging) {
       if (e.pointerType === 'mouse') {
         if (selected === null) {
@@ -1130,7 +1138,9 @@ export async function createTower(
   ro.observe(host);
   const stopVis = onVisibility(host, (v) => {
     visible = v && document.visibilityState === 'visible';
-    if (visible) request();
+    if (!visible) return;
+    idleSince = performance.now(); // back on screen: the desktop sway runs again for its 20 s
+    request();
   });
 
   fit();
