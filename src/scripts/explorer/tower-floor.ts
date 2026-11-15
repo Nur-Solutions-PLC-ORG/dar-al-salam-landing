@@ -167,6 +167,9 @@ export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
     const solidMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, transparent: true });
     const ug = new Group();
     const add = (gs: BufferGeometry[], m: MeshStandardMaterial, shadow: boolean) => {
+      // only attributes every part has (a stray uv on one piece used to fail the whole merge: review r9b)
+      const names = Object.keys(gs[0]!.attributes).filter((n) => gs.every((g) => g.getAttribute(n)));
+      for (const g of gs) for (const n of Object.keys(g.attributes)) if (!names.includes(n)) g.deleteAttribute(n);
       const g = mergeGeometries(gs)!;
       gs.forEach((x) => x.dispose());
       keep.push(g, m);
