@@ -11,6 +11,7 @@ import bl09 from '../assets/plans/bl09.jpg';
 import keyplanDuotone from '../assets/plans/keyplan-duotone.png';
 import hotspots from './keyplan-hotspots.json';
 import { HAS3D } from './units3d';
+import { site } from './site';
 
 /** Room labels; translated in src/i18n/*.ts under `rooms`. */
 export type RoomKey =
@@ -100,11 +101,12 @@ export const keyplan = keyplanDuotone;
 export const keyplanViewBox = '100 60 1200 1840';
 
 /**
- * Floors the explorer shows: 1–14, the typical floors we have plans for. The tower has 16 floors
- * (site.project.floors) with a 16th floor planned; there is no per-floor breakdown above 14 (don't invent one).
+ * Floors the explorer shows (rev 11): the residential floors 3–16, nine homes each on the typical plan. The ground
+ * floor (reception) and floors 1–2 are never selectable.
  */
-export const PLAN_FLOORS = 14;
-export const planFloors: readonly number[] = Array.from({ length: PLAN_FLOORS }, (_, i) => i + 1);
+const { from: FIRST_FLOOR, to: LAST_FLOOR } = site.project.residentialFloors;
+export const PLAN_FLOORS = LAST_FLOOR - FIRST_FLOOR + 1;
+export const planFloors: readonly number[] = Array.from({ length: PLAN_FLOORS }, (_, i) => i + FIRST_FLOOR);
 
 /* ---------- per-floor composition ---------- */
 
@@ -125,7 +127,7 @@ export interface FloorComposition {
 }
 
 const assertPlanFloor = (floor: number) => {
-  if (!Number.isInteger(floor) || floor < 1 || floor > PLAN_FLOORS) throw new Error(`No plan for floor ${floor}`);
+  if (!Number.isInteger(floor) || floor < FIRST_FLOOR || floor > LAST_FLOOR) throw new Error(`No plan for floor ${floor}`);
 };
 
 export const slotStatus = (floor: number, code: UnitCode): SlotStatus => {

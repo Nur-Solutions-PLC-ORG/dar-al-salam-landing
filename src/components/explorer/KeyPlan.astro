@@ -7,6 +7,7 @@
 import { Picture } from 'astro:assets';
 import keyplanFloor from '../../assets/plans/keyplan-floor.png';
 import { units, keyplanViewBox, floorComposition, floorSlots, formatArea, planFloors } from '../../data/units';
+const firstFloor = planFloors[0]!; // rev 11
 import { floorMix, fmt, getDict, type Lang } from '../../i18n';
 
 interface Props {
@@ -33,7 +34,7 @@ const tbcCodes = new Set(planFloors.flatMap((n) => floorSlots(n).filter((s) => s
     decoding="async"
     class="keyplan__img"
   />
-  <svg class="keyplan__svg" viewBox={keyplanViewBox} role="group" aria-label={fmt(t.explore.keyplanLabel, { n: 1, mix: floorMix(floorComposition(1), t) })} data-keyplan-svg>
+  <svg class="keyplan__svg" viewBox={keyplanViewBox} role="group" aria-label={fmt(t.explore.keyplanLabel, { n: firstFloor, mix: floorMix(floorComposition(firstFloor), t) })} data-keyplan-svg>
     <defs>
       <pattern id="tbc-hatch" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
         <line x1="0" y1="0" x2="0" y2="28" stroke="#1a273f" stroke-opacity="0.22" stroke-width="3"></line>

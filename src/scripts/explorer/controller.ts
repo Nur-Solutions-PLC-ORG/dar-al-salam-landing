@@ -80,7 +80,10 @@ export function createExplorer(root: HTMLElement) {
   const floorRows = $$<HTMLButtonElement>('.floors__row');
   // per plan floor, server-rendered on the floor list: composition text + positions still to be confirmed
   const rowOf = (n: number) => floorRows.find((r) => Number(r.dataset.floor) === n);
-  const FLOORS = floorRows.length || 14;
+  // rev 11: the residential floors (3–16), read from the server-rendered rows
+  const floorNums = floorRows.map((r) => Number(r.dataset.floor));
+  const FIRST = floorNums.length ? Math.min(...floorNums) : 3;
+  const LAST = floorNums.length ? Math.max(...floorNums) : 16;
   const mixOf = (n: number) => rowOf(n)?.querySelector('.floors__mix')?.textContent?.trim() ?? '';
   const tbcOf = (n: number) => new Set((rowOf(n)?.dataset.tbc ?? '').split(' ').filter(Boolean));
   const hotspots = $$<SVGAElement>('.hotspot');
@@ -95,7 +98,7 @@ export function createExplorer(root: HTMLElement) {
   /** Floors where `code` is confirmed, read from the floor rows' data-tbc. */
   const confirmedFloors = (code: Code) =>
     floorRows.map((r) => Number(r.dataset.floor)).filter((n) => !tbcOf(n).has(code)).sort((a, b) => a - b);
-  /** Nearest confirmed floor; ties go to the lower floor (DESIGN §9.2 rev 5: 1–5 → 4, 7 → 6, 12–14 → 11). */
+  /** Nearest confirmed floor; ties go to the lower floor (rev 11: 3 → 4, 5 → 4, 7 → 6, 9 → 8, 12–16 → 11). */
   const nearestFloor = (n: number, code: Code) =>
     confirmedFloors(code).reduce<number | null>((best, f) => (best === null || Math.abs(f - n) < Math.abs(best - n) ? f : best), null) ?? n;
   const isTbc = (code: string | null, n = state.floor) => Boolean(code && tbcOf(n).has(code));
@@ -109,9 +112,9 @@ export function createExplorer(root: HTMLElement) {
     }),
   );
 
-  const state: State = { level: 'idle', floor: 1, unit: null };
+  const state: State = { level: 'idle', floor: FIRST, unit: null };
   let introProgress = 1; // S10 scrub progress, handed to the 3D scene when it arrives
-  let previewFloor = 1; // stepper / list preview while idle
+  let previewFloor = FIRST; // stepper / list preview while idle
 
   /* ---------- model tiers ---------- */
 
@@ -381,8 +384,8 @@ export function createExplorer(root: HTMLElement) {
     const n = state.level === 'idle' ? previewFloor : state.floor;
     $$('[data-stepper-label]').forEach((el) => (el.textContent = f(t.floorN, { n })));
     $$('[data-view-floor] .btn__text').forEach((el) => (el.textContent = f(t.viewFloor, { n })));
-    $$<HTMLButtonElement>('[data-step="-1"]').forEach((b) => (b.disabled = n <= 1));
-    $$<HTMLButtonElement>('[data-step="1"]').forEach((b) => (b.disabled = n >= FLOORS));
+    $$<HTMLButtonElement>('[data-step="-1"]').forEach((b) => (b.disabled = n <= FIRST));
+    $$<HTMLButtonElement>('[data-step="1"]').forEach((b) => (b.disabled = n >= LAST));
   }
 
   function renderHotspots() {
@@ -985,7 +988,7 @@ export function createExplorer(root: HTMLElement) {
     else if (state.level === 'floor') go({ level: 'idle', floor: state.floor, unit: null }, { focus: true });
   };
 
-  const clampFloor = (n: number) => Math.min(FLOORS, Math.max(1, n));
+  const clampFloor = (n: number) => Math.min(LAST, Math.max(FIRST, n));
 
   /* ---------- events ---------- */
 
@@ -1124,7 +1127,7 @@ export function createExplorer(root: HTMLElement) {
   const fromHash = (): State | null => {
     const m = /^#explore(?:\/f(\d{1,2})(?:\/(bl0[1-9])(?:\/(3d|plan)(?:\/in\/([a-z0-9-]+))?)?)?)?$/i.exec(location.hash);
     if (!m) return null;
-    if (!m[1]) return { level: 'idle', floor: 1, unit: null };
+    if (!m[1]) return { level: 'idle', floor: FIRST, unit: null };
     const floor = clampFloor(Number(m[1]));
     const unit = (m[2]?.toUpperCase() as Code | undefined) ?? null;
     return { level: unit ? 'unit' : 'floor', floor, unit, pref: (m[3]?.toLowerCase() as View | undefined) ?? null, walk: m[4]?.toLowerCase() ?? null };
@@ -1138,7 +1141,10 @@ export function createExplorer(root: HTMLElement) {
   if (initial && state.level !== 'idle') history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   window.addEventListener('hashchange', () => {
     const s = fromHash();
-    if (s) go(s, { animate: true });
+    if (!s) return;
+    go(s, { animate: true });
+    // rev 11: an old or hand-typed f1/f2 (or above 16) settles on f3/f16 quietly
+    if (s.level !== 'idle' && location.hash !== hashFor(state)) history.replaceState(null, '', `${location.pathname}${location.search}${hashFor(state)}`);
   });
 
   /* ---------- S10 intro (desktop, motion allowed) ---------- */

@@ -26,8 +26,8 @@ export interface SiteConfig {
     country: string;
     /** Total floors in the tower (BRIEF update 2026-11-14). */
     floors: number;
-    /** The client is adding a 16th floor: say "16th floor planned"; no plans or breakdown for it yet. */
-    topFloorPlanned: boolean;
+    /** Rev 11 (client correction, BRIEF 2026-11-15): homes are on these floors, nine per floor; ground has a reception. */
+    residentialFloors: { from: number; to: number };
     totalApartments: number;
     /** e.g. '2027-12' or 'Q4 2027'. */
     completion: string;
@@ -88,8 +88,8 @@ export const site: SiteConfig = {
     city: 'Addis Ababa',
     country: 'Ethiopia',
     floors: 16,
-    topFloorPlanned: true,
-    totalApartments: 126, // unchanged by the 16th floor (BRIEF update 2026-11-14)
+    residentialFloors: { from: 3, to: 16 }, // 14 × 9 = 126 (rev 11)
+    totalApartments: 126,
     completion: '', // TODO(client): completion date
   },
   contact: {

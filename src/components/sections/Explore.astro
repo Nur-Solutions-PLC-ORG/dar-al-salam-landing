@@ -23,6 +23,7 @@ interface Props {
 const { lang } = Astro.props;
 const t = getDict(lang);
 const floorsDesc = [...planFloors].reverse();
+const firstFloor = planFloors[0]!; // rev 11: floor 3, the first floor with homes
 const twoBedFloorsText = floorList(twoBedFloors, lang);
 /** Row mix split so the "1 to be confirmed" part can be muted (DESIGN §9.2 rev 5); text = floorMix(). */
 const mixParts = (n: number) => {
@@ -110,10 +111,10 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
         <div class="explore__stepper" data-model-stepper>
           <div class="stepper">
             <button type="button" class="stepper__btn" data-step="-1" aria-label={t.explore.prevFloor}>−</button>
-            <span class="stepper__label tabular" data-stepper-label aria-live="polite">{fmt(t.explore.floorN, { n: 1 })}</span>
+            <span class="stepper__label tabular" data-stepper-label aria-live="polite">{fmt(t.explore.floorN, { n: firstFloor })}</span>
             <button type="button" class="stepper__btn" data-step="1" aria-label={t.explore.nextFloor}>+</button>
           </div>
-          <Button class="explore__view" data-view-floor>{fmt(t.explore.viewFloor, { n: 1 })}</Button>
+          <Button class="explore__view" data-view-floor>{fmt(t.explore.viewFloor, { n: firstFloor })}</Button>
         </div>
 
         <p class="explore__strip small">{t.explore.strip}</p>
@@ -255,7 +256,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
             </div>
             <div class="unit__body">
               <h3 class="eyebrow unit__tbc-title" id="explore-unit-tbc" tabindex="-1" data-unit-title data-unit-where>{tbcUnit.code}</h3>
-              <p class="muted" data-tbc-body>{fmt(t.explore.tbcBody, { n: 1, floors: twoBedFloorsText })}</p>
+              <p class="muted" data-tbc-body>{fmt(t.explore.tbcBody, { n: firstFloor, floors: twoBedFloorsText })}</p>
               <div class="unit__actions">
                 <Button href="#enquire" data-request={tbcUnit.code}>{t.explore.askAbout}</Button>
                 <Button variant="secondary" data-see-confirmed={tbcUnit.code}>{fmt(t.explore.seeOn, { code: tbcUnit.code, n: twoBedFloors[0]! })}</Button>

@@ -13,6 +13,7 @@ import {
   GROUND_INSET,
   PARAPET,
   RESIDENTIAL_FLOORS,
+  FIRST_RESIDENTIAL,
   SLAB_DEPTH,
   floorBase,
   floorOutlineM,
@@ -140,8 +141,8 @@ export function buildMaquette(): Maquette {
 
   const podium = prism(podiumRing, 0, GROUND_HEIGHT);
   const floors = Array.from({ length: RESIDENTIAL_FLOORS }, (_, i) => {
-    const n = i + 1;
-    const z0 = floorBase(n);
+    const n = i + FIRST_RESIDENTIAL; // rev 11: the slabs are floors 3–16
+    const z0 = floorBase(i + 1);
     return { n, prism: prism(plate, z0, z0 + SLAB_DEPTH, { glaze: true }) };
   });
   const parapet = prism(insetPolygon(plate, 0.4), towerTop, towerTop + PARAPET);
