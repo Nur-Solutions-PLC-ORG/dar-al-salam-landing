@@ -79,8 +79,9 @@ const paint = (g: BufferGeometry, hex: string, uv = false) => {
 
 // flat floor colours by room kind (no textures in this view); bedrooms oak where the plan says parquet
 // design's T5 look fix (rev 10): warm floors under white walls, so the rooms read apart
-const FLOOR: Record<string, string> = { livingDining: '#CFC8BB', corridor: '#CFC8BB', bedroom: '#D8BC94', masterBedroom: '#D8BC94', kitchen: '#C4C0B8', shower: '#B7BEC2', store: '#C9C2B6', balcony: '#BDB6AA' };
 const OAK = '#C9A77C'; // furniture blocks (F1 replaces them); wardrobes in the dollhouse's greige oak
+// review r9a (facts): bedrooms are tile unless the plan labels them parquet — oak only via `finish: 'parquet'`
+const FLOOR: Record<string, string> = { livingDining: '#CFC8BB', corridor: '#CFC8BB', bedroom: '#D9D3C7', masterBedroom: '#D9D3C7', kitchen: '#C4C0B8', shower: '#B7BEC2', store: '#C9C2B6', balcony: '#BDB6AA' };
 const KIND: Record<string, string> = { column: '#F3ECE2', shaft: '#F3ECE2', wardrobe: '#B5A08A', counter: '#D9D4CC', shower: '#E8EBED', basin: '#F4F4F2', wc: '#F4F4F2', hob: '#2E2E2E', sink: '#C9CDD0', rug: '#B9A98F' };
 
 export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
