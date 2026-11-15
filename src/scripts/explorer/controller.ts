@@ -230,7 +230,8 @@ export function createExplorer(root: HTMLElement) {
   let leftTowerAt = 0; // when the visitor left the tower view (the push-in + lift take ~1.25 s)
   function syncSlab() {
     // with the 3D tower as the stage, the floor shows inside it (T5); the slab canvas only hosts the unit dollhouse
-    const want = tower ? state.level === 'unit' && viewFor() === '3d' : state.level !== 'idle';
+    // (and only once the dollhouse exists: the slab's own key-plan plate must never show in its place)
+    const want = tower ? state.level === 'unit' && viewFor() === '3d' && Boolean(dh) : state.level !== 'idle';
     if (want && !gl && webgl && !prefersLightweight()) void loadScene();
     clearTimeout(slabTimer);
     if (gl) {
@@ -673,6 +674,7 @@ export function createExplorer(root: HTMLElement) {
       onStepInside: prefersLightweight() ? undefined : (id) => go({ ...state, walk: id }),
     });
     const entering = dh.enter({ skipLift: Boolean(tower) }); // rev 10 T5: from the assembled floor the walls are already up
+    if (tower) syncSlab(); // the dollhouse is drawing: now the stage cross-fades from the tower to it
     await fade(1, 200);
     await entering;
   }
