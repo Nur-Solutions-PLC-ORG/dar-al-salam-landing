@@ -86,6 +86,8 @@ export interface Walk {
   /** Back to the 3D model (U9). */
   exit(): Promise<void>;
   readonly room: string | null;
+  /** The top-left toolbar ("Back to 3D model", …): the controller docks "Render this view" here (review F7 M1). */
+  readonly toolbar: HTMLElement;
   destroy(): void;
 }
 
@@ -1009,6 +1011,7 @@ export function createWalk(
     get room() {
       return current;
     },
+    toolbar,
     async enter(id) {
       // a ledge or an unknown id (an old link) starts in the living room instead
       if (!known(id) || !canStand(id)) id = (data.rooms.find((r) => r.name === 'livingDining' && canStand(r.id)) ?? data.rooms.find((r) => canStand(r.id)))!.id;

@@ -689,6 +689,7 @@ export function createExplorer(root: HTMLElement) {
   /* ---------- rev 10 F7: "Render this view" — a path-traced still, desktop only, on press ---------- */
   let stillBtn: HTMLButtonElement | null = null;
   let stillBar: HTMLElement | null = null;
+  let stillStatus: HTMLElement | null = null; // the polite progress announcer beside the button
   let still: import('./render-still').Still | null = null;
   let stillJob = 0;
   let stillFade: HTMLCanvasElement | null = null; // the frozen live frame the traced image cross-fades in under
@@ -705,11 +706,21 @@ export function createExplorer(root: HTMLElement) {
     if (stillBtn) stillBtn.textContent = stillBtn.dataset.label ?? '';
     if (stillBar) stillBar.hidden = true;
   };
+  /**
+   * Review F7 M1: walking, the bottom-edge room chips could cover the button, so it joins the walk toolbar (DESIGN F7:
+   * "dollhouse and walk-in toolbars"); back on the dollhouse it returns to the stage's bottom-right corner.
+   */
+  function placeStill() {
+    if (!stillBtn) return;
+    const host = walkOn && walk ? walk.toolbar : stage;
+    if (stillBtn.parentElement !== host) host.append(stillBtn);
+  }
   function dropStill() {
     stopStill();
     stillBtn?.remove();
     stillBar?.remove();
-    stillBtn = stillBar = null;
+    stillStatus?.remove(); // review F7 L1: it outlived the button
+    stillBtn = stillBar = stillStatus = null;
   }
   async function offerStill(s: { render?: string; rendering?: string; cant?: string }) {
     if (!dh || stillBtn || !s.render || prefersReducedMotion()) return;
@@ -726,10 +737,11 @@ export function createExplorer(root: HTMLElement) {
     stillBar.setAttribute('aria-hidden', 'true');
     stillBar.hidden = true;
     stage.append(stillBtn, stillBar);
-    const status = document.createElement('span');
+    const status = (stillStatus = document.createElement('span'));
     status.className = 'visually-hidden';
     status.setAttribute('aria-live', 'polite');
     stillBtn.after(status);
+    placeStill();
     stillBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       if (!dh) return;
@@ -883,6 +895,10 @@ export function createExplorer(root: HTMLElement) {
     walkOn = on;
     document.documentElement.classList.toggle('is-walking', on);
     void walkLayout(on);
+    placeStill();
+    // review F7 M3: on phones the 70svh stage can start part-way off screen; bring it in before the dive (phones switch
+    // the layout synchronously above, so the stage is measured at its walk size)
+    if (on && !window.matchMedia('(min-width: 1024px)').matches) scrollToTarget(stage, { immediate: prefersReducedMotion() });
     // breadcrumb: … › BL05 › Inside
     if (on && !insideLi) {
       insideLi = document.createElement('li');

@@ -606,9 +606,10 @@ html.is-walking .u3d-enter {
   cursor: progress;
 }
 
-/* walking: clear of the look-right button */
-.explore[data-walk] .u3d-render {
-  bottom: 64px;
+/* walking: in the walk toolbar, after "Back to 3D model" (review F7 M1: the bottom room chips covered it) */
+.walk-toolbar .u3d-render {
+  position: static;
+  pointer-events: auto;
 }
 
 .u3d-render-bar {
