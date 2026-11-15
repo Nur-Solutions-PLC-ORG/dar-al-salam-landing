@@ -16,6 +16,7 @@ import {
   ExtrudeGeometry,
   Float32BufferAttribute,
   Group,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   RepeatWrapping,
@@ -26,6 +27,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { units3d } from '../../data/units3d';
+import { buildFurniture } from './furniture';
 import type { Unit3d } from '../../data/units3d/types';
 
 type P2 = [number, number];
@@ -65,6 +67,21 @@ const shape = (p: P2[]) => {
 };
 const prism = (p: P2[], h: number) => new ExtrudeGeometry(shape(p), { depth: Math.max(0.01, h), bevelEnabled: false }).rotateX(-Math.PI / 2);
 const flat = (p: P2[], y: number) => new ShapeGeometry(shape(p)).rotateX(-Math.PI / 2).translate(0, y, 0).toNonIndexed();
+/** Reverse each triangle's winding (a mirrored placement turns faces inside out otherwise). */
+const flip = (g: BufferGeometry) => {
+  const pos = g.getAttribute('position');
+  const col = g.getAttribute('color');
+  for (let i = 0; i < pos.count; i += 3) {
+    for (const a of [pos, col]) {
+      if (!a) continue;
+      for (let k = 0; k < a.itemSize; k++) {
+        const t = a.getComponent(i + 1, k);
+        a.setComponent(i + 1, k, a.getComponent(i + 2, k));
+        a.setComponent(i + 2, k, t);
+      }
+    }
+  }
+};
 const paint = (g: BufferGeometry, hex: string, uv = false) => {
   const c = new Color(hex);
   const n = g.getAttribute('position').count;
@@ -79,7 +96,6 @@ const paint = (g: BufferGeometry, hex: string, uv = false) => {
 
 // flat floor colours by room kind (no textures in this view); bedrooms oak where the plan says parquet
 // design's T5 look fix (rev 10): warm floors under white walls, so the rooms read apart
-const OAK = '#C9A77C'; // furniture blocks (F1 replaces them); wardrobes in the dollhouse's greige oak
 // review r9a (facts): bedrooms are tile unless the plan labels them parquet — oak only via `finish: 'parquet'`
 const FLOOR: Record<string, string> = { livingDining: '#CFC8BB', corridor: '#CFC8BB', bedroom: '#D9D3C7', masterBedroom: '#D9D3C7', kitchen: '#C4C0B8', shower: '#B7BEC2', store: '#C9C2B6', balcony: '#BDB6AA' };
 const KIND: Record<string, string> = { column: '#F3ECE2', shaft: '#F3ECE2', wardrobe: '#B5A08A', counter: '#D9D4CC', shower: '#E8EBED', basin: '#F4F4F2', wc: '#F4F4F2', hob: '#2E2E2E', sink: '#C9CDD0', rug: '#B9A98F' };
@@ -126,7 +142,23 @@ export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
       if (op.type !== 'open' && op.head < CUT) walls.push(box(T(op.a), T(op.b), op.head, CUT, op.t));
     }
     const floors = geo.rooms.map((rm) => paint(flat(TP(rm.poly), 0.02), rm.finish === 'parquet' ? '#D8BC94' : (FLOOR[rm.name] ?? '#CFC8BB'), true));
-    const solids = geo.solids.map((s) => paint(prism(TP(s.poly), Math.min(s.h, CUT)), s.kind === 'furniture' ? OAK : (KIND[s.kind] ?? '#CFC7BB')));
+    // structure as blocks; furniture, wardrobes, counters and fixtures from the library's low tier (F1), placed by matrix
+    const solids = geo.solids.filter((s) => s.kind === 'column' || s.kind === 'shaft').map((s) => paint(prism(TP(s.poly), Math.min(s.h, CUT)), KIND[s.kind]!));
+    const place = new Matrix4()
+      .makeTranslation(u.t[0]! - cx, 0, u.t[1]! - cz)
+      .multiply(new Matrix4().makeRotationY(-r))
+      .multiply(new Matrix4().makeScale(u.mirror ? -1 : 1, 1, 1));
+    for (const p of buildFurniture(geo, 'low')) {
+      if (p.m === 'glass') {
+        p.g.dispose();
+        continue;
+      }
+      p.g.applyMatrix4(place);
+      if (u.mirror) flip(p.g);
+      p.g.deleteAttribute('normal');
+      p.g.computeVertexNormals();
+      solids.push(p.g);
+    }
     for (const rl of geo.railings) solids.push(paint(box(T(rl.a), T(rl.b), 0, rl.h, 0.05), '#3A3A3A'));
 
     const wallMat = new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.9, transparent: true });

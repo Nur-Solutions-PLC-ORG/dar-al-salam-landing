@@ -42,6 +42,7 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildFurniture } from './furniture';
 import { gsap } from '../motion';
 import { onVisibility } from '../lazy';
 import type { P2, Unit3d } from '../../data/units3d/types';
@@ -297,15 +298,9 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     pieces.push({ g: seg(r.a, r.b, r.h - 0.04, r.h, 0.04), m: 'dark', mid: m, side: -1 });
   }
   for (const s of data.solids) {
-    if (s.kind === 'furniture') continue; // below: textured blocks (rev 8.1 D)
-    if (s.kind === 'rug' || s.kind === 'hob' || s.kind === 'sink') continue; // F2: the plan texture shows them until F1
-    const m = centroid(s.poly);
-    if (s.kind === 'counter') {
-      pieces.push({ g: prism(s.poly, s.h - 0.02), m: 'counter', mid: m, side: -1, solid: true });
-      const top = prism(s.poly, 0.02);
-      top.translate(0, s.h - 0.02, 0);
-      pieces.push({ g: top, m: 'top', mid: m, side: -1, solid: true });
-    } else pieces.push({ g: prism(s.poly, cut(s.h)), m: s.kind === 'wardrobe' ? 'oak' : 'wall', mid: m, side: -1, solid: true });
+    // rev 10 F1: furniture, wardrobes, counters and fixtures are modelled by furniture.ts (below); the structure stays here
+    if (s.kind !== 'column' && s.kind !== 'shaft') continue;
+    pieces.push({ g: prism(s.poly, cut(s.h)), m: 'wall', mid: centroid(s.poly), side: -1, solid: true });
   }
   const sub = ([x, z]: P2): [number, number] => [x - cx, z - cz];
   const dist = (p: Piece) => Math.hypot(...sub(p.mid));
@@ -313,9 +308,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const solids = pieces.filter((p) => p.solid).sort((a, b) => dist(a) - dist(b));
   walls.forEach((p, i) => tag(p.g, i * 0.012, p.side));
   solids.forEach((p, i) => tag(p.g, 0.3 + i * 0.012, -1));
-  const furniture = data.solids
-    .filter((x) => x.kind === 'furniture')
-    .sort((a, b) => Math.hypot(...sub(centroid(a.poly))) - Math.hypot(...sub(centroid(b.poly))));
+  const furniture = data.solids.filter((x) => x.kind !== 'column' && x.kind !== 'shaft');
   const riseEnd = Math.max(walls.length * 0.012 + 0.7, 0.3 + solids.length * 0.012 + 0.7, 0.45 + furniture.length * 0.012 + 0.5);
 
   const meshes: Partial<Record<keyof typeof mat, Mesh>> = {};
@@ -352,46 +345,23 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   };
   const floorGeo = k(planUV(flat(data.footprint)));
 
-  /* rev 8.1 D: furniture blocks. Lids reuse the floor texture (the plan's own furniture art becomes the lid), sides
-     take `side`; one geometry with two groups. They rise after the walls (+0.45 s, 0.5 s). */
-  if (furniture.length) {
-    const slice = (g: BufferGeometry, gi: number) => {
-      const { start, count } = g.groups[gi]!;
-      const out = new BufferGeometry();
-      for (const name of ['position', 'normal', 'uv'] as const) {
-        const a = g.getAttribute(name);
-        out.setAttribute(name, new Float32BufferAttribute((a.array as Float32Array).slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize));
-      }
-      return out;
-    };
-    const colour = (g: BufferGeometry, hex: string) => {
-      const c = new Color(hex);
-      const n = g.getAttribute('position').count;
-      const arr = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) arr.set([c.r, c.g, c.b], i * 3);
-      g.setAttribute('color', new Float32BufferAttribute(arr, 3));
-      return g;
-    };
-    const lids: BufferGeometry[] = [];
-    const sides: BufferGeometry[] = [];
-    furniture.forEach((f, i) => {
-      const g = prism(f.poly, f.h); // ExtrudeGeometry groups: 0 = caps, 1 = sides
-      const delay = 0.45 + i * 0.012;
-      lids.push(tag(colour(planUV(slice(g, 0)), '#ffffff'), delay, -1));
-      sides.push(tag(colour(slice(g, 1), f.side ?? '#E4DACB'), delay, -1));
-      g.dispose();
-    });
-    const L = mergeGeometries(lids)!;
-    const S = mergeGeometries(sides)!;
-    const geo = k(mergeGeometries([L, S], true)!);
-    [...lids, ...sides, L, S].forEach((g) => g.dispose());
-    const mesh = new Mesh(geo, [
-      inject(new MeshLambertMaterial({ map: tex, color: FLOOR_TINT }), true, 0.5),
-      inject(new MeshLambertMaterial({ vertexColors: true }), true, 0.5),
-    ]);
-    mesh.castShadow = mesh.receiveShadow = true;
-    mesh.customDepthMaterial = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
-    root.add(mesh);
+  /* rev 10 F1: modelled furniture (full tier): one vertex-coloured mesh, plus the shower screens' glass. Pieces rise
+     after the walls (+0.45 s, 0.5 s), nearest the middle first. */
+  {
+    const parts = buildFurniture(data, 'full').sort((a, b) => Math.hypot(...sub(a.c)) - Math.hypot(...sub(b.c)));
+    const order = new Map<string, number>();
+    for (const p of parts) if (!order.has(p.c.join())) order.set(p.c.join(), order.size);
+    parts.forEach((p) => tag(p.g, 0.45 + order.get(p.c.join())! * 0.012, -1));
+    const solid = parts.filter((p) => p.m !== 'glass').map((p) => p.g);
+    const glass = parts.filter((p) => p.m === 'glass').map((p) => p.g);
+    if (solid.length) {
+      const mesh = new Mesh(k(mergeGeometries(solid)!), inject(new MeshLambertMaterial({ vertexColors: true }), true, 0.5));
+      mesh.castShadow = mesh.receiveShadow = true;
+      mesh.customDepthMaterial = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
+      root.add(mesh);
+    }
+    if (glass.length) root.add(new Mesh(k(mergeGeometries(glass)!), inject(new MeshBasicMaterial({ color: '#DDE8EE', transparent: true, opacity: 0.25, depthWrite: false, side: DoubleSide }), true, 0.5)));
+    [...solid, ...glass].forEach((g) => g.dispose());
   }
   const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex, color: FLOOR_TINT })));
   floor.receiveShadow = true;

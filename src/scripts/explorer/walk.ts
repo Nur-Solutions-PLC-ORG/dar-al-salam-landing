@@ -253,66 +253,7 @@ export function createWalk(
     }
   }
   mesh(strips, new MeshBasicMaterial({ map: aoTex, transparent: true, depthWrite: false, side: DoubleSide }));
-  // furniture at eye level: beds get a headboard and a mattress step, sofas a back, counters an overhang
-  const nearestEdge = (poly: readonly P2[]) => {
-    let best = { i: 0, d: Infinity };
-    poly.forEach((a, i) => {
-      const b = poly[(i + 1) % poly.length]!;
-      const m: P2 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      for (const w of data.walls) {
-        const wx = w.b[0] - w.a[0];
-        const wz = w.b[1] - w.a[1];
-        const t = Math.max(0, Math.min(1, ((m[0] - w.a[0]) * wx + (m[1] - w.a[1]) * wz) / (wx * wx + wz * wz)));
-        const d = Math.hypot(m[0] - (w.a[0] + wx * t), m[1] - (w.a[1] + wz * t));
-        if (d < best.d) best = { i, d };
-      }
-    });
-    return [poly[best.i]!, poly[(best.i + 1) % poly.length]!] as const;
-  };
-  const area = (poly: readonly P2[]) => Math.abs(poly.reduce((a, [x0, z0], i) => a + x0 * poly[(i + 1) % poly.length]![1] - poly[(i + 1) % poly.length]![0] * z0, 0)) / 2;
-  const toCentre = (a: P2, b: P2, poly: readonly P2[]) => {
-    // the box offset that keeps a strip along edge a→b inside the block
-    const c = centroidOf(poly);
-    const nx = -(b[1] - a[1]);
-    const nz = b[0] - a[0];
-    return (c[0] - a[0]) * nx + (c[1] - a[1]) * nz > 0 ? -1 : 1;
-  };
-  const heads: BufferGeometry[] = [];
-  const steps: BufferGeometry[] = [];
-  for (const f of data.solids) {
-    if (f.kind === 'furniture') {
-      const [a, b] = nearestEdge(f.poly);
-      const inward = toCentre(a, b, f.poly);
-      if (f.h <= 0.55 && area(f.poly) > 2.5) {
-        heads.push(seg(a, b, 0, 0.9, 0.08, inward * -0.04));
-        const s2 = new Shape();
-        const c = centroidOf(f.poly);
-        f.poly.forEach(([x, z], i) => {
-          const px = x + Math.sign(c[0] - x) * 0.03;
-          const pz = z + Math.sign(c[1] - z) * 0.03;
-          if (i) s2.lineTo(px, -pz);
-          else s2.moveTo(px, -pz);
-        });
-        const g = new ExtrudeGeometry(s2, { depth: 0.18, bevelEnabled: false }).rotateX(-Math.PI / 2);
-        g.translate(0, f.h, 0);
-        steps.push(g); // extrusions are already non-indexed
-      } else if (Math.abs(f.h - 0.8) < 0.03) heads.push(seg(a, b, 0, 0.75, 0.2, inward * -0.1));
-    } else if (f.kind === 'counter') {
-      const c = centroidOf(f.poly);
-      const s3 = new Shape();
-      f.poly.forEach(([x, z], i) => {
-        const px = x - Math.sign(c[0] - x) * 0.04;
-        const pz = z - Math.sign(c[1] - z) * 0.04;
-        if (i) s3.lineTo(px, -pz);
-        else s3.moveTo(px, -pz);
-      });
-      const g = new ExtrudeGeometry(s3, { depth: 0.03, bevelEnabled: false }).rotateX(-Math.PI / 2);
-      g.translate(0, f.h, 0);
-      steps.push(g);
-    }
-  }
-  mesh(heads, new MeshLambertMaterial({ color: '#CFC3B1' }));
-  mesh(steps, new MeshLambertMaterial({ color: '#F1ECE4' }));
+  // (rev 10 F1: the furniture itself is modelled now — headboards, sofa backs and worktops come from furniture.ts)
   // the room light: warm, at the room's centroid, 2.4 m up; it follows the room
   const lamp = new PointLight('#FFE9CC', LAMP, 9, 2);
   lamp.visible = false;
