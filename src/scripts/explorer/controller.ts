@@ -43,7 +43,8 @@ type I18n = Record<
   | 'towerTap'
   | 'towerLoad'
   | 'towerDrag'
-  | 'towerNote',
+  | 'towerNote'
+  | 'towerPlanned',
   string
 >;
 

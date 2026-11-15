@@ -170,6 +170,7 @@ export const en = {
     load: 'Load the 3D tower',
     drag: 'Drag to turn · Choose a floor',
     surroundings: 'The surroundings are illustrative.',
+    planned: '16th floor planned',
   },
   /** Rev 8 3D apartments (DESIGN §9.6, §11). Room names in sentence case; alt strings lower-case {room}. */
   unit3d: {

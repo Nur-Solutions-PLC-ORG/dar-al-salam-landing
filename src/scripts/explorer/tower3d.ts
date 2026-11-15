@@ -150,7 +150,13 @@ const gradient = (w: number, h: number, paint: (c: CanvasRenderingContext2D) => 
 export async function createTower(
   host: HTMLElement,
   stage: HTMLElement,
-  cb: ModelCallbacks & { onFail: () => void; label: (floor: number) => string; unitLabel: (code: string) => string; onUnit: (code: string) => void },
+  cb: ModelCallbacks & {
+    onFail: () => void;
+    label: (floor: number) => string;
+    plannedLabel: string;
+    unitLabel: (code: string) => string;
+    onUnit: (code: string) => void;
+  },
 ): Promise<TowerAdapter> {
   const d: Tower3d = (await import('../../data/tower3d.json')).default;
   const hi = matchMedia('(pointer: fine)').matches && innerWidth >= 1024;
@@ -872,6 +878,26 @@ export async function createTower(
   /* ---------- T4: hover and picking by raycast (an invisible prism of the typical floors) ---------- */
   const hit = new Mesh(k(prism(outline, f1.y0, top.y0 + top.h - f1.y0)), mats.slab);
   hit.updateMatrixWorld();
+  // review r9a M4: the planned storey answers a hover with "16th floor planned" (never a pick)
+  const hitPlanned = planned ? new Mesh(k(prism(outline, planned.y0, planned.h)), mats.slab) : null;
+  hitPlanned?.updateMatrixWorld();
+  const plannedAt = (e: PointerEvent) => {
+    if (!hitPlanned) return false;
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    return ray.intersectObject(hitPlanned).length > 0 && floorAt(e) === null;
+  };
+  let plannedOn = false;
+  const showPlanned = (on: boolean) => {
+    if (on === plannedOn) return;
+    plannedOn = on;
+    uchip.hidden = !on;
+    if (!on || !planned) return;
+    uchip.textContent = cb.plannedLabel;
+    const A = toStage(v3.set(corner[0], planned.y0 + planned.h, corner[1]).clone());
+    uchip.style.transform = `translate(${A.x}px, ${A.y}px) translate(-50%, -100%)`;
+  };
   const ray = new Raycaster();
   const ndc = new Vector2();
   const floorAt = (e: PointerEvent | MouseEvent) => {
@@ -1033,8 +1059,10 @@ export async function createTower(
     if (!mine()) return;
     if (!dragging) {
       if (e.pointerType === 'mouse') {
-        if (selected === null) hoverFloor(floorAt(e));
-        else hoverUnit(unitAt(e));
+        if (selected === null) {
+          hoverFloor(floorAt(e));
+          showPlanned(plannedAt(e));
+        } else hoverUnit(unitAt(e));
       }
       return;
     }
@@ -1069,6 +1097,7 @@ export async function createTower(
     }
     // a click picks; on touch the first tap previews and a second tap on the same floor picks
     const n = floorAt(e);
+    showPlanned(n === null && plannedAt(e)); // the planned storey only answers with its chip
     if (n === null) return;
     if (e.pointerType === 'mouse' || touchPick === n) {
       touchPick = null;
@@ -1079,7 +1108,7 @@ export async function createTower(
       hoverFloor(n);
     }
   };
-  const onLeave = (e: PointerEvent) => mine() && e.pointerType === 'mouse' && !dragging && (selected === null ? hoverFloor(null) : hoverUnit(null));
+  const onLeave = (e: PointerEvent) => mine() && e.pointerType === 'mouse' && !dragging && (selected === null ? (hoverFloor(null), showPlanned(false)) : hoverUnit(null));
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
@@ -1145,6 +1174,7 @@ export async function createTower(
       tweening = 0;
       if (n !== null) {
         cb.onHover(null); // the chip would sit stale over a moving view
+        showPlanned(false);
         part.floor = n;
         fitFloor();
         setLit(n);

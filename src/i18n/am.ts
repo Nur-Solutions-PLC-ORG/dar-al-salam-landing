@@ -162,6 +162,7 @@ export const am: Dict = {
     load: '3D ታወሩን ጫን',
     drag: 'ለማዞር ይጎትቱ · ወለል ይምረጡ',
     surroundings: 'አካባቢው ለማሳያ ብቻ ነው።',
+    planned: '16ኛ ወለል ታቅዷል',
   },
   // rev 8 strings: drafts from DESIGN §11, for the client to check (kitchen and living/dining reuse `rooms`)
   unit3d: {
