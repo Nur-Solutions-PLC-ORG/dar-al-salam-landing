@@ -25,7 +25,14 @@ const C = {
   greige: '#B5A08A',
   mattress: '#F4F0E8',
   linen: '#E9E2D6',
-  sofa: '#D8CDBC',
+  sofa: '#C9BDA9', // base, back and arms (design F1 fix 3)
+  cushion: '#D8CDBC',
+  pillow: '#F4F0E8',
+  oakTop: '#A88762', // the darker top edge of side and coffee tables
+  groove: '#9A8875', // wardrobe door grooves, 15% darker than the greige oak
+  mirror: '#C9D6DE',
+  basin: '#DCE1E4',
+  rugEdge: '#8E96A6',
   upholstery: '#CFC3B1',
   navy: '#1A273F',
   chair: '#B79B74',
@@ -34,7 +41,7 @@ const C = {
   white: '#F6F5F2',
   black: '#1B1C1F',
   line: '#8C7B68',
-  gold: '#C9A55A',
+  gold: '#B59458', // brushed gold (design F1 fix 4)
   steel: '#B9BDC1',
   rug: '#D9D2C6',
 };
@@ -83,6 +90,13 @@ interface Frame {
 function frameOf(poly: readonly P2[], back: (sides: [P2, P2][]) => number): Frame | null {
   if (poly.length !== 4) return null;
   const sides = poly.map((a, i) => [a, poly[(i + 1) % 4]!] as [P2, P2]);
+  // only true rectangles get a frame; a trapezoid (wr-mbed) is extruded as drawn, flat-topped
+  for (let i = 0; i < 4; i++) {
+    const [a, b] = sides[i]!;
+    const [, c] = sides[(i + 1) % 4]!;
+    const ux = b[0] - a[0], uz = b[1] - a[1], vx = c[0] - b[0], vz = c[1] - b[1];
+    if (Math.abs(ux * vx + uz * vz) > 0.08 * Math.hypot(ux, uz) * Math.hypot(vx, vz)) return null;
+  }
   const bi = back(sides);
   const [a, b] = sides[bi]!;
   const w = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -177,7 +191,7 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
       const n = Math.max(1, Math.round(w / step));
       for (let i = 1; i < n; i++) {
         const x = -W + (w / n) * i;
-        box(x - 0.006, x + 0.006, y0 + 0.02, y1 - 0.02, d, d + 0.006, C.line);
+        box(x - 0.005, x + 0.005, y0 + 0.02, y1 - 0.02, d - 0.002, d + 0.004, handles ? C.groove : C.line);
       }
       if (handles)
         for (let i = 0; i < n; i++) {
@@ -194,7 +208,7 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         box(-W - 0.05, W + 0.05, 0, Math.min(1, H + 0.6), 0, 0.08, C.upholstery, 'matte', full ? 0.03 : 0); // headboard
         if (full) {
           const pw = Math.min(0.7, w / 2 - 0.1);
-          for (const sx of [-1, 1]) box(sx * (w / 4) - pw / 2, sx * (w / 4) + pw / 2, 0.52, 0.66, 0.14, 0.5, C.white, 'matte', 0.06); // pillows
+          for (const sx of [-1, 1]) box(sx * (w / 4) - pw / 2, sx * (w / 4) + pw / 2, 0.52, 0.66, 0.14, 0.5, C.pillow, 'matte', 0.06); // pillows
           box(-W - 0.02, W + 0.02, 0.58, 0.61, d - 0.5, d - 0.12, C.navy); // throw across the foot
         }
         break;
@@ -203,7 +217,7 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         box(-W, W, 0, Math.min(0.5, H + 0.1), 0, d, C.oak);
         if (full) {
           box(-W + 0.03, W - 0.03, 0.33, 0.34, d, d + 0.005, C.line); // drawer line
-          cyl(0, d / 2, 0.012, 0.5, 0.82, C.gold, 'metal', 6); // lamp stem
+          cyl(0, d / 2, 0.012, 0.5, 0.82, C.gold, 'matte', 6); // lamp stem, brushed gold
           cyl(0, d / 2, 0.11, 0.82, 1.0, C.linen); // shade
         }
         break;
@@ -217,8 +231,8 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
           const cw = (w - 2 * aw) / n;
           for (let i = 0; i < n; i++) {
             const x = -W + aw + cw * i;
-            box(x + 0.01, x + cw - 0.01, 0.25, 0.42, 0.22, d - 0.02, C.sofa, 'matte', 0.05); // seat cushions
-            box(x + 0.03, x + cw - 0.03, 0.42, 0.78, 0.18, 0.34, i === 0 ? C.navy : C.linen, 'matte', 0.06); // back cushions (one navy)
+            box(x + 0.01, x + cw - 0.01, 0.25, 0.42, 0.22, d - 0.02, C.cushion, 'matte', 0.05); // seat cushions
+            box(x + 0.03, x + cw - 0.03, 0.42, 0.78, 0.18, 0.34, i === 0 ? C.navy : C.cushion, 'matte', 0.06); // back cushions (one navy)
           }
         }
         break;
@@ -226,12 +240,16 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
       case 'sideTable':
         if (w * d > 0.6) {
           // a coffee table: a top on four legs, with a gold tray
-          box(-W, W, 0.36, 0.4, 0, d, C.oak);
+          box(-W, W, 0.36, 0.385, 0, d, C.oak);
+          box(-W, W, 0.385, 0.4, 0, d, C.oakTop);
           if (full) {
             legs(0.36, 0.06, 0.04, C.oak);
             box(-0.18, 0.18, 0.4, 0.42, d / 2 - 0.12, d / 2 + 0.12, C.gold, 'metal');
           }
-        } else cyl(0, d / 2, Math.min(w, d) / 2, 0, 0.55, C.oak); // a drum
+        } else {
+          cyl(0, d / 2, Math.min(w, d) / 2, 0, 0.53, C.oak); // a drum
+          cyl(0, d / 2, Math.min(w, d) / 2 + 0.01, 0.53, 0.55, C.oakTop);
+        }
         break;
       case 'dining':
         box(-W, W, 0.71, 0.75, 0, d, C.oak);
@@ -278,8 +296,8 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         }
         break;
       case 'rug':
-        box(-W, W, 0, 0.008, 0, d, C.navy);
-        box(-W + 0.08, W - 0.08, 0.008, 0.012, 0.08, d - 0.08, C.rug);
+        box(-W, W, 0, 0.01, 0, d, C.rugEdge); // a 6 cm muted navy border
+        box(-W + 0.06, W - 0.06, 0.0005, 0.0105, 0.06, d - 0.06, C.rug);
         break;
       case 'shower':
         box(-W, W, 0, 0.08, 0, d, C.white, 'gloss'); // tray
@@ -287,8 +305,14 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         break;
       case 'basin':
         box(-W, W, 0.15, 0.8, 0, d, C.oak); // vanity
-        box(-W, W, 0.8, 0.86, 0, d, C.white, 'gloss'); // basin top
-        if (full) box(-Math.min(0.35, W), Math.min(0.35, W), 1.1, 1.8, 0, 0.02, '#C8D2D8', 'gloss'); // mirror
+        box(-W, W, 0.8, 0.86, 0, d, C.white, 'gloss'); // white top
+        box(-W + 0.07, W - 0.07, 0.8605, 0.8615, 0.08, d - 0.06, C.basin, 'gloss'); // the inset basin
+        if (full) {
+          const mw = Math.min(0.35, W);
+          box(-mw - 0.015, mw + 0.015, 1.085, 1.915, 0, 0.015, C.darkOak); // thin frame
+          box(-mw, mw, 1.1, 1.9, 0.015, 0.02, C.mirror, 'gloss'); // mirror, 1.1–1.9 m
+          cyl(0, 0.06, 0.012, 0.86, 1.0, C.steel, 'metal', 6); // tap
+        }
         break;
       case 'wc':
         box(-Math.min(0.2, W), Math.min(0.2, W), 0, 0.4, 0.15, d, C.white, 'gloss', 0.04); // bowl
