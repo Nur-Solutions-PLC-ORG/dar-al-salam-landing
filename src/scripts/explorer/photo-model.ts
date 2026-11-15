@@ -152,9 +152,13 @@ export function createPhotoModel(root: HTMLElement, stage: HTMLElement, cb: Mode
   const pushFor = (n: number) => {
     const k = frame.offsetWidth / VB.w;
     const [cx, cy] = centroid(n);
-    const fx = stage.clientWidth / 2 - frame.offsetWidth / 2;
-    const fy = stage.clientHeight * 0.4 - frame.offsetHeight * 0.4;
-    return { x: stage.clientWidth * 0.5 - fx - SCALE * cx * k, y: stage.clientHeight * 0.46 - fy - SCALE * cy * k, scale: SCALE };
+    // rev 10.7: the frame is centred in .tstage (contain fit), which can sit offset inside the stage; aim at 50% / 46%
+    // of the stage, in .tstage's coordinates
+    const r = root.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    const fx = (root.clientWidth - frame.offsetWidth) / 2;
+    const fy = (root.clientHeight - frame.offsetHeight) / 2;
+    return { x: s.left - r.left + s.width * 0.5 - fx - SCALE * cx * k, y: s.top - r.top + s.height * 0.46 - fy - SCALE * cy * k, scale: SCALE };
   };
 
   let tl: gsap.core.Timeline | null = null;

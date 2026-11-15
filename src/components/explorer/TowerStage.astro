@@ -6,8 +6,8 @@
  *
  * The render draws 13 storeys; tower-floors.json splits the façade's height into the explorer's 14 floors, so a band
  * can sit up to half a storey off the balconies. It is a soft selection highlight, not a storey trace (by design).
- * Positioning: .tstage__frame is a cover-fit box at object-position 50% 40% (container-query units), and both the image
- * and the SVG (viewBox = the crop) fill it, so the bands stay on the façade at every stage size.
+ * Positioning (rev 10.7): .tstage__frame is a contain-fit box with the image's aspect, centred in the stage
+ * (container-query units); the image and the SVG fill it, so the bands stay on the façade and are never cropped.
  */
 import { getImage, Picture } from 'astro:assets';
 import towerStage from '../../assets/generated/tower-stage.jpg';
@@ -65,7 +65,7 @@ const [avif, webp, fallback] = await Promise.all([set('avif'), set('webp'), getI
           class="tstage__img"
         />
       </noscript>
-      <svg class="tstage__svg" viewBox="0 0 1350 1850" aria-hidden="true" focusable="false" data-tstage-svg>
+      <svg class="tstage__svg" viewBox="0 0 1350 1850" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false" data-tstage-svg>
         <defs>
           <filter id="tband-feather" x="-5%" y="-30%" width="110%" height="160%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="soft"></feGaussianBlur>
@@ -85,9 +85,38 @@ const [avif, webp, fallback] = await Promise.all([set('avif'), set('webp'), getI
     inset: 0;
     overflow: hidden;
     container-type: size;
-    /* the collage sky clashes with the navy section: the photo melts into it, no hard rectangle. Rev 10.6: two
-       linear fades inside the bands' margins (5.5% left, 8.1% right, 7.6% top, 11% bottom of the box), so all 14
-       selectable bands stay at full opacity and the box edges fade fully. */
+    /* rev 10.7: a thin 3% edge fade, so the pushed-in photo never meets a hard stage edge. It can't reach a band: the
+       bands sit ≥ 5.5% of the frame inside it, and the frame is never larger than the stage. */
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 3%, #000 97%, transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 3%, #000 97%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent 0, #000 3%, #000 97%, transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 3%, #000 97%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  .tstage[hidden] {
+    display: none;
+  }
+
+  /* rev 10.7: contain fit, centred, so no floor band is ever cropped; the image and the overlay fill the frame */
+  .tstage__frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: min(100cqw, 100cqh * 1350 / 1850);
+    aspect-ratio: 1350 / 1850;
+    transform: translate(-50%, -50%);
+  }
+
+  /* the collage sky clashes with the navy section: the photo melts into it, no hard rectangle. Rev 10.6/10.7: two
+     linear fades in image space, inside the bands' margins (5.5% left, 8.1% right, 7.6% top, 11% bottom), so all 14
+     selectable bands stay at full opacity. On the zoom box (= the frame at rest), so the push-in scales them away. */
+  .tstage__zoom {
+    position: absolute;
+    inset: 0;
     -webkit-mask-image:
       linear-gradient(to right, transparent 0, #000 5%, #000 93%, transparent 100%),
       linear-gradient(to bottom, transparent 0, #000 7%, #000 90%, transparent 100%);
@@ -96,25 +125,6 @@ const [avif, webp, fallback] = await Promise.all([set('avif'), set('webp'), getI
       linear-gradient(to right, transparent 0, #000 5%, #000 93%, transparent 100%),
       linear-gradient(to bottom, transparent 0, #000 7%, #000 90%, transparent 100%);
     mask-composite: intersect;
-  }
-
-  .tstage[hidden] {
-    display: none;
-  }
-
-  /* cover fit at 50% 40% (object-position), for the image and the overlay alike */
-  .tstage__frame {
-    position: absolute;
-    left: 50%;
-    top: 40%;
-    width: max(100cqw, 100cqh * 1350 / 1850);
-    aspect-ratio: 1350 / 1850;
-    transform: translate(-50%, -40%);
-  }
-
-  .tstage__zoom {
-    position: absolute;
-    inset: 0;
   }
 
   .tstage__zoom :global(picture),
