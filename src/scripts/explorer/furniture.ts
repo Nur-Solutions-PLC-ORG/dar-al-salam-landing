@@ -12,7 +12,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import type { P2, Unit3d } from '../../data/units3d/types';
 
 /** Material classes (F3): wood takes the oak grain, fabric the linen weave; the colour is always the vertex colour. */
-export type FurnMat = 'matte' | 'wood' | 'fabric' | 'gloss' | 'metal' | 'glass';
+export type FurnMat = 'matte' | 'wood' | 'fabric' | 'stone' | 'gloss' | 'metal' | 'glass';
 export interface FurnPiece {
   g: BufferGeometry;
   m: FurnMat;
@@ -26,6 +26,7 @@ const C = {
   greige: '#B5A08A',
   mattress: '#F4F0E8',
   linen: '#E9E2D6',
+  duvet: '#DDD4C5', // renders near (228,221,210) under the room lamp, a step below the pillows (review r9b L3)
   sofa: '#C9BDA9', // base, back and arms (design F1 fix 3)
   cushion: '#D8CDBC',
   pillow: '#F1ECE4',
@@ -39,6 +40,7 @@ const C = {
   chair: '#B79B74',
   ivory: '#EFE9DF',
   stone: '#CFC8BC',
+  stoneEdge: '#B4AC9F',
   white: '#F6F5F2',
   black: '#1B1C1F',
   line: '#8C7B68',
@@ -48,7 +50,7 @@ const C = {
 };
 
 const WOOD = new Set([C.oak, C.darkOak, C.greige, C.chair, C.oakTop]);
-const FABRIC = new Set([C.sofa, C.cushion, C.upholstery, C.linen, C.mattress, C.pillow, C.navy, C.rug, C.rugEdge]);
+const FABRIC = new Set([C.duvet, C.sofa, C.cushion, C.upholstery, C.linen, C.mattress, C.pillow, C.navy, C.rug, C.rugEdge]);
 
 type Kind = 'bed' | 'nightstand' | 'sofa' | 'dining' | 'chair' | 'tvUnit' | 'sideTable' | 'wardrobe' | 'counter' | 'rug' | 'shower' | 'basin' | 'wc' | 'hob' | 'sink' | 'block';
 
@@ -232,7 +234,7 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
       case 'bed': {
         box(-W, W, 0, 0.3, 0.06, d, C.oak); // frame
         box(-W + 0.03, W - 0.03, 0.3, 0.48, 0.1, d - 0.03, C.mattress, 'matte', 0.04); // mattress, 0.18 m above the frame
-        box(-W - 0.01, W + 0.01, 0.4, 0.54, d / 3, d + 0.01, C.linen, 'matte', 0.05); // duvet, lower two thirds
+        box(-W - 0.01, W + 0.01, 0.4, 0.54, d / 3, d + 0.01, C.duvet, 'matte', 0.05); // duvet, lower two thirds
         box(-W - 0.05, W + 0.05, 0, Math.min(1, H + 0.6), 0, 0.08, C.upholstery, 'matte', full ? 0.03 : 0); // headboard
         if (full) {
           const pw = Math.min(0.7, w / 2 - 0.1);
@@ -308,10 +310,23 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         const top = s.h;
         box(-W + 0.005, W - 0.005, 0.1, top - 0.04, 0.005, d - 0.02, C.ivory); // base cabinets (5 mm off the walls)
         box(-W, W, 0, 0.1, 0.05, d - 0.07, C.darkOak); // plinth
-        box(-W - 0.02, W + 0.02, top - 0.04, top, 0, d + 0.02, C.stone, 'gloss'); // worktop, 2 cm overhang
+        // worktop: matte stone (roughness 0.35, no gloss: from above it washed out to a white slab), its 2 cm overhang
+        // a darker front edge so it reads as a separate layer (design F1 kitchen fix)
+        box(-W - 0.02, W + 0.02, top - 0.04, top, 0, d + 0.005, C.stone, 'stone');
+        box(-W - 0.02, W + 0.02, top - 0.04, top, d + 0.005, d + 0.02, C.stoneEdge, 'stone');
         doors(0.6, 0.1, top - 0.04, false);
-        // wall cabinets where the counter's back is on a wall (they sit 1.5–2.2 m, inside the 2.4 m cut)
-        if (full && Math.min(...walls.map((wl) => dist2seg(c, wl.a, wl.b))) < d + 0.3) box(-W, W, 1.5, 2.2, 0, 0.35, C.ivory);
+        // wall cabinets where the counter's back stands on a wall (an island has none): 0.7 m high from 1.5 m, with
+        // door lines and a darker underside
+        const back = new Vector3().setFromMatrixPosition(m);
+        if (full && Math.min(...walls.map((wl) => dist2seg([back.x, back.z], wl.a, wl.b))) < 0.2) {
+          box(-W + 0.005, W - 0.005, 1.5, 2.2, 0.005, 0.35, C.ivory);
+          box(-W + 0.005, W - 0.005, 1.5, 1.505, 0.005, 0.35, C.line); // underside line
+          const n = Math.max(1, Math.round(w / 0.6));
+          for (let i = 1; i < n; i++) {
+            const x = -W + (w / n) * i;
+            box(x - 0.005, x + 0.005, 1.52, 2.18, 0.348, 0.354, C.line);
+          }
+        }
         break;
       }
       case 'hob':
@@ -351,5 +366,47 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         box(-W, W, 0, H, 0, d, C.oak);
     }
   }
+
+  // curtains (full tier): two gathered linen panels, 2.4 m, inside each glazed door, pulled to its ends
+  if (full)
+    for (const op of data.openings) {
+      if (op.type !== 'glazed-door') continue;
+      const L = Math.hypot(op.b[0] - op.a[0], op.b[1] - op.a[1]);
+      if (L < 0.8) continue;
+      const u: P2 = [(op.b[0] - op.a[0]) / L, (op.b[1] - op.a[1]) / L];
+      let n: P2 = [-u[1], u[0]];
+      const mid: P2 = [(op.a[0] + op.b[0]) / 2, (op.a[1] + op.b[1]) / 2];
+      const probe = (k: number): P2 => [mid[0] + n[0] * k, mid[1] + n[1] * k];
+      // the room side: the probe lands in a room that isn't a balcony
+      const indoor = (q: P2) => data.rooms.some((r) => r.name !== 'balcony' && insidePoly(q, r.poly));
+      if (!indoor(probe(0.4))) n = [-n[0], -n[1]];
+      if (!indoor([mid[0] + n[0] * 0.4, mid[1] + n[1] * 0.4])) continue;
+      const pw = Math.min(0.45, L * 0.22);
+      const c0: P2 = mid;
+      for (const end of [0, 1]) {
+        for (let f = 0; f < 4; f++) {
+          // four folds per panel, alternately 3 cm in and out
+          const t0 = end ? L - pw + (pw / 4) * f : (pw / 4) * f;
+          const off = op.t / 2 + 0.1 + (f % 2) * 0.03;
+          const A: P2 = [op.a[0] + u[0] * t0 + n[0] * off, op.a[1] + u[1] * t0 + n[1] * off];
+          const B: P2 = [A[0] + u[0] * (pw / 4), A[1] + u[1] * (pw / 4)];
+          const g = new BoxGeometry(pw / 4 + 0.01, 2.35, 0.025);
+          g.translate(0, 0.05 + 2.35 / 2, 0);
+          g.rotateY(-Math.atan2(B[1] - A[1], B[0] - A[0]));
+          g.translate((A[0] + B[0]) / 2, 0, (A[1] + B[1]) / 2);
+          out.push({ g: paint(g, C.linen), m: 'fabric', c: c0 });
+        }
+      }
+    }
   return out;
+}
+
+function insidePoly([x, z]: P2, poly: readonly P2[]) {
+  let r = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i]!;
+    const [xj, zj] = poly[j]!;
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) r = !r;
+  }
+  return r;
 }

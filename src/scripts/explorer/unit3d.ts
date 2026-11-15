@@ -274,7 +274,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const glassTier = !matchMedia('(pointer: coarse)').matches && ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8;
   const mat = {
     // F3: plaster normal + roughness. Polygon offset: furniture traced flush with a wall wins the depth tie (no stripes)
-    wall: inject(new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })),
+    wall: inject(new MeshStandardMaterial({ color: '#F0E7DA', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })),
     oak: inject(new MeshStandardMaterial({ color: '#B5A08A', roughness: 0.6 })), // rev 8.2 H: greige oak
     counter: inject(new MeshStandardMaterial({ color: '#E4DACB', roughness: 0.6 })),
     top: inject(new MeshStandardMaterial({ color: '#B9AE9E', roughness: 0.35 })),
@@ -383,6 +383,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     matte: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     wood: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55 }),
     fabric: new MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
+    stone: new MeshStandardMaterial({ vertexColors: true, roughness: 0.35 }), // worktops (F3: flat colour, 0.35)
     gloss: new MeshStandardMaterial({ vertexColors: true, roughness: 0.2 }),
     metal: new MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.8 }),
   };
@@ -396,7 +397,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     parts.forEach((p) => tag(p.g, 0.45 + order.get(p.c.join())! * 0.012, -1));
     const glass = parts.filter((p) => p.m === 'glass').map((p) => p.g);
     const fdepth = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
-    for (const cls of ['matte', 'wood', 'fabric', 'gloss', 'metal'] as FurnMat[]) {
+    for (const cls of ['matte', 'wood', 'fabric', 'stone', 'gloss', 'metal'] as FurnMat[]) {
       const gs = parts.filter((p) => p.m === cls).map((p) => p.g);
       if (!gs.length) continue;
       const mesh = new Mesh(k(mergeGeometries(gs)!), inject(furnMat[cls]!, true, 0.5));
@@ -489,10 +490,10 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const lowTier = matchMedia('(pointer: coarse)').matches || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 8;
   const pmrem = new PMREMGenerator(renderer);
   scene.environment = k(pmrem.fromScene(new RoomEnvironment(), 0.04).texture);
-  scene.environmentIntensity = lowTier ? 0.6 : 0.8;
+  scene.environmentIntensity = lowTier ? 0.5 : 0.65; // review r9b L3: the neutral environment washed colours toward cool white
   pmrem.dispose();
   scene.add(new HemisphereLight('#FFE6C8', '#3A4558', 0.9)); // warm sky: the walls read cream, not grey-white
-  const sun = new DirectionalLight('#FFE3BD', 2.4);
+  const sun = new DirectionalLight('#FFE3BD', 1.9); // (L3: less sun on horizontal faces — duvets, worktops)
   sun.position.set(-6, 14, -4);
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(lowTier ? 1024 : 2048);
@@ -511,7 +512,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   /** This scene's renderer state (the canvas is shared: the slab and the tower set theirs when they draw). */
   const rendererState = () => {
     renderer.toneMapping = ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.85; // design (F5 tuning): lit walls ~ (238,230,218), no clipped whites
+    renderer.toneMappingExposure = 0.95; // design (F5 tuning) + review L3: lit walls ~ (232–238, 224–230, 212–218)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFShadowMap; // (PCFSoftShadowMap is gone in r187: PCF with a wider radius on desktop)
     renderer.shadowMap.autoUpdate = false;

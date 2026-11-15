@@ -10,6 +10,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 export interface Ao {
   render(): void;
@@ -28,6 +29,9 @@ export function createAo(renderer: WebGLRenderer, scene: Scene, camera: Camera, 
   gtao.blendIntensity = 1;
   composer.addPass(gtao);
   composer.addPass(new OutputPass());
+  // SMAA on the settled frame (design: jagged cushion and bed edges in stills), after tone mapping as SMAA expects
+  const smaa = new SMAAPass();
+  composer.addPass(smaa);
   const size = (cw: number, ch: number) => {
     composer.setPixelRatio(renderer.getPixelRatio());
     composer.setSize(cw, ch);
@@ -39,6 +43,7 @@ export function createAo(renderer: WebGLRenderer, scene: Scene, camera: Camera, 
     setSize: size,
     dispose() {
       gtao.dispose();
+      smaa.dispose();
       composer.dispose();
       target.dispose();
     },

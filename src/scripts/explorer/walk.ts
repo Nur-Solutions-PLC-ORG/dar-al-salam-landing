@@ -89,7 +89,7 @@ export interface Walk {
 const DEG = Math.PI / 180;
 const PITCH = 25 * DEG;
 const STEP = 30 * DEG;
-const LAMP = 6; // r187 units, tuned in a settled capture so the walls read about sand-100, not clipped and not grey
+const LAMP = 5; // r187 units; review r9b L3: one step down so bedding and worktops under the lamp don't wash to white
 
 export function createWalk(
   h: WalkHost,
@@ -417,7 +417,20 @@ export function createWalk(
     for (const want of FOCUS[r.name] ?? []) if ((focus = inRoom.filter((s) => tag(s) === want).sort((a, b) => size(b) - size(a))[0])) break;
     focus ??= inRoom.filter((s) => s.kind !== 'rug').sort((a, b) => size(b) - size(a))[0];
     if (!focus) return { yaw: p.yaw, pitch: 0 };
-    const at = h.toWorld(centroidOf(focus.poly), Math.min(focus.h, 1.2) / 2);
+    let aim = centroidOf(focus.poly);
+    if (tag(focus) === 'counter') {
+      // kitchens: look along the longest run (toward its far end), not square onto the wall (design F1 kitchen fix)
+      const run = inRoom.filter((x) => tag(x) === 'counter').sort((a, b) => size(b) - size(a))[0]!;
+      const q = run.poly;
+      const e = q.map((a2, i) => [a2, q[(i + 1) % q.length]!] as const).sort((x, y) => Math.hypot(y[1][0] - y[0][0], y[1][1] - y[0][1]) - Math.hypot(x[1][0] - x[0][0], x[1][1] - x[0][1]))[0]!;
+      const c = centroidOf(q);
+      const half: P2 = [(e[1][0] - e[0][0]) / 2, (e[1][1] - e[0][1]) / 2];
+      const ends: P2[] = [[c[0] + half[0] * 0.8, c[1] + half[1] * 0.8], [c[0] - half[0] * 0.8, c[1] - half[1] * 0.8]];
+      const st = [p.at.x, p.at.z];
+      const far = (q2: P2) => Math.hypot(h.toWorld(q2, 0).x - st[0]!, h.toWorld(q2, 0).z - st[1]!);
+      aim = far(ends[0]!) > far(ends[1]!) ? ends[0]! : ends[1]!;
+    }
+    const at = h.toWorld(aim, Math.min(focus.h, 1.2) / 2);
     const dx = at.x - p.at.x;
     const dz = at.z - p.at.z;
     const down = Math.atan2(EYE - at.y, Math.hypot(dx, dz) || 1);
