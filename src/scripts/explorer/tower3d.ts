@@ -294,7 +294,7 @@ export async function createTower(
   // façade walls: illustrative punched windows on a 3.6 m grid wherever the wall is free
   const wb = fs.windowBay;
   const fins: BufferGeometry[] = [];
-  const f1 = d.levels.find((l) => l.id === 'f1')!;
+  const f1 = d.levels.find((l) => l.status === 'plan')!; // rev 11: the first floor with homes (floor 3)
   const top = d.levels.filter((l) => l.status === 'plan').at(-1)!;
   for (const e of edges) {
     const busy = [...e.cuts, ...e.wins.map((w) => [w.t0, w.t1] as [number, number])];
@@ -421,9 +421,9 @@ export async function createTower(
   const pr = fs.roof.plantRoom;
   above.push(solid(prism([[x0 + pr.inset + 4, z0 + pr.inset], [x1 - pr.inset, z0 + pr.inset], [x1 - pr.inset, z1 - pr.inset], [x0 + pr.inset + 4, z1 - pr.inset]], roofY + SL, pr.h), white));
 
-  /* ---------- ground storey ---------- */
-  const gc = fs.groundCladding;
-  const g0 = d.levels[0]!;
+  /* ---------- the base (rev 11.1): stone over every `clad` level (ground with the reception, and floor 1) ---------- */
+  const gc = fs.groundCladding as typeof fs.groundCladding & { upperGlassSill?: number; upperGlassHead?: number };
+  const cladTop = Math.max(...d.levels.filter((l) => (l as { clad?: boolean }).clad).map((l) => l.y0 + l.h), d.levels[0]!.h);
   const stripes = k(
     gradient(4, 64, (x) => {
       x.fillStyle = '#A39C92'; // a lighter stone than the shopfront glass below it (design fix 5)
@@ -435,7 +435,7 @@ export async function createTower(
   stripes.wrapS = stripes.wrapT = RepeatWrapping;
   stripes.repeat.set(1, 1 / 1.2);
   const base = inset(outline, 0.6);
-  below.push(solid(prism(base, 0, g0.h), std('#FFFFFF', { map: stripes })));
+  below.push(solid(prism(base, 0, cladTop), std('#FFFFFF', { map: stripes })));
   const shop: BufferGeometry[] = [];
   const mull: BufferGeometry[] = [];
   let entrance: { a: P2; b: P2; l: number } | null = null;
@@ -445,9 +445,12 @@ export async function createTower(
     const l = len(a, b);
     if (!entrance || l > entrance.l) entrance = { a, b, l };
     const at = (s: number): P2 => [a[0] + ((b[0] - a[0]) / l) * s, a[1] + ((b[1] - a[1]) / l) * s];
-    // shopfront glass up to shopfrontHead, white mullions on the fins' 3.6 m grid (design fix 5)
+    // glazed front up to shopfrontHead on the ground storey (the reception), a second band on floor 1, white
+    // mullions on the fins' 3.6 m grid through both (design fix 5, rev 11.1)
     shop.push(pane(at(0.15), at(l - 0.15), 0.15, gc.shopfrontHead, side * 0.03));
-    for (let t = fs.fin.spacing; t < l - 0.3; t += fs.fin.spacing) mull.push(box(at(t), at(t + 0.25), 0, gc.shopfrontHead, 0.3, side * 0.15));
+    if (gc.upperGlassSill !== undefined && gc.upperGlassHead !== undefined) shop.push(pane(at(0.15), at(l - 0.15), gc.upperGlassSill, gc.upperGlassHead, side * 0.03));
+    const mTop = gc.upperGlassHead ?? gc.shopfrontHead;
+    for (let t = fs.fin.spacing; t < l - 0.3; t += fs.fin.spacing) mull.push(box(at(t), at(t + 0.25), 0, mTop, 0.3, side * 0.15));
   });
   if (shop.length) below.push(solid(mergeGeometries(shop)!, std(gc.shopfrontGlass, { roughness: 0.2, metalness: 0.3 }), false));
   if (mull.length) below.push(solid(mergeGeometries(mull)!, std(fs.fin.colour)));
@@ -462,6 +465,35 @@ export async function createTower(
     const cn = gc.canopy;
     const out = (p: P2, s: number): P2 => [p[0] - u[1] * side * s, p[1] + u[0] * side * s];
     below.push(solid(mergeGeometries([box(A, B, cn.height, cn.height + 0.35, cn.depth, side * (cn.depth / 2)), box(out(A, cn.depth - 0.3), out(A, cn.depth), 0, cn.height, 0.3), box(out(B, cn.depth - 0.3), out(B, cn.depth), 0, cn.height, 0.3)])!, std(cn.colour)));
+  }
+
+  /* ---------- plain lower storeys (rev 11.1: floor 2): the white wall and window rhythm of the floors above, with no
+     balconies, lights, pins or hover; they never slide out (they drop with the floors below) ---------- */
+  {
+    const plain = d.levels.filter((l) => l.status === 'podium' && !(l as { clad?: boolean }).clad);
+    const pw: BufferGeometry[] = [];
+    const pg: BufferGeometry[] = [];
+    for (const lv of plain) {
+      pw.push(prism(outline, lv.y0, SL));
+      for (const e of edges) {
+        let cur = 0;
+        const top2 = lv.y0 + lv.h;
+        for (let i = 0; (i + 0.5) * wb.spacing < e.l; i++) {
+          const m = (i + 0.5) * wb.spacing;
+          const t0 = m - wb.width / 2;
+          const t1 = m + wb.width / 2;
+          if (t0 < 0.3 || t1 > e.l - 0.3) continue;
+          if (t0 > cur) pw.push(box(e.at(cur), e.at(t0), lv.y0 + SL, top2, WALL, -side * (WALL / 2)));
+          pw.push(box(e.at(t0), e.at(t1), lv.y0 + SL, lv.y0 + SL + wb.sill, WALL, -side * (WALL / 2)));
+          pw.push(box(e.at(t0), e.at(t1), lv.y0 + SL + wb.head, top2, WALL, -side * (WALL / 2)));
+          pg.push(pane(e.at(t0), e.at(t1), lv.y0 + SL + wb.sill, lv.y0 + SL + wb.head, -side * 0.05));
+          cur = t1;
+        }
+        if (e.l > cur) pw.push(box(e.at(cur), e.at(e.l), lv.y0 + SL, top2, WALL, -side * (WALL / 2)));
+      }
+    }
+    if (pw.length) below.push(solid(mergeGeometries(pw.map((x) => (x.index ? x.toNonIndexed() : x)))!, std(WALL_C, { side: DoubleSide })));
+    if (pg.length) below.push(solid(mergeGeometries(pg.map((x) => (x.index ? x.toNonIndexed() : x)))!, std(GLASS_C, { roughness: 0.15, envMapIntensity: 0.6, transparent: true, opacity: 0.8, side: DoubleSide }), false));
   }
 
   /* ---------- T2: city context (generic) ---------- */
@@ -806,7 +838,7 @@ export async function createTower(
   };
 
   /* ---------- T4: pins (HTML, projected each frame) ---------- */
-  const PINS = [2, 5, 8, 11, 14].filter((n) => typical.some((l) => l.floor === n));
+  const PINS = [4, 7, 10, 13, 16].filter((n) => typical.some((l) => l.floor === n)); // rev 11
   // the street corner: the outline vertex furthest toward the camera
   const corner = outline.reduce((b2, p) => (p[0] * out[0] + p[1] * out[1] > b2[0] * out[0] + b2[1] * out[1] ? p : b2));
   const layer = document.createElement('div');

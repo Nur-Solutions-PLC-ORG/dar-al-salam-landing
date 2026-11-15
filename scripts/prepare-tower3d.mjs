@@ -11,7 +11,7 @@ const keep = {
   centre: d.centre,
   outline: d.outline,
   heights: d.heights,
-  levels: d.levels.map(({ id, floor, y0, h, status, selectable }) => ({ id, floor, y0, h, status, selectable })),
+  levels: d.levels.map(({ id, floor, y0, h, status, selectable, clad, use }) => ({ id, floor, y0, h, status, selectable, clad, use })),
   units: Object.fromEntries(Object.entries(d.units).map(([k, u]) => [k, { mirror: u.mirror, rot: u.rot, t: u.t, centroid: u.centroid }])),
   twoBedFloors: d.twoBedFloors,
   balconies: d.balconies.map(({ unit, poly }) => ({ unit, poly })),
