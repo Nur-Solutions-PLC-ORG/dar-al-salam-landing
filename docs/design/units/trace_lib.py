@@ -30,10 +30,12 @@ def _dseg(p, a, b):
 
 
 def stand_point(poly, solids, step=0.1):
-    """Rev 9.4: where a visitor stands in a room (metres). The point inside `poly` with the most clearance from
-    the room's edges and from every solid (furniture, wardrobes, counters, columns), so the walk-in camera never
-    starts inside or against a block. Returns [x, z, clearance]."""
-    xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; best = None
+    """Where a visitor stands in a room (metres). Returns [x, z, clearance].
+    Rev 9.4: a point inside `poly`, clear of the room's edges and of every solid.
+    Rev 10.11: among the points with enough clearance (at least 0.45 m, or 70% of the best available), take the one
+    FARTHEST from the room's largest furniture piece, so the camera sees the room and the piece instead of standing
+    at the foot of the bed. Rooms with no furniture keep the most-clear point."""
+    xs = [p[0] for p in poly]; ys = [p[1] for p in poly]; pts = []
     obst = [s['poly'] for s in solids]
     y = min(ys) + step / 2
     while y < max(ys):
@@ -43,10 +45,23 @@ def stand_point(poly, solids, step=0.1):
                 d = min(_dseg((x, y), poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly)))
                 for o in obst:
                     d = min(d, min(_dseg((x, y), o[i], o[(i + 1) % len(o)]) for i in range(len(o))))
-                if best is None or d > best[2]: best = [round(x, 2), round(y, 2), round(d, 2)]
+                pts.append((x, y, d))
             x += step
         y += step
-    return best
+    if not pts: return None
+    best = max(pts, key=lambda p: p[2])
+    focus = None; area = 0
+    for s in solids:
+        if s.get('kind') != 'furniture': continue
+        q = s['poly']; cx = sum(p[0] for p in q) / len(q); cy = sum(p[1] for p in q) / len(q)
+        if not _inside((cx, cy), poly): continue
+        a = abs(sum(q[i][0] * q[(i + 1) % len(q)][1] - q[(i + 1) % len(q)][0] * q[i][1] for i in range(len(q)))) / 2
+        if a > area: area, focus = a, (cx, cy)
+    if focus:
+        need = min(0.45, best[2] * 0.7)
+        ok = [p for p in pts if p[2] >= need]
+        best = max(ok, key=lambda p: (math.hypot(p[0] - focus[0], p[1] - focus[1]), p[2]))
+    return [round(best[0], 2), round(best[1], 2), round(best[2], 2)]
 
 
 class Unit:
