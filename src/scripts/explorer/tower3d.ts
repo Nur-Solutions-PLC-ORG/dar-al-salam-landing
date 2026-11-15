@@ -968,7 +968,14 @@ export async function createTower(
   };
   const run = (vars: gsap.TweenVars) => {
     tweening++;
-    return gsap.to(part, { ...vars, onComplete: () => (tweening--, request()), onInterrupt: () => (tweening--, request()) });
+    // the end state is applied even if no frame was drawn during the tween (a slow device, a hidden tab)
+    const settle = () => {
+      tweening--;
+      arrange();
+      renderer.shadowMap.needsUpdate = true;
+      request();
+    };
+    return gsap.to(part, { ...vars, onComplete: settle, onInterrupt: settle });
   };
 
   let downX = 0;
