@@ -22,7 +22,7 @@ Assets in `brand-source/`:
 
 ## Project facts (only these; don't invent more)
 - **Garment tower**, Garment area, Addis Ababa. Landmarks nearby: Haile Garment roundabout, Garment taxi station, Lafto square, Africa CDC headquarters.
-- High-rise residential tower, "two block layout". Basement: parking + offices. Ground floor: offices/commercial. **126 apartments** across the residential floors (see the 2026-11-14 update below: 16 floors, 2-bedroom floors).
+- High-rise residential tower, "two block layout". Basement: parking. Ground floor: **reception**. **126 apartments** on the residential floors 3–16 (see the 2026-11-15 update below).
 - Unit types (gross / net m²):
 
 | Code | Type | Gross m² | Net m² | Rooms |
@@ -40,7 +40,7 @@ Assets in `brand-source/`:
   Room lists corrected 2026-11-15 against the plans (review round 7). Some plan area labels don't match the drawn space (e.g. BL02's bottom balcony 2.68 m², BL03 master 15.82 m², BL03 living 26.41 m², BL02 second bedroom 13.14 m²); the site shows the labels as printed and these go to the client.
   Plans show balconies, a separate shower room per bath, lift lobby with 2+ lifts and stairs per block. Floor finishes follow each plan's labels: ceramic tile throughout BL05 (and the other 3-bed plans unless their labels say otherwise); **BL01, BL02 and BL04 label their bedrooms and living/dining "PARQUET ff"** (BL02's living label is partly under the "600" dimension; "…UET ff" is legible) (BL04 shares BL01's artwork), with ceramic in the kitchen, corridor, showers and balconies.
 - **Update 2026-11-14 (from the client, via the user):**
-  - **16 floors.** The client is adding a 16th floor; the site says **16 floors** and keeps **126 homes**. We only have plans for the typical residential floors 1–14, so the explorer shows those and notes "16th floor planned". Don't invent a per-floor breakdown for floors 15–16.
+  - ~~16 floors / "16th floor planned"~~ superseded by the 2026-11-15 update below.
   - **2-bedroom homes (BL01) only on floors 4, 6, 8, 10 and 11.** What sits in the BL01 corner on the other floors is **not confirmed yet**: show it as "To be confirmed" in the explorer, never as a 3-bedroom or as missing.
   - **Exact location:** https://maps.app.goo.gl/4Ed5VBCaYGvbbY6X9 (the client's pin; Google place id `0x164b81003f901365:0x2aba21e4438756c4`). Use this link for "Open in Google Maps" / "Get directions" instead of the "Haile Garment" search. Still no hand-typed coordinates; the location diagram stays "not to scale".
   - **Coordinates (from the client's own pin, resolved 2026-11-14):** the link opens the Google place "Dar al Salam Real Estate" at **8.9356809, 38.7299505**. These replace "no coordinates": the location section may now show a real satellite map with a pin there, and "Get directions" can use `https://www.google.com/maps/dir/?api=1&destination=8.9356809,38.7299505`.
@@ -59,6 +59,11 @@ Assets in `brand-source/`:
     - **A real 3D tower** modelled in Three.js from our own sources: the brochure/plans (footprint from the key plan, the nine units' traced geometry, balconies), the tower render, and the hero film (`brand-source/video/`; façade: white render, blue glazing, grey balcony fronts and rails, white vertical fins, grey stone cladding and glass shopfronts at the ground storey). Includes simple context (street, trees, neighbouring blocks) and sky. The video's flow: hover a floor (pins and lit windows) → push in → that floor's slab slides out of the tower → cutaway floor → unit.
     - **Real 3D furniture and materials** in the dollhouse and walk-in: modelled beds, sofas, tables, chairs, wardrobes, kitchens, bathroom fittings, rugs, lamps and plants, placed on the plan's furniture footprints. PBR floors per plan label (ceramic tile, or parquet where labelled), realistic light, soft shadows and ambient occlusion. Photoreal still quality where the device allows (e.g. progressive path tracing when the camera rests on desktop).
     - The photo tower stage stays as the fallback/intro for devices without WebGL. AI panoramas (Higgsfield) remain the route to exact photoreal interiors if real-time 3D falls short.
+  - **Floors, corrected by the client (2026-11-15):** the apartments are on **Floor 3 – Floor 16, 9 apartments per floor** (14 × 9 = 126). The typical floor plan (BL01–BL09) applies to every floor 3–16. There is no "planned" floor any more: floor 16 is a normal apartment floor.
+    - **Ground floor: has a reception.** Say so on the site.
+    - **Ground to Floor 2 are offices, but that's internal: don't mention offices anywhere** (not for the ground floor, floors 1–2 or the basement). On the site, floors G–2 are simply non-selectable podium storeys; the basement is "parking".
+    - The 2-bedroom (BL01) floors stay **4, 6, 8, 10 and 11** as the client gave them; every other floor 3–16 shows BL01 as "To be confirmed".
+    - The tower render shows ground + 13 apartment storeys, so the 3D tower (G, 1, 2, then 3–16) is taller than the picture; that's expected.
   - **Building features (confirmed):** garbage chute on every floor, standby lift, underground water, parking. Basement parking is also shown on the plans. Use the wording "underground water"; don't specify borehole vs tank.
 - **Tower film:** `brand-source/video/` (rendered fly-through, 41 s, 640×352, H.264 with a music track). It's low resolution, so never show it full-bleed or stretched; see DESIGN for the treatment.
 - **Prices: do not publish.** Use "Request pricing". Payment is flexible (pay any amount over time until fully paid; a unit is reserved with an initial payment). It's OK to say "Flexible payment plans".
@@ -69,7 +74,7 @@ English (default) + Amharic toggle (`/am` or a client-side switch). Amharic copy
 
 ## Sections (starting point; design can refine)
 1. Hero: the tower, brand, one-line promise, primary CTA (Book a visit) and secondary (Explore apartments).
-2. Key facts strip: 16 floors, 126 apartments, 2 & 3 bedroom homes, 158–171 m².
+2. Key facts strip: 16 floors, 126 apartments (floors 3–16), 2 & 3 bedroom homes, 158–171 m².
 3. The tower / story: "House of Peace", calm living in the heart of Garment.
 4. **Interactive tower model** (the "creative model"): a 3D or 2.5D massing of the tower; hover/tap a floor to select it, then the floor's key plan with the 9 apartments, then the apartment's plan + specs. Must have a lightweight non-WebGL fallback.
 5. Apartment types gallery: 9 plans with filters (2 bed / 3 bed), zoomable plan viewer.
