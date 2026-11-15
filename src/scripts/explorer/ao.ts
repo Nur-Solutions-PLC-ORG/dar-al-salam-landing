@@ -24,8 +24,10 @@ export function createAo(renderer: WebGLRenderer, scene: Scene, camera: Camera, 
   composer.addPass(new RenderPass(scene, camera));
   const gtao = new GTAOPass(scene, camera, w, h);
   // design (F5 tuning): twice as strong, so corners and the bases of furniture show a soft shadow at rest
-  gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.5, thickness: 1, scale: 1.6, samples: 16 });
-  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
+  gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.5, thickness: 1, distanceFallOff: 0.3, scale: 1.6, samples: 32 });
+  // review r9b L5: the dotted halo on edges was raw AO noise the edge-aware denoise kept at depth steps; more AO
+  // samples (less noise to start with), a distance falloff, and a softer depth weight so the denoise reaches the edge
+  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 1.5, normalPhi: 3, radius: 8, rings: 3, samples: 16 });
   gtao.blendIntensity = 1;
   composer.addPass(gtao);
   composer.addPass(new OutputPass());
