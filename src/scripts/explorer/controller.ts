@@ -232,7 +232,7 @@ export function createExplorer(root: HTMLElement) {
     // with the 3D tower as the stage, the floor shows inside it (T5); the slab canvas only hosts the unit dollhouse
     // (and only once the dollhouse exists: the slab's own key-plan plate must never show in its place)
     const want = tower ? state.level === 'unit' && viewFor() === '3d' && Boolean(dh) : state.level !== 'idle';
-    if (want && !gl && webgl && !prefersLightweight()) void loadScene();
+    if (want && !gl && webgl && !failed3d && !prefersLightweight()) void loadScene();
     clearTimeout(slabTimer);
     if (gl) {
       gl.setTbc(new Set(CODES.filter((c) => isTbc(c))));
@@ -296,6 +296,7 @@ export function createExplorer(root: HTMLElement) {
             tower = null;
             towerWanted = false; // no retry this session; the photo stage stays
             towerFailed = true;
+            failed3d = true; // review r9a note: no fresh WebGL (slab, dollhouse) after a loss; the photo and 2D plan stay
             loadBtn?.remove();
             towerNote?.remove();
             setHint(fine ? t.towerHover : t.towerTap);
