@@ -44,8 +44,7 @@ type I18n = Record<
   | 'towerTap'
   | 'towerLoad'
   | 'towerDrag'
-  | 'towerNote'
-  | 'towerPlanned',
+  | 'towerNote',
   string
 >;
 
@@ -292,7 +291,6 @@ export function createExplorer(root: HTMLElement) {
         m.createTower(photo, stage, {
           ...callbacks,
           label: (n) => f(t.floorTooltip, { n, mix: mixOf(n) }),
-          plannedLabel: t.towerPlanned,
           unitLabel: (code) => `${code} · ${isTbc(code) ? t.tbc : (unitInfo.get(code as Code) ?? '')}`,
           onUnit: (code) => pickUnit(code as Code, false),
           onFail: () => {
@@ -1204,9 +1202,9 @@ export function createExplorer(root: HTMLElement) {
     find(code: string, opts: { focus?: boolean } = {}) {
       const c = code.toUpperCase() as Code;
       if (!CODES.includes(c)) return;
-      // the floor view with the unit highlighted (selected) on the current floor, default floor 1;
-      // a home not confirmed there (BL01) opens its first confirmed floor instead (rev 5: floor 4)
-      const current = state.level === 'idle' ? 1 : state.floor;
+      // the floor view with the unit highlighted (selected) on the current floor, default the first floor with homes
+      // (rev 11: floor 3); a home not confirmed there (BL01) opens its first confirmed floor instead (floor 4)
+      const current = state.level === 'idle' ? FIRST : state.floor;
       const floor = isTbc(c, current) ? (confirmedFloors(c)[0] ?? current) : current;
       go({ level: 'floor', floor, unit: c }, { focus: false });
       const h = hotspots.find((x) => x.dataset.unit === c);

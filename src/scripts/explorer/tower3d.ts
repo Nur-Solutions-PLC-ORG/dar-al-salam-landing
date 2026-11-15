@@ -9,7 +9,7 @@
  *   the recess gets side and back walls, with the traced glazing set into the back walls. Window bays without a traced
  *   opening get the illustrative punched windows of `facadeStyle.windowBay` in their own mesh, so they can be removed if
  *   the client supplies real positions. White fins on the two street faces; ground storey (cladding, shopfronts,
- *   canopy); the planned storey at 0.35 opacity with a dashed gold edge; roof slab, parapet and plant room.
+ *   canopy); roof slab, parapet and plant room (rev 11: no planned storey).
  * - T2: a round ground fading out, road and pavement on the two street sides, instanced palms and trees, ten plain
  *   blocks, a gradient sky. Generic: no real buildings, signs or cars.
  * - T3: a warm sun from the south-west (38°) with soft shadows baked once, a hemisphere light and a RoomEnvironment,
@@ -36,8 +36,6 @@ import {
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedMesh,
-  LineDashedMaterial,
-  LineSegments,
   Material,
   Matrix4,
   Mesh,
@@ -159,7 +157,6 @@ export async function createTower(
   cb: ModelCallbacks & {
     onFail: () => void;
     label: (floor: number) => string;
-    plannedLabel: string;
     unitLabel: (code: string) => string;
     onUnit: (code: string) => void;
   },
@@ -414,30 +411,8 @@ export async function createTower(
   const finMesh = fins.length ? solid(mergeGeometries(fins)!, std(fs.fin.colour)) : null;
   fins.forEach((x) => x.dispose());
 
-  // the planned storey: the same parts, faint, with a dashed gold edge; then the roof
-  const planned = d.levels.find((l) => l.status === 'planned');
-  let roofY = top.y0 + top.h;
-  if (planned) {
-    for (const key of Object.keys(parts) as (keyof typeof parts)[]) {
-      const m = k(mats[key].clone());
-      m.userData.base = 0.35 * (key === 'traced' || key === 'illus' ? 0.6 : 1);
-      m.transparent = true;
-      m.opacity = 0.35 * (key === 'traced' || key === 'illus' ? 0.6 : 1);
-      m.depthWrite = false;
-      const pm = solid(floorGeo[key].clone(), m, false);
-      pm.position.y = planned.y0;
-      above.push(pm);
-    }
-    const pts: number[] = [];
-    for (const y of [planned.y0 + SL, planned.y0 + planned.h]) outline.forEach((a, i) => pts.push(a[0], y, a[1], ...[outline[(i + 1) % outline.length]![0], y, outline[(i + 1) % outline.length]![1]]));
-    const lg = k(new BufferGeometry());
-    lg.setAttribute('position', new Float32BufferAttribute(pts, 3));
-    const line = new LineSegments(lg, k(new LineDashedMaterial({ color: '#B59458', dashSize: 0.9, gapSize: 0.6, transparent: true })));
-    line.computeLineDistances();
-    scene.add(line);
-    above.push(line);
-    roofY = planned.y0 + planned.h;
-  }
+  // rev 11: no planned storey; the roof sits on floor 16
+  const roofY = top.y0 + top.h;
   const white = std(WALL_C, { transparent: true }); // the roof fades out with the floors above (T4)
   above.push(solid(prism(outline, roofY, SL), white), solid(mergeGeometries(edges.map((e) => box(e.a, e.b, roofY + SL, roofY + SL + H.parapet, 0.2, -side * 0.1)))!, white));
   const xs = outline.map((p) => p[0]);
@@ -629,7 +604,7 @@ export async function createTower(
   sun.shadow.camera.updateProjectionMatrix();
   scene.add(sun, sun.target);
 
-  /* ---------- T3: camera (fitted by projection: ground to the top of the planned storey = 82% of the stage) ---------- */
+  /* ---------- T3: camera (fitted by projection: ground to the roof = 82% of the stage) ---------- */
   const towerTop = roofY;
   const corners = [0, towerTop].flatMap((y) => outline.map(([x, z]) => new Vector3(x, y, z)));
   const view = { az: AZ, sway: 0 };
@@ -900,26 +875,6 @@ export async function createTower(
   /* ---------- T4: hover and picking by raycast (an invisible prism of the typical floors) ---------- */
   const hit = new Mesh(k(prism(outline, f1.y0, top.y0 + top.h - f1.y0)), mats.slab);
   hit.updateMatrixWorld();
-  // review r9a M4: the planned storey answers a hover with "16th floor planned" (never a pick)
-  const hitPlanned = planned ? new Mesh(k(prism(outline, planned.y0, planned.h)), mats.slab) : null;
-  hitPlanned?.updateMatrixWorld();
-  const plannedAt = (e: PointerEvent) => {
-    if (!hitPlanned) return false;
-    const r = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(ndc, camera);
-    return ray.intersectObject(hitPlanned).length > 0 && floorAt(e) === null;
-  };
-  let plannedOn = false;
-  const showPlanned = (on: boolean) => {
-    if (on === plannedOn) return;
-    plannedOn = on;
-    uchip.hidden = !on;
-    if (!on || !planned) return;
-    uchip.textContent = cb.plannedLabel;
-    const A = toStage(v3.set(corner[0], planned.y0 + planned.h, corner[1]).clone());
-    uchip.style.transform = `translate(${A.x}px, ${A.y}px) translate(-50%, -100%)`;
-  };
   const ray = new Raycaster();
   const ndc = new Vector2();
   const floorAt = (e: PointerEvent | MouseEvent) => {
@@ -1098,7 +1053,6 @@ export async function createTower(
       if (e.pointerType === 'mouse') {
         if (selected === null) {
           hoverFloor(floorAt(e));
-          showPlanned(plannedAt(e));
         } else hoverUnit(unitAt(e));
       }
       return;
@@ -1134,7 +1088,6 @@ export async function createTower(
     }
     // a click picks; on touch the first tap previews and a second tap on the same floor picks
     const n = floorAt(e);
-    showPlanned(n === null && plannedAt(e)); // the planned storey only answers with its chip
     if (n === null) return;
     if (e.pointerType === 'mouse' || touchPick === n) {
       touchPick = null;
@@ -1145,7 +1098,7 @@ export async function createTower(
       hoverFloor(n);
     }
   };
-  const onLeave = (e: PointerEvent) => mine() && e.pointerType === 'mouse' && !dragging && (selected === null ? (hoverFloor(null), showPlanned(false)) : hoverUnit(null));
+  const onLeave = (e: PointerEvent) => mine() && e.pointerType === 'mouse' && !dragging && (selected === null ? hoverFloor(null) : hoverUnit(null));
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
@@ -1213,7 +1166,6 @@ export async function createTower(
       tweening = 0;
       if (n !== null) {
         cb.onHover(null); // the chip would sit stale over a moving view
-        showPlanned(false);
         part.floor = n;
         fitFloor();
         setLit(n);

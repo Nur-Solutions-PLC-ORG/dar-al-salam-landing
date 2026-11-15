@@ -63,7 +63,6 @@ const i18n = {
   towerLoad: t.tower.load,
   towerDrag: t.tower.drag,
   towerNote: t.tower.surroundings,
-  towerPlanned: t.tower.planned,
 };
 const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).join(', ');
 ---
@@ -124,14 +123,6 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
         <!-- IDLE: floor list (primary accessible control) -->
         <div class="view view--idle" data-view="idle">
           <h3 class="view__title h3">{t.explore.floorList}</h3>
-          {
-            site.project.topFloorPlanned && (
-              <p class="small floors__planned">
-                <span class="floors__planned-glyph" aria-hidden="true" />
-                {t.explore.topFloorPlanned}
-              </p>
-            )
-          }
           <ol role="list" class="floors">
             {
               floorsDesc.map((n) => (
@@ -612,25 +603,6 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
 
   .floors__twobed + .floors__legend {
     margin-top: calc(-1 * var(--space-4));
-  }
-
-  /* "16th floor planned": a note, not a row (rev 5); dashed = "not drawn yet", like the TBC hatch */
-  .floors__planned {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: 40px;
-    margin-bottom: calc(-1 * var(--space-3));
-    padding-inline: var(--space-2);
-    border-bottom: 1px dashed var(--line);
-    color: var(--text-muted);
-  }
-
-  .floors__planned-glyph {
-    width: 10px;
-    height: 10px;
-    flex: none;
-    border: 1px dashed currentColor;
   }
 
   /* < 480 px the mix moves under the floor number, so every floor keeps its own composition */

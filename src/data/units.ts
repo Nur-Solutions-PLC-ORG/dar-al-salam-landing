@@ -78,7 +78,7 @@ const base: readonly UnitBase[] = [
 const NORTH = new Set<UnitCode>(['BL01', 'BL02', 'BL03', 'BL04']);
 
 /**
- * The 9 apartment types of the typical floor plan (DESIGN §9.1: plan floors 1–14 use it). BL01 is confirmed only
+ * The 9 apartment types of the typical floor plan (rev 11: floors 3–16 use it). BL01 is confirmed only
  * on `twoBedFloors`; see `slotStatus()` for what a given floor holds.
  */
 export const units: readonly Unit[] = base.map((u) => {
