@@ -14,17 +14,7 @@ export interface Still {
   stop(): void;
 }
 
-/** Desktop GPUs that can take it: a fine pointer, ≥ 8 GB, WebGL2 float render targets. */
-export function canRenderStill(renderer: WebGLRenderer) {
-  const gl = renderer.getContext();
-  return (
-    matchMedia('(pointer: fine)').matches &&
-    ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8 &&
-    typeof WebGL2RenderingContext !== 'undefined' &&
-    gl instanceof WebGL2RenderingContext &&
-    Boolean(gl.getExtension('EXT_color_buffer_float'))
-  );
-}
+export { canRenderStill } from './gpu';
 
 const visible = (o: Object3D) => {
   for (let x: Object3D | null = o; x; x = x.parent) if (!x.visible) return false;
@@ -134,18 +124,46 @@ export async function renderStill(o: {
   let frame = 0;
   let stopped = false;
   let shown = false;
+  // review r9 final H1: at most one sample in flight. A fence after each sample; the next frame renders only once the
+  // GPU has finished it, so no backlog builds and stop() never waits on a queue. The deadline is checked every frame.
+  const gl = o.renderer.getContext() as WebGL2RenderingContext;
+  let sync: WebGLSync | null = null;
+  let syncAt = 0;
+  let firstDone = false;
   const stop = () => {
     if (stopped) return;
     stopped = true;
     if (frame) cancelAnimationFrame(frame);
+    if (sync) gl.deleteSync(sync);
+    sync = null;
     pt.dispose();
     sky.dispose();
     own.forEach((g) => g.dispose());
   };
+  const giveUp = () => {
+    stop();
+    o.onTimeout();
+  };
   const step = () => {
     frame = 0;
     if (stopped) return;
+    const now = performance.now();
+    if (!shown && now - t0 > deadline) return giveUp();
+    if (sync) {
+      if (gl.getSyncParameter(sync, gl.SYNC_STATUS) !== gl.SIGNALED) {
+        // the first sample alone taking over a second means this GPU won't get there: stop now
+        if (!firstDone && now - syncAt > 1000) return giveUp();
+        frame = requestAnimationFrame(step);
+        return;
+      }
+      gl.deleteSync(sync);
+      sync = null;
+      firstDone = true;
+    }
     pt.renderSample();
+    sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    gl.flush();
+    syncAt = performance.now();
     o.onProgress(Math.min(1, pt.samples / max));
     if (!shown && pt.samples >= cleanAt) {
       shown = true;
@@ -153,10 +171,6 @@ export async function renderStill(o: {
         pt.renderToCanvas = true;
         pt.renderSample(); // draws the accumulated image now
       });
-    } else if (!shown && performance.now() - t0 > deadline) {
-      stop();
-      o.onTimeout();
-      return;
     }
     if (pt.samples < max) frame = requestAnimationFrame(step);
   };

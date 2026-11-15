@@ -14,6 +14,7 @@ import { prefersLightweight, supportsWebGL, onVisibility } from '../lazy';
 import { createSvgModel } from './svg-model';
 import { createPhotoModel } from './photo-model';
 import { toast } from '../toast';
+import { canRenderStill } from './gpu';
 import type { Anchor, Level, ModelAdapter, ModelCallbacks } from './types';
 import css3d from '../../styles/explore3d.css?inline';
 
@@ -713,14 +714,7 @@ export function createExplorer(root: HTMLElement) {
     if (!dh || stillBtn || !s.render || prefersReducedMotion()) return;
     const host = dh.walkHost();
     // the GPU check runs on the live renderer; the path tracer itself loads only on press
-    const gl2 = host.renderer.getContext();
-    const capable =
-      matchMedia('(pointer: fine)').matches &&
-      ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8 &&
-      typeof WebGL2RenderingContext !== 'undefined' &&
-      gl2 instanceof WebGL2RenderingContext &&
-      Boolean(gl2.getExtension('EXT_color_buffer_float'));
-    if (!capable) return;
+    if (!canRenderStill(host.renderer.getContext())) return; // shared check; refuses software renderers (H1)
     stillBtn = document.createElement('button');
     stillBtn.type = 'button';
     stillBtn.className = 'u3d-render';
