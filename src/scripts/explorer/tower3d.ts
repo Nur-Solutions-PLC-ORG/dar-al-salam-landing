@@ -892,6 +892,26 @@ export async function createTower(
     v3.copy(p).project(camera);
     return { x: cr.left - sr.left + ((v3.x + 1) / 2) * cr.width, y: cr.top - sr.top + ((1 - v3.y) / 2) * cr.height };
   };
+  /**
+   * Design rev 11.3: a pin's card stays at least 8 px inside the stage on every side. Beside the dot (flipped to its
+   * left near the right edge); on phones (viewport under 768 px), centred across the stage at the pin's height (it
+   * may cover the leader). (Not the stage's width: the desktop stage is under 640 px too.) Positions are relative to the pin button, whose box starts 22 px left of and above the dot.
+   */
+  let cardW = new WeakMap<HTMLElement, { w: number; h: number }>();
+  void document.fonts?.ready.then(() => (cardW = new WeakMap())); // measured before the web font: measure again
+  const placeCard = (card: HTMLElement, A: { x: number; y: number }) => {
+    let size = cardW.get(card);
+    if (!size?.w) cardW.set(card, (size = { w: card.offsetWidth, h: card.offsetHeight })); // the label never changes
+    const sw = stage.clientWidth;
+    const sh = stage.clientHeight;
+    let x = A.x + 16; // (the dot's right, as before)
+    if (window.innerWidth < 768) x = (sw - size.w) / 2;
+    else if (x + size.w > sw - 8) x = A.x - 16 - size.w;
+    x = Math.max(8, Math.min(x, sw - 8 - size.w));
+    const y = Math.max(8 + size.h / 2, Math.min(A.y, sh - 8 - size.h / 2));
+    card.style.left = `${x - (A.x - 22)}px`;
+    card.style.top = `${y - (A.y - 22)}px`;
+  };
   const projectPins = () => {
     layer.hidden = part.push > 0.01 || !shown;
     if (layer.hidden) return;
@@ -903,8 +923,7 @@ export async function createTower(
       const F = toStage(p.from);
       p.b.style.transform = `translate(${A.x}px, ${A.y}px)`;
       p.b.classList.toggle('is-on', litFloor === p.n);
-      // the card flips to the dot's left when it would cross the stage's right edge
-      p.b.classList.toggle('is-flip', A.x + 30 + (p.b.firstElementChild as HTMLElement).offsetWidth > stage.clientWidth - 12);
+      placeCard(p.b.firstElementChild as HTMLElement, A);
       p.line.setAttribute('x1', String(A.x));
       p.line.setAttribute('y1', String(A.y));
       p.line.setAttribute('x2', String(F.x));

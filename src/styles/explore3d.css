@@ -509,7 +509,8 @@ html.is-walking .u3d-enter {
   transform: scale(1.35);
 }
 
-/* design T4 fix 4: the pin's card, beside the dot while its floor is lit; flips left near the stage's right edge */
+/* design T4 fix 4: the pin's card, shown while its floor is lit. Rev 11.3: tower3d.ts places it (beside the dot,
+   flipped near the right edge, centred on narrow stages, always 8 px inside the stage); these are the defaults until it does */
 .tower-pin__card {
   position: absolute;
   left: calc(100% - 6px);
@@ -524,11 +525,6 @@ html.is-walking .u3d-enter {
   transform: translateY(-50%);
   transition: opacity 0.2s ease;
   pointer-events: none;
-}
-
-.tower-pin.is-flip .tower-pin__card {
-  right: calc(100% - 6px);
-  left: auto;
 }
 
 .tower-pin.is-on .tower-pin__card {
