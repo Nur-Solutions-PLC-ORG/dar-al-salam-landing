@@ -492,7 +492,11 @@ export function createWalk(
       const n = same.length > 1 ? same.indexOf(room!) + 1 : hn;
       const nm = nameOf(r.to);
       b.lastElementChild!.textContent = nm.charAt(0).toUpperCase() + nm.slice(1) + (n ? ` ${n}` : '');
-      b.addEventListener('click', () => void through(r.door, r.to));
+      b.addEventListener('click', () => {
+        // review r8 nit: taken by keyboard, the ring goes away mid-glide; focus lands on the stage (arrow keys look)
+        const kb = document.activeElement === b;
+        void through(r.door, r.to).then(() => kb && h.stage.focus({ preventScroll: true }));
+      });
       ringLayer.append(b);
       const at = ringAt(loc, r);
       rings.push({ b, at, edge: at.clone().add(new Vector3(0.45, 0, 0)), arrow: b.children[1] as HTMLElement });
@@ -570,7 +574,9 @@ export function createWalk(
         for (let i = xs.length - 1, max = w - 12; i >= 0; i--) max = (xs[i] = Math.min(xs[i]!, max - sizes[i]!)) - 8;
         row.forEach((q, i) => (q.r.b.style.transform = `translate(${Math.max(12, xs[i]!)}px, ${base}px)`));
       } else {
-        const y0 = Math.max(hh * 0.3, hh / 2 - (row.length * 52) / 2);
+        // review r8 nit: the stacks start below the minimap (right) or the toolbar (left)
+        const clear = edge === 'r' ? (mini.hidden ? 0 : mini.offsetTop + mini.offsetHeight) : toolbar.offsetTop + toolbar.offsetHeight;
+        const y0 = Math.max(hh * 0.3, clear + 8, hh / 2 - (row.length * 52) / 2);
         row.forEach((q, i) => (q.r.b.style.transform = `translate(${edge === 'l' ? 12 : w - 12 - sizes[i]!}px, ${Math.min(hh - 128, y0 + i * 52)}px)`));
       }
     }
