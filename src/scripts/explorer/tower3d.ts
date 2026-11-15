@@ -524,8 +524,11 @@ export async function createTower(
     road.push(box(A, B, 0, 0.02 + i * 0.004, rw, side * (pw + rw / 2)));
     roadLines.push({ p: [m[0] + e.n[0] * (pw + rw / 2), m[1] + e.n[1] * (pw + rw / 2)], n: e.n });
   });
-  solid(mergeGeometries(road)!, fadeOut(std('#2E3138', { roughness: 0.95 }), R * 0.3, R * 0.6), false);
-  solid(mergeGeometries(walk)!, fadeOut(std('#A39E95'), R * 0.3, R * 0.6), false);
+  const groundMs = [
+    groundM,
+    solid(mergeGeometries(road)!, fadeOut(std('#2E3138', { roughness: 0.95 }), R * 0.3, R * 0.6), false),
+    solid(mergeGeometries(walk)!, fadeOut(std('#A39E95'), R * 0.3, R * 0.6), false),
+  ];
   [...road, ...walk].forEach((x) => x.dispose());
   const nearRoad = (p: P2, w: number) => roadLines.some((r) => Math.abs((p[0] - r.p[0]) * r.n[0] + (p[1] - r.p[1]) * r.n[1]) < w);
   const insideTower = (p: P2, w: number) => p[0] > x0 - w && p[0] < x1 + w && p[1] > z0 - w && p[1] < z1 + w;
@@ -667,7 +670,8 @@ export async function createTower(
       l = Math.min(l, v3.x);
       r = Math.max(r, v3.x);
     }
-    return { h: (hi2 - lo) / 2, w: (r - l) / 2, mid: (hi2 + lo) / 2 };
+    // half-spans, plus the furthest edge from the centre (an off-centre box can cross the frame at 85% span)
+    return { h: (hi2 - lo) / 2, w: (r - l) / 2, mid: (hi2 + lo) / 2, edge: Math.max(-l, r, -lo, hi2) };
   };
   const fit = () => {
     const w = host.clientWidth || 1;
@@ -719,7 +723,8 @@ export async function createTower(
       near = (a + b) / 2;
       place();
       const e = extent(pts);
-      if (e.w > 0.85 || e.h > 0.85) a = near; // its bounding box at 85% of the limiting dimension (design T5 fix 6)
+      // its bounding box at 85% of the limiting dimension (design T5 fix 6), and no corner past 92% of the half-frame
+      if (e.w > 0.85 || e.h > 0.85 || e.edge > 0.92) a = near;
       else b = near;
     }
     near = b;
@@ -770,6 +775,9 @@ export async function createTower(
     }
     for (const m of ctxMats) m.opacity = (m.userData.base as number) * (1 - k2);
     for (const x of ctxMeshes) x.visible = k2 < 0.98; // gone, they cast no shadow either
+    // design (T5 low): the raised plate's own shadow on the far ground reads as a leftover tower shadow; none in this view
+    const groundShadow = part.cut < 0.5;
+    for (const g2 of groundMs) if (g2.receiveShadow !== groundShadow) ((g2.receiveShadow = groundShadow), ((g2.material as MeshStandardMaterial).needsUpdate = true));
     for (const o2 of below) {
       o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
       o2.visible = c < 0 || part.cut < 0.5; // the podium (and its canopy) leave with the floors below
