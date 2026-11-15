@@ -510,7 +510,13 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   camera.add(fill, fill.target);
   scene.add(camera);
   /** This scene's renderer state (the canvas is shared: the slab and the tower set theirs when they draw). */
+  let refit: (() => void) | null = null;
+  const ratio = Math.min(devicePixelRatio, lowTier ? 1.5 : 2); // F5 (review r9b L4): phones ≤ 1.5, whoever made the renderer
   const rendererState = () => {
+    if (renderer.getPixelRatio() !== ratio) {
+      renderer.setPixelRatio(ratio);
+      refit?.(); // (the first call runs before fit() exists; the initial fit applies it)
+    }
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.95; // design (F5 tuning) + review L3: lit walls ~ (232–238, 224–230, 212–218)
     renderer.shadowMap.enabled = true;
@@ -561,6 +567,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     renderer.setSize(w, h, false);
     ao?.setSize(w, h);
   };
+  refit = fit;
   const place = () => {
     const c = Math.cos(cam.el);
     camera.position.set(cam.x + Math.sin(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z + Math.cos(cam.az) * c * d);
