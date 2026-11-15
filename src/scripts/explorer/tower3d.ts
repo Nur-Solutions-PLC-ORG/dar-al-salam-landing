@@ -36,6 +36,7 @@ import {
   IcosahedronGeometry,
   InstancedBufferAttribute,
   InstancedMesh,
+  LineBasicMaterial,
   LineDashedMaterial,
   LineSegments,
   Material,
@@ -48,19 +49,25 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   PMREMGenerator,
+  Raycaster,
   RepeatWrapping,
   Scene,
   Shape,
   SRGBColorSpace,
+  Vector2,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import type { MeshStandardMaterialParameters } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { prefersReducedMotion } from '../motion';
+import { gsap, prefersReducedMotion } from '../motion';
+import type { ModelAdapter, ModelCallbacks } from './types';
 import { onVisibility } from '../lazy';
 
 type P2 = [number, number];
+/** A window opening along a run; `u` is the unit it belongs to (index into tower3d.units), for the per-unit lit rule. */
+type Win = { t0: number; t1: number; sill: number; head: number; traced: boolean; u: number };
 type Tower3d = typeof import('../../data/tower3d.json');
 
 const DEG = Math.PI / 180;
@@ -69,14 +76,12 @@ const EL = 14 * DEG;
 const ORBIT = 50 * DEG;
 const SWAY = 5 * DEG;
 
-export interface TowerAdapter {
+/** The 3D tower is a tower stage like the photo (ModelAdapter), plus showing/hiding and QA stats. */
+export interface TowerAdapter extends ModelAdapter {
   /** Show (resume rendering) or hide (stop). */
   show(on: boolean): void;
-  /** Light one floor's glazing warm (T4 refines this per unit), or none. */
-  setLit(floor: number | null): void;
   /** Triangles and draw calls of the last frame (QA). */
   stats(): { tris: number; calls: number };
-  destroy(): void;
 }
 
 /* ---------- small geometry helpers (plan x/z, already centred; y up) ---------- */
@@ -137,7 +142,7 @@ const gradient = (w: number, h: number, paint: (c: CanvasRenderingContext2D) => 
   return t;
 };
 
-export async function createTower(host: HTMLElement, o: { onFail: () => void }): Promise<TowerAdapter> {
+export async function createTower(host: HTMLElement, stage: HTMLElement, cb: ModelCallbacks & { onFail: () => void }): Promise<TowerAdapter> {
   const d: Tower3d = (await import('../../data/tower3d.json')).default;
   const hi = matchMedia('(pointer: fine)').matches && innerWidth >= 1024;
   const reduced = prefersReducedMotion();
@@ -175,7 +180,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     const u: P2 = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
     const n: P2 = [-u[1] * side, u[0] * side]; // outward
     const at = (t: number): P2 => [a[0] + u[0] * t, a[1] + u[1] * t];
-    return { a, b, l, u, n, at, cuts: [] as [number, number][], wins: [] as { t0: number; t1: number; sill: number; head: number; traced: boolean }[] };
+    return { a, b, l, u, n, at, cuts: [] as [number, number][], wins: [] as Win[] };
   });
   const street = (e: (typeof edges)[number]) => e.n[1] > 0.7 || e.n[0] < -0.7; // south (+z) and west (−x) faces
   /** The outline edge a plan segment lies along (parallel, within `tol` inside it), and its span on that edge. */
@@ -198,7 +203,10 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   const SL = H.slab;
   const parts = { slab: [] as BufferGeometry[], wall: [] as BufferGeometry[], front: [] as BufferGeometry[], rail: [] as BufferGeometry[], traced: [] as BufferGeometry[], illus: [] as BufferGeometry[] };
   parts.slab.push(prism(outline, 0, SL));
-  const glazing = d.glazing.map((g) => ({ a: c(g.a), b: c(g.b), sill: g.sill, head: g.head, used: false }));
+  const UNITS = Object.keys(d.units);
+  const cents = Object.values(d.units).map((u) => c(u.centroid));
+  const nearest = (p: P2) => cents.reduce((bi, q, i) => (len(p, q) < len(p, cents[bi]!) ? i : bi), 0);
+  const glazing = d.glazing.map((g) => ({ a: c(g.a), b: c(g.b), sill: g.sill, head: g.head, used: false, u: UNITS.indexOf(g.unit) }));
 
   // balconies: open the façade over each outer edge, put the front and rail on the outline, wall the recess
   const fr = fs.balconyFront;
@@ -235,19 +243,21 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
         .filter((w) => w.t1 - w.t0 > 0.3);
       wins.forEach((w) => (w.g.used = true));
       const at = (t: number): P2 => [a[0] + ((b[0] - a[0]) / l) * t, a[1] + ((b[1] - a[1]) / l) * t];
-      wallRun(l, at, wins.map((w) => ({ t0: w.t0, t1: w.t1, sill: w.g.sill, head: w.g.head, traced: true })), 0.2, 0);
+      wallRun(l, at, wins.map((w) => ({ t0: w.t0, t1: w.t1, sill: w.g.sill, head: w.g.head, traced: true, u: w.g.u })), 0.2, 0);
     });
   }
 
   /** Wall pieces along a run of length l with window openings, and the glass in them. */
-  function wallRun(l: number, at: (t: number) => P2, wins: { t0: number; t1: number; sill: number; head: number; traced: boolean }[], t: number, off: number, glassOff = 0) {
+  function wallRun(l: number, at: (t: number) => P2, wins: Win[], t: number, off: number, glassOff = 0) {
     let cur = 0;
     for (const w of [...wins].sort((x, y) => x.t0 - y.t0)) {
       if (w.t0 > cur + 0.01) parts.wall.push(box(at(cur), at(w.t0), SL, FH, t, off));
       const [A, B] = [at(w.t0), at(w.t1)];
       if (w.sill > 0.01) parts.wall.push(box(A, B, SL, SL + w.sill, t, off));
       if (SL + w.head < FH - 0.01) parts.wall.push(box(A, B, SL + w.head, FH, t, off));
-      (w.traced ? parts.traced : parts.illus).push(pane(A, B, SL + w.sill, SL + Math.min(w.head, FH - SL), glassOff));
+      const g = pane(A, B, SL + w.sill, SL + Math.min(w.head, FH - SL), glassOff);
+      g.setAttribute('aUnit', new Float32BufferAttribute(new Float32Array(g.getAttribute('position').count).fill(w.u), 1));
+      (w.traced ? parts.traced : parts.illus).push(g);
       cur = Math.max(cur, w.t1);
     }
     if (l > cur + 0.01) parts.wall.push(box(at(cur), at(l), SL, FH, t, off));
@@ -259,7 +269,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     const hit = onOutline(g.a, g.b, 0.8);
     if (!hit) continue;
     g.used = true;
-    hit.e.wins.push({ t0: hit.t0, t1: hit.t1, sill: g.sill, head: g.head, traced: true });
+    hit.e.wins.push({ t0: hit.t0, t1: hit.t1, sill: g.sill, head: g.head, traced: true, u: g.u });
   }
   // façade walls: illustrative punched windows on a 3.6 m grid wherever the wall is free
   const wb = fs.windowBay;
@@ -271,7 +281,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     const free = (t0: number, t1: number) => t0 > 0.3 && t1 < e.l - 0.3 && busy.every(([b0, b1]) => t1 < b0 - 0.3 || t0 > b1 + 0.3);
     for (let i = 0; (i + 0.5) * wb.spacing < e.l; i++) {
       const m = (i + 0.5) * wb.spacing;
-      if (free(m - wb.width / 2, m + wb.width / 2)) e.wins.push({ t0: m - wb.width / 2, t1: m + wb.width / 2, sill: wb.sill, head: wb.head, traced: false });
+      if (free(m - wb.width / 2, m + wb.width / 2)) e.wins.push({ t0: m - wb.width / 2, t1: m + wb.width / 2, sill: wb.sill, head: wb.head, traced: false, u: nearest(e.at(m)) });
     }
     // the façade, split around the balcony openings
     let cur = 0;
@@ -293,14 +303,17 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   }
 
   /* ---------- materials ---------- */
+  // design's early tower fixes (rev 10): whiter walls than the cream data value, and the film's grey-blue glass
+  const WALL_C = '#F7F5F1';
+  const GLASS_C = '#5B7388';
   const std = (color: string, x: MeshStandardMaterialParameters = {}) => k(new MeshStandardMaterial({ color, roughness: 0.85, ...x }));
   const mats = {
     slab: std('#E4DED4'),
-    wall: std(fs.wall, { side: DoubleSide }),
+    wall: std(WALL_C, { side: DoubleSide }),
     front: std(fr.colour),
     rail: std(fr.railColour, { roughness: 0.5 }),
-    traced: std(fs.glass.colour, { roughness: 0.3, envMapIntensity: 0.5, transparent: true, opacity: 0.92, side: DoubleSide }),
-    illus: std(fs.glass.colour, { roughness: 0.3, envMapIntensity: 0.5, transparent: true, opacity: 0.92, side: DoubleSide }),
+    traced: std(GLASS_C, { roughness: 0.15, envMapIntensity: 0.6, transparent: true, opacity: 0.8, side: DoubleSide }),
+    illus: std(GLASS_C, { roughness: 0.15, envMapIntensity: 0.6, transparent: true, opacity: 0.8, side: DoubleSide }),
   };
   // the walls' inner faces read dark through the glass
   mats.wall.onBeforeCompile = (s) => {
@@ -308,9 +321,13 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   };
   // T4 hook: a per-floor "lit" amount warms and lights the glazing
   const lit = new Color(fs.glass.litColour);
+  const uSkip = { value: -1 }; // the unit whose glazing stays dark (BL01 off its two-bedroom floors)
   for (const m of [mats.traced, mats.illus]) {
     m.onBeforeCompile = (s) => {
-      s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute float aLit;\nvarying float vLit;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLit = aLit;');
+      s.uniforms.uSkip = uSkip;
+      s.vertexShader = s.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aLit;\nattribute float aUnit;\nuniform float uSkip;\nvarying float vLit;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLit = aLit * step(0.5, abs(aUnit - uSkip));');
       s.fragmentShader = s.fragmentShader
         .replace('#include <common>', `#include <common>\nvarying float vLit;\nconst vec3 LIT = vec3(${lit.r.toFixed(3)}, ${lit.g.toFixed(3)}, ${lit.b.toFixed(3)});`)
         .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor = mix(diffuseColor, vec4(LIT, 1.0), vLit);')
@@ -321,6 +338,10 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   /* ---------- floors: one instance per typical floor ---------- */
   const typical = d.levels.filter((l) => l.status === 'plan');
   const lits: InstancedBufferAttribute[] = [];
+  const ims: InstancedMesh[] = [];
+  /** What rises with the floors above a chosen floor, and what drops with the floors below (T4 slide-out). */
+  const above: Object3D[] = [];
+  const below: Object3D[] = [];
   const m4 = new Matrix4();
   const floorGeo = {} as Record<keyof typeof parts, BufferGeometry>;
   for (const key of Object.keys(parts) as (keyof typeof parts)[]) {
@@ -329,6 +350,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     [...parts[key], ...flat].forEach((x) => x.dispose());
     floorGeo[key] = g;
     const im = new InstancedMesh(g, mats[key], typical.length);
+    ims.push(im);
     typical.forEach((l, i) => im.setMatrixAt(i, m4.makeTranslation(0, l.y0, 0)));
     if (key === 'traced' || key === 'illus') {
       const a = new InstancedBufferAttribute(new Float32Array(typical.length), 1);
@@ -347,7 +369,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     scene.add(mesh);
     return mesh;
   };
-  if (fins.length) solid(mergeGeometries(fins)!, std(fs.fin.colour));
+  const finMesh = fins.length ? solid(mergeGeometries(fins)!, std(fs.fin.colour)) : null;
   fins.forEach((x) => x.dispose());
 
   // the planned storey: the same parts, faint, with a dashed gold edge; then the roof
@@ -359,7 +381,9 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
       m.transparent = true;
       m.opacity = 0.35 * (key === 'traced' || key === 'illus' ? 0.6 : 1);
       m.depthWrite = false;
-      solid(floorGeo[key].clone(), m, false).position.y = planned.y0;
+      const pm = solid(floorGeo[key].clone(), m, false);
+      pm.position.y = planned.y0;
+      above.push(pm);
     }
     const pts: number[] = [];
     for (const y of [planned.y0 + SL, planned.y0 + planned.h]) outline.forEach((a, i) => pts.push(a[0], y, a[1], ...[outline[(i + 1) % outline.length]![0], y, outline[(i + 1) % outline.length]![1]]));
@@ -368,46 +392,48 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     const line = new LineSegments(lg, k(new LineDashedMaterial({ color: '#B59458', dashSize: 0.9, gapSize: 0.6 })));
     line.computeLineDistances();
     scene.add(line);
+    above.push(line);
     roofY = planned.y0 + planned.h;
   }
-  const white = std(fs.wall);
-  solid(prism(outline, roofY, SL), white);
-  solid(mergeGeometries(edges.map((e) => box(e.a, e.b, roofY + SL, roofY + SL + H.parapet, 0.2, -side * 0.1)))!, white);
+  const white = std(WALL_C);
+  above.push(solid(prism(outline, roofY, SL), white), solid(mergeGeometries(edges.map((e) => box(e.a, e.b, roofY + SL, roofY + SL + H.parapet, 0.2, -side * 0.1)))!, white));
   const xs = outline.map((p) => p[0]);
   const zs = outline.map((p) => p[1]);
   const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)];
   const pr = fs.roof.plantRoom;
-  solid(prism([[x0 + pr.inset + 4, z0 + pr.inset], [x1 - pr.inset, z0 + pr.inset], [x1 - pr.inset, z1 - pr.inset], [x0 + pr.inset + 4, z1 - pr.inset]], roofY + SL, pr.h), white);
+  above.push(solid(prism([[x0 + pr.inset + 4, z0 + pr.inset], [x1 - pr.inset, z0 + pr.inset], [x1 - pr.inset, z1 - pr.inset], [x0 + pr.inset + 4, z1 - pr.inset]], roofY + SL, pr.h), white));
 
   /* ---------- ground storey ---------- */
   const gc = fs.groundCladding;
   const g0 = d.levels[0]!;
   const stripes = k(
     gradient(4, 64, (x) => {
-      x.fillStyle = gc.colour;
+      x.fillStyle = '#A39C92'; // a lighter stone than the shopfront glass below it (design fix 5)
       x.fillRect(0, 0, 4, 64);
-      x.fillStyle = 'rgba(255,255,255,0.18)';
+      x.fillStyle = 'rgba(255,255,255,0.22)';
       for (let y = 0; y < 64; y += 16) x.fillRect(0, y, 4, 3);
     }),
   );
   stripes.wrapS = stripes.wrapT = RepeatWrapping;
   stripes.repeat.set(1, 1 / 1.2);
   const base = inset(outline, 0.6);
-  solid(prism(base, 0, g0.h), std('#FFFFFF', { map: stripes }));
+  below.push(solid(prism(base, 0, g0.h), std('#FFFFFF', { map: stripes })));
   const shop: BufferGeometry[] = [];
+  const mull: BufferGeometry[] = [];
   let entrance: { a: P2; b: P2; l: number } | null = null;
   base.forEach((a, i) => {
     const b = base[(i + 1) % base.length]!;
-    if (!street(edges[i]!)) return;
+    if (!street(edges[i]!) || len(a, b) < 1.5) return;
     const l = len(a, b);
     if (!entrance || l > entrance.l) entrance = { a, b, l };
-    for (let t = 0.6; t + 3.0 < l - 0.3; t += 3.6) {
-      const at = (s: number): P2 => [a[0] + ((b[0] - a[0]) / l) * s, a[1] + ((b[1] - a[1]) / l) * s];
-      shop.push(pane(at(t), at(t + 3.0), 0.15, gc.shopfrontHead, side * 0.03));
-    }
+    const at = (s: number): P2 => [a[0] + ((b[0] - a[0]) / l) * s, a[1] + ((b[1] - a[1]) / l) * s];
+    // shopfront glass up to shopfrontHead, white mullions on the fins' 3.6 m grid (design fix 5)
+    shop.push(pane(at(0.15), at(l - 0.15), 0.15, gc.shopfrontHead, side * 0.03));
+    for (let t = fs.fin.spacing; t < l - 0.3; t += fs.fin.spacing) mull.push(box(at(t), at(t + 0.25), 0, gc.shopfrontHead, 0.3, side * 0.15));
   });
-  if (shop.length) solid(mergeGeometries(shop)!, std(gc.shopfrontGlass, { roughness: 0.2, metalness: 0.3 }), false);
-  shop.forEach((x) => x.dispose());
+  if (shop.length) below.push(solid(mergeGeometries(shop)!, std(gc.shopfrontGlass, { roughness: 0.2, metalness: 0.3 }), false));
+  if (mull.length) below.push(solid(mergeGeometries(mull)!, std(fs.fin.colour)));
+  [...shop, ...mull].forEach((x) => x.dispose());
   if (entrance) {
     const { a, b, l } = entrance as { a: P2; b: P2; l: number };
     const u: P2 = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
@@ -417,7 +443,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     const B: P2 = [m[0] + (u[0] * w) / 2, m[1] + (u[1] * w) / 2];
     const cn = gc.canopy;
     const out = (p: P2, s: number): P2 => [p[0] - u[1] * side * s, p[1] + u[0] * side * s];
-    solid(mergeGeometries([box(A, B, cn.height, cn.height + 0.35, cn.depth, side * (cn.depth / 2)), box(out(A, cn.depth - 0.3), out(A, cn.depth), 0, cn.height, 0.3), box(out(B, cn.depth - 0.3), out(B, cn.depth), 0, cn.height, 0.3)])!, std(cn.colour));
+    below.push(solid(mergeGeometries([box(A, B, cn.height, cn.height + 0.35, cn.depth, side * (cn.depth / 2)), box(out(A, cn.depth - 0.3), out(A, cn.depth), 0, cn.height, 0.3), box(out(B, cn.depth - 0.3), out(B, cn.depth), 0, cn.height, 0.3)])!, std(cn.colour)));
   }
 
   /* ---------- T2: city context (generic) ---------- */
@@ -425,7 +451,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   const R = cx2.ground.radius;
   const fade = k(
     gradient(256, 256, (x) => {
-      const g = x.createRadialGradient(128, 128, 60, 128, 128, 128);
+      const g = x.createRadialGradient(128, 128, 128 * 0.6, 128, 128, 128); // fades to the navy over its outer 40%
       g.addColorStop(0, '#fff');
       g.addColorStop(1, '#000');
       x.fillStyle = g;
@@ -433,7 +459,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
     }),
   );
   fade.colorSpace = NoColorSpace;
-  solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), std(cx2.ground.colour, { alphaMap: fade, transparent: true, depthWrite: false }), false).renderOrder = -1;
+  solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), std(cx2.ground.colour, { alphaMap: fade, transparent: true }), false).renderOrder = -1; // writes depth: the lowered storeys sink out of sight (T4)
   // the two street faces' longest edges set the roads' directions
   const longest = (f: (e: (typeof edges)[number]) => boolean) => edges.filter(f).sort((p, q) => q.l - p.l)[0]!;
   const roadSides = [longest((e) => e.n[1] > 0.7), longest((e) => e.n[0] < -0.7)];
@@ -464,16 +490,16 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   const boxes: { p: P2; w: number; dd: number; h: number }[] = [];
   for (let tries = 0; boxes.length < bl.count && tries < 400; tries++) {
     const ang = rand() * Math.PI * 2;
-    const r = bl.minDistance + 10 + rand() * 40;
+    const r = 40 + rand() * 45;
     const p: P2 = [Math.sin(ang) * r, Math.cos(ang) * r];
     const w = 12 + rand() * 10;
     const dd = 12 + rand() * 10;
-    if (nearRoad(p, rw / 2 + Math.max(w, dd) / 2 + 2) || insideTower(p, 10 + w / 2)) continue;
+    if (nearRoad(p, rw / 2 + Math.max(w, dd) / 2 + 2) || insideTower(p, bl.minDistance + Math.hypot(w, dd) / 2)) continue; // ≥ 28 m clear
     if ((p[0] * camDir[0] + p[1] * camDir[1]) / r > Math.cos(55 * DEG)) continue;
     if (boxes.some((q) => Math.hypot(q.p[0] - p[0], q.p[1] - p[1]) < (q.w + w) / 2 + 4)) continue;
     boxes.push({ p, w, dd, h: bl.minH + rand() * (bl.maxH - bl.minH) });
   }
-  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), std(bl.colour), boxes.length);
+  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), std('#CFC9BE', { transparent: true, opacity: 0.8 }), boxes.length); // quieter than the tower (fix 6)
   const dummy = new Object3D();
   boxes.forEach((b, i) => {
     dummy.position.set(b.p[0], 0, b.p[1]);
@@ -531,15 +557,7 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   plant(cx2.trees, new CylinderGeometry(0.18, 0.26, 2.6, 6).translate(0, 1.3, 0), new IcosahedronGeometry(2.3, 0).scale(1, 0.85, 1).translate(0, 3.9, 0), '#7A6A55', '#4F6B3A', treeSpots);
 
   /* ---------- T3: sky, light, environment ---------- */
-  scene.background = k(
-    gradient(2, 256, (x) => {
-      const g = x.createLinearGradient(0, 0, 0, 256);
-      g.addColorStop(0, '#9DB7CC');
-      g.addColorStop(1, '#F3ECE2');
-      x.fillStyle = g;
-      x.fillRect(0, 0, 2, 256);
-    }),
-  );
+  // design fix 1: no sky disc; the canvas stays clear over the section's navy and a soft CSS glow sits behind the tower
   const pm = new PMREMGenerator(renderer);
   scene.environment = k(pm.fromScene(new RoomEnvironment(), 0.04).texture);
   scene.environmentIntensity = 0.3;
@@ -557,25 +575,223 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   sun.shadow.camera.updateProjectionMatrix();
   scene.add(sun, sun.target);
 
-  /* ---------- T3: camera ---------- */
-  const towerTop = roofY + SL + H.parapet;
-  const span = Math.max(x1 - x0, z1 - z0);
-  let dist = 120;
+  /* ---------- T3: camera (fitted by projection: ground to the top of the planned storey = 82% of the stage) ---------- */
+  const towerTop = roofY;
+  const corners = [0, towerTop].flatMap((y) => outline.map(([x, z]) => new Vector3(x, y, z)));
+  const view = { az: AZ, sway: 0 };
+  // T4: push (camera in toward the chosen floor) and slide (that floor out, the rest apart), both 0 → 1
+  const part = { push: 0, slide: 0, floor: 0 };
+  const rest = { dist: 120, ty: towerTop / 2 };
+  const out: P2 = [Math.sin(AZ), Math.cos(AZ)]; // the camera's ground direction at rest; a chosen floor slides along it
+  const midY = (n: number) => {
+    const l = typical.find((x) => x.floor === n);
+    return l ? l.y0 + l.h / 2 : towerTop / 2;
+  };
+  let near = 60; // the push-in distance for the chosen floor (fitFloor)
+  const place = (dist = rest.dist, ty = rest.ty) => {
+    const az = view.az + view.sway;
+    const p = part.push;
+    // aim from the tower's middle to the chosen floor's middle, which slides 14 m out toward the camera
+    const s = 14 * part.slide;
+    const ax = out[0] * s * p;
+    const az2 = out[1] * s * p;
+    const ay = ty + (midY(part.floor) - ty) * p;
+    const dd = dist + (near - dist) * p;
+    const el = EL + 10 * DEG * p;
+    camera.position.set(ax + Math.sin(az) * Math.cos(el) * dd, ay + Math.sin(el) * dd, az2 + Math.cos(az) * Math.cos(el) * dd);
+    camera.lookAt(ax, ay, az2);
+    camera.updateMatrixWorld();
+  };
+  const v3 = new Vector3();
+  const extent = (pts = corners) => {
+    let lo = 1, hi2 = -1, l = 1, r = -1;
+    for (const c of pts) {
+      v3.copy(c).project(camera);
+      lo = Math.min(lo, v3.y);
+      hi2 = Math.max(hi2, v3.y);
+      l = Math.min(l, v3.x);
+      r = Math.max(r, v3.x);
+    }
+    return { h: (hi2 - lo) / 2, w: (r - l) / 2, mid: (hi2 + lo) / 2 };
+  };
   const fit = () => {
     const w = host.clientWidth || 1;
     const h = host.clientHeight || 1;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    const tv = Math.tan((camera.fov * DEG) / 2);
-    dist = Math.max(towerTop / (0.82 * 2 * tv), span / (0.9 * 2 * tv * camera.aspect)) + span / 2;
     renderer.setSize(w, h, false);
+    // the distance where the tower fills 82% of the height (and ≤ 90% of the width), then centre it
+    const az = view.az;
+    view.az = AZ;
+    let a = 30, b = 600;
+    for (let i = 0; i < 24; i++) {
+      const m = (a + b) / 2;
+      place(m, rest.ty);
+      const e = extent();
+      if (e.h > 0.82 || e.w > 0.9) a = m;
+      else b = m;
+    }
+    rest.dist = b;
+    for (let i = 0; i < 3; i++) {
+      place(rest.dist, rest.ty);
+      rest.ty += extent().mid * Math.tan((camera.fov * DEG) / 2) * rest.dist; // raise the aim if the tower sits high
+    }
+    view.az = az;
+    fitFloor();
+    // the CSS glow sits at the tower's mid-height on screen
+    place();
+    v3.set(0, towerTop / 2, 0).project(camera);
+    canvas.style.setProperty('--glow-y', `${(((1 - v3.y) / 2) * 100).toFixed(1)}%`);
   };
-  const view = { az: AZ, sway: 0 };
-  const place = () => {
-    const az = view.az + view.sway;
-    const ce = Math.cos(EL);
-    camera.position.set(Math.sin(az) * ce * dist, towerTop * 0.48 + Math.sin(EL) * dist, Math.cos(az) * ce * dist);
-    camera.lookAt(0, towerTop * 0.48, 0);
+
+  /** T4: the push-in distance where the slid-out floor fills about 30% of the stage height (≤ 90% of its width). */
+  function fitFloor() {
+    const l = typical.find((x) => x.floor === part.floor) ?? typical[0]!;
+    const pts = [l.y0, l.y0 + l.h].flatMap((y) => outline.map(([x, z]) => new Vector3(x + out[0] * 14, y, z + out[1] * 14)));
+    const keep2 = { push: part.push, slide: part.slide, az: view.az, sway: view.sway };
+    Object.assign(part, { push: 1, slide: 1 });
+    Object.assign(view, { az: AZ, sway: 0 });
+    let a = 10, b = 400;
+    for (let i = 0; i < 24; i++) {
+      near = (a + b) / 2;
+      place();
+      const e = extent(pts);
+      if (e.h > 0.3 || e.w > 0.9) a = near;
+      else b = near;
+    }
+    near = b;
+    Object.assign(part, { push: keep2.push, slide: keep2.slide });
+    Object.assign(view, { az: keep2.az, sway: keep2.sway });
+  }
+
+  /* ---------- T4: floors apart ---------- */
+  const ci = () => typical.findIndex((l) => l.floor === part.floor);
+  const arrange = () => {
+    const k2 = part.slide;
+    const c = ci();
+    for (const im of ims) {
+      typical.forEach((l, i) => {
+        const dy = c < 0 ? 0 : (i > c ? 1.6 : i < c ? -1.6 : 0) * k2;
+        const s = i === c ? 14 * k2 : 0;
+        im.setMatrixAt(i, m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
+      });
+      im.instanceMatrix.needsUpdate = true;
+    }
+    for (const o2 of above) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : 1.6 * k2);
+    for (const o2 of below) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
+    if (finMesh) finMesh.visible = k2 < 0.02; // the fins run through every storey; they step aside while it's apart
+    edge.position.set(c >= 0 && litFloor === part.floor ? out[0] * 14 * k2 : 0, (typical.find((l) => l.floor === litFloor)?.y0 ?? 0) + (c < 0 || litFloor === part.floor ? 0 : 1.6 * k2 * Math.sign(typical.findIndex((l) => l.floor === litFloor) - c)), c >= 0 && litFloor === part.floor ? out[1] * 14 * k2 : 0);
+  };
+  ims.forEach((im) => (im.frustumCulled = false)); // instances move; the tower is always in view
+
+  /* ---------- T4: lit glazing (0.25 s), gold slab edge ---------- */
+  const edgeG = k(new BufferGeometry());
+  edgeG.setAttribute('position', new Float32BufferAttribute(outline.flatMap((a, i) => [a[0], SL + 0.02, a[1], outline[(i + 1) % outline.length]![0], SL + 0.02, outline[(i + 1) % outline.length]![1]]), 3));
+  const edge = new LineSegments(edgeG, k(new LineBasicMaterial({ color: '#D9B979' })));
+  edge.visible = false;
+  scene.add(edge);
+  const litAmt = new Float32Array(typical.length);
+  let litFloor: number | null = null;
+  const BL01 = UNITS.indexOf('BL01');
+  const setLit = (n: number | null) => {
+    litFloor = n;
+    edge.visible = n !== null;
+    // BL01's bay lights only on its two-bedroom floors (lit.rule)
+    uSkip.value = n !== null && !d.twoBedFloors.includes(n) ? BL01 : -1;
+    arrange();
+    request();
+  };
+  const litStep = (dt: number) => {
+    let moving = false;
+    typical.forEach((l, i) => {
+      const want = l.floor === litFloor ? 1 : 0;
+      const v = litAmt[i]!;
+      if (v === want) return;
+      litAmt[i] = reduced ? want : want > v ? Math.min(1, v + dt / 0.25) : Math.max(0, v - dt / 0.25);
+      moving = true;
+    });
+    if (moving)
+      for (const a of lits) {
+        (a.array as Float32Array).set(litAmt);
+        a.needsUpdate = true;
+      }
+    return moving;
+  };
+
+  /* ---------- T4: pins (HTML, projected each frame) ---------- */
+  const PINS = [2, 5, 8, 11, 14].filter((n) => typical.some((l) => l.floor === n));
+  // the street corner: the outline vertex furthest toward the camera
+  const corner = outline.reduce((b2, p) => (p[0] * out[0] + p[1] * out[1] > b2[0] * out[0] + b2[1] * out[1] ? p : b2));
+  const layer = document.createElement('div');
+  layer.className = 'tower-pins';
+  layer.setAttribute('aria-hidden', 'true');
+  const leaders = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  leaders.setAttribute('class', 'tower-pins__lines');
+  layer.append(leaders);
+  stage.append(layer);
+  const pins = PINS.map((n) => {
+    const b2 = document.createElement('button');
+    b2.type = 'button';
+    b2.tabIndex = -1;
+    b2.className = 'tower-pin';
+    b2.dataset.floor = String(n);
+    b2.addEventListener('click', () => cb.onPick(n));
+    b2.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && hoverFloor(n));
+    b2.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && hoverFloor(null));
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    leaders.append(line);
+    layer.append(b2);
+    return { n, b: b2, line, at: new Vector3(), from: new Vector3() };
+  });
+  const toStage = (p: Vector3) => {
+    const cr = canvas.getBoundingClientRect();
+    const sr = stage.getBoundingClientRect();
+    v3.copy(p).project(camera);
+    return { x: cr.left - sr.left + ((v3.x + 1) / 2) * cr.width, y: cr.top - sr.top + ((1 - v3.y) / 2) * cr.height };
+  };
+  const projectPins = () => {
+    layer.hidden = part.push > 0.01 || !shown;
+    if (layer.hidden) return;
+    for (const p of pins) {
+      const y = midY(p.n);
+      p.from.set(corner[0], y, corner[1]);
+      p.at.set(corner[0] + out[0] * 7 - out[1] * 3, y, corner[1] + out[1] * 7 + out[0] * 3);
+      const A = toStage(p.at);
+      const F = toStage(p.from);
+      p.b.style.transform = `translate(${A.x}px, ${A.y}px)`;
+      p.b.classList.toggle('is-on', litFloor === p.n);
+      p.line.setAttribute('x1', String(A.x));
+      p.line.setAttribute('y1', String(A.y));
+      p.line.setAttribute('x2', String(F.x));
+      p.line.setAttribute('y2', String(F.y));
+    }
+  };
+  /** The tooltip anchor for floor n: its pin, else the street corner at that floor (stage px). */
+  const anchor = (n: number) => {
+    const p = pins.find((x) => x.n === n);
+    const A = toStage(p ? p.at : v3.set(corner[0], midY(n), corner[1]).clone());
+    return { x: A.x + 26, y: A.y };
+  };
+
+  /* ---------- T4: hover and picking by raycast (an invisible prism of the typical floors) ---------- */
+  const hit = new Mesh(k(prism(outline, f1.y0, top.y0 + top.h - f1.y0)), mats.slab);
+  hit.updateMatrixWorld();
+  const ray = new Raycaster();
+  const ndc = new Vector2();
+  const floorAt = (e: PointerEvent | MouseEvent) => {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const h2 = ray.intersectObject(hit)[0];
+    return h2 ? (typical.find((l) => h2.point.y >= l.y0 && h2.point.y < l.y0 + l.h)?.floor ?? null) : null;
+  };
+  let selected: number | null = null;
+  let hovered: number | null = null;
+  const hoverFloor = (n: number | null) => {
+    if (selected !== null || n === hovered) return;
+    hovered = n;
+    setLit(n);
+    cb.onHover(n, n ? anchor(n) : undefined);
   };
 
   /* ---------- render loop ---------- */
@@ -584,62 +800,102 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   let shown = true;
   let destroyed = false;
   let dragging = false;
+  let tweening = 0;
   let vel = 0;
-  let idleSince = performance.now();
+  let last = performance.now();
+  let idleSince = last;
   const tick = (now: number) => {
     frame = 0;
     if (destroyed || !visible || !shown) return;
-    let again = false;
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    let again = tweening > 0 || litStep(dt);
     if (!dragging && Math.abs(vel) > 1e-4) {
       view.az = Math.max(AZ - ORBIT, Math.min(AZ + ORBIT, view.az + vel));
       vel *= 0.92;
       again = true;
     }
-    if (!reduced && !dragging) {
+    if (!reduced && !dragging && part.push === 0) {
       // the sway eases in after a second of rest
       const k2 = Math.min(1, (now - idleSince) / 2000);
       view.sway += (Math.sin((now / 24000) * Math.PI * 2) * SWAY * k2 - view.sway) * 0.05;
       again = true;
     }
+    if (tweening > 0) {
+      arrange();
+      renderer.shadowMap.needsUpdate = true; // the floors move: shadows follow
+    }
     place();
     renderer.render(scene, camera);
+    projectPins();
     if (again) request();
   };
   const request = () => {
-    if (!frame && !destroyed) frame = requestAnimationFrame(tick);
+    if (!frame && !destroyed) {
+      last = performance.now();
+      frame = requestAnimationFrame(tick);
+    }
+  };
+  const run = (vars: gsap.TweenVars) => {
+    tweening++;
+    return gsap.to(part, { ...vars, onComplete: () => (tweening--, request()), onInterrupt: () => (tweening--, request()) });
   };
 
+  let downX = 0;
+  let downY = 0;
   let lastX = 0;
+  let touchPick: number | null = null;
   const onDown = (e: PointerEvent) => {
+    cb.onInteract();
     dragging = true;
-    lastX = e.clientX;
+    downX = lastX = e.clientX;
+    downY = e.clientY;
     vel = 0;
     if (e.pointerType === 'mouse') canvas.setPointerCapture(e.pointerId);
-    canvas.style.cursor = 'grabbing';
   };
   const onMove = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (!dragging) {
+      if (e.pointerType === 'mouse') hoverFloor(floorAt(e));
+      return;
+    }
+    if (selected !== null) return; // apart: no orbit
     vel = -((e.clientX - lastX) / canvas.clientWidth) * Math.PI * 0.6;
     lastX = e.clientX;
     view.az = Math.max(AZ - ORBIT, Math.min(AZ + ORBIT, view.az + vel));
+    if (Math.abs(e.clientX - downX) > 6) canvas.style.cursor = 'grabbing';
     request();
   };
   const onUp = (e: PointerEvent) => {
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY) > 6;
     dragging = false;
     idleSince = performance.now();
     canvas.style.cursor = 'grab';
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     request();
+    if (moved || e.type === 'pointercancel' || selected !== null) return;
+    // a click picks; on touch the first tap previews and a second tap on the same floor picks
+    const n = floorAt(e);
+    if (n === null) return;
+    if (e.pointerType === 'mouse' || touchPick === n) {
+      touchPick = null;
+      cb.onPick(n);
+    } else {
+      touchPick = n;
+      hovered = null;
+      hoverFloor(n);
+    }
   };
+  const onLeave = (e: PointerEvent) => e.pointerType === 'mouse' && !dragging && hoverFloor(null);
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onUp);
+  canvas.addEventListener('pointerleave', onLeave);
   canvas.style.cursor = 'grab';
   const onLost = (e: Event) => {
     e.preventDefault();
     console.warn('[explorer] WebGL context lost; keeping the photo stage');
-    o.onFail();
+    cb.onFail();
   };
   canvas.addEventListener('webglcontextlost', onLost);
   const ro = new ResizeObserver(() => {
@@ -658,14 +914,17 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
   renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
   await new Promise<void>((r) => requestAnimationFrame(() => r()));
-  // the photo stage stays underneath until the first frame is up, then the tower fades in over it
-  canvas.animate([{ opacity: 0 }, { opacity: 1 }], { duration: reduced ? 0 : 600, fill: 'forwards' });
+  // the photo stage stays underneath until the first frame is up, then the tower fades in over it (T6: 0.6 s)
+  const shownIn = canvas.animate([{ opacity: 0 }, { opacity: 1 }], { duration: reduced ? 0 : 600, fill: 'forwards' });
+  // the canvas is clear (navy shows through), so the photo under it steps aside once the tower is in
+  void shownIn.finished.then(() => !destroyed && host.setAttribute('data-tower3d', ''));
   request();
 
   return {
     show(on) {
       shown = on;
       canvas.hidden = !on;
+      layer.hidden = !on;
       if (on) {
         fit();
         request();
@@ -674,26 +933,63 @@ export async function createTower(host: HTMLElement, o: { onFail: () => void }):
         frame = 0;
       }
     },
-    setLit(floor) {
-      for (const a of lits) {
-        (a.array as Float32Array).fill(0);
-        const i = typical.findIndex((l) => l.floor === floor);
-        if (i >= 0) a.array[i] = 1;
-        a.needsUpdate = true;
+    preview(n) {
+      if (selected !== null) return;
+      hovered = n;
+      setLit(n);
+    },
+    select(n) {
+      if (n === selected) return;
+      const was = selected;
+      selected = n;
+      touchPick = null;
+      hovered = null;
+      gsap.killTweensOf(part);
+      tweening = 0;
+      if (n !== null) {
+        cb.onHover(null); // the chip would sit stale over a moving view
+        part.floor = n;
+        fitFloor();
+        setLit(n);
+        vel = 0;
+        if (reduced || was !== null) {
+          // reduced motion cross-fades straight to the floor; changing floors keeps the tower apart
+          part.push = part.slide = 1;
+          arrange();
+          request();
+          return;
+        }
+        gsap.to(view, { az: AZ, sway: 0, duration: 1.2, ease: 'power3.inOut' });
+        run({ push: 1, duration: 1.2, ease: 'power3.inOut' });
+        run({ slide: 1, duration: 0.9, delay: 0.9, ease: 'power3.out' });
+      } else {
+        setLit(null);
+        if (reduced) {
+          part.push = part.slide = 0;
+          arrange();
+          request();
+          return;
+        }
+        run({ push: 0, slide: 0, duration: 1.2, ease: 'power3.inOut' });
       }
       request();
     },
+    anchor: (n) => (selected === null ? anchor(n) : null),
     stats: () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls }),
     destroy() {
       destroyed = true;
       if (frame) cancelAnimationFrame(frame);
+      gsap.killTweensOf([part, view]);
       ro.disconnect();
       stopVis();
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
       canvas.removeEventListener('pointercancel', onUp);
+      canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('webglcontextlost', onLost);
+      layer.remove();
+      host.removeAttribute('data-tower3d');
       scene.traverse((x) => (x as Mesh).geometry?.dispose());
       keep.forEach((x) => x.dispose());
       renderer.dispose();

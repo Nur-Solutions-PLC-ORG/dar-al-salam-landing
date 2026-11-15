@@ -230,36 +230,46 @@ export function createExplorer(root: HTMLElement) {
       stage.toggleAttribute('data-slab', on);
       gl?.show(on);
     };
-    const wait = on && !prefersReducedMotion() ? 1250 - (performance.now() - leftTowerAt) : 0;
+    // the 3D tower's push-in and slide-out take ~1.9 s (T4); the photo's push-in and lift ~1.25 s
+    const wait = on && !prefersReducedMotion() ? (tower ? 1900 : 1250) - (performance.now() - leftTowerAt) : 0;
     if (wait > 0) slabTimer = window.setTimeout(apply, wait);
     else apply();
   }
   /**
-   * Rev 10 (T1–T3): the real 3D tower over the photo stage at the tower level. Behind `?tower3d` until floor picking
-   * (T4) lands, so the live page keeps its working photo stage meanwhile. Tier 2 only; any failure keeps the photo.
+   * Rev 10 (T1–T4): the real 3D tower over the photo stage at the tower level. Once its first frame is up it becomes
+   * the tower stage (`model`): hover/tap lights a floor, a pick pushes in and slides the floor out, then the slab takes
+   * over. Behind `?tower3d` until T6 makes it the default. Tier 2 only; any failure puts the photo stage back.
    */
   const towerFlag = new URLSearchParams(location.search).has('tower3d');
   let tower: import('./tower3d').TowerAdapter | null = null;
   let towerJob: Promise<void> | null = null;
+  let towerHide = 0;
   function syncTower() {
     if (!towerFlag || !photo || !webgl || prefersLightweight() || stage.dataset.tier !== 'photo') return;
-    const on = state.level === 'idle';
     towerJob ??= import('./tower3d')
       .then((m) =>
-        m.createTower(photo, {
+        m.createTower(photo, stage, {
+          ...callbacks,
           onFail: () => {
             tower?.destroy();
             tower = null;
+            model = createPhotoModel(photo, stage, { ...callbacks, onGround: ground });
+            model.select(state.level === 'idle' ? null : state.floor);
           },
         }),
       )
       .then((t) => {
         tower = t;
-        t.show(state.level === 'idle');
-        (window as unknown as { __tower?: unknown }).__tower = t; // QA (flag only)
+        model.destroy(); // the photo stays underneath as the first paint and the fallback
+        model = t;
+        t.select(state.level === 'idle' ? null : state.floor);
+        syncTower();
       })
       .catch((err: unknown) => console.warn('[explorer] 3D tower unavailable; keeping the photo stage', err));
-    tower?.show(on);
+    // it keeps drawing through the push-in and slide-out, and rests once the slab has covered it
+    clearTimeout(towerHide);
+    if (state.level === 'idle') tower?.show(true);
+    else if (tower) towerHide = window.setTimeout(() => stage.hasAttribute('data-slab') && tower?.show(false), 2600);
   }
 
   // context loss → the photo stage (pushed in on the floor) stays; no WebGL for the rest of the session

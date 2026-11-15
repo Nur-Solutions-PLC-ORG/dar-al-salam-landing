@@ -385,6 +385,8 @@ html.is-walking .u3d-enter {
   display: block;
   width: 100%;
   height: 100%;
+  /* design fix 1: no sky disc; a soft glow behind the tower (its mid-height, set from JS), gone by 70% of the short side */
+  background: radial-gradient(circle min(70cqw, 70cqh) at 50% var(--glow-y, 45%), rgb(157 183 204 / 0.5), transparent);
 }
 
 .tower3d[hidden] {
@@ -447,4 +449,73 @@ html.is-walking .u3d-enter {
 
 .walk-rings.is-narrow .walk-ring.is-chip .walk-ring__arrow {
   order: 2;
+}
+
+/* rev 10 T4: floor pins off the street corner (decorative: the floor list and stepper are the accessible controls) */
+.tower-pins {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tower-pins[hidden] {
+  display: none;
+}
+
+.tower-pins__lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tower-pins__lines line {
+  stroke: rgb(217 185 121 / 0.85);
+  stroke-width: 1.5;
+}
+
+.tower-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.tower-pin::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--gold-500);
+  box-shadow: 0 0 0 3px rgb(251 247 242 / 0.9);
+  transition: transform 0.2s ease;
+}
+
+.tower-pin.is-on::before {
+  transform: scale(1.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tower-pin::before {
+    transition: none;
+  }
+}
+
+/* the 3D tower is in: the photo under its clear canvas steps aside (it comes back if the tower fails) */
+.tstage[data-tower3d] .tstage__frame {
+  visibility: hidden;
 }
