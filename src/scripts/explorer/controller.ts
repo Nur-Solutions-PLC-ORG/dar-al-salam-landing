@@ -593,6 +593,7 @@ export function createExplorer(root: HTMLElement) {
     room = null;
     rooms?.destroy();
     rooms = null;
+    dropStill();
     dh?.destroy();
     dh = dhCode = null;
     gl?.suspend(false);
@@ -607,6 +608,7 @@ export function createExplorer(root: HTMLElement) {
   async function leave3d(job: number) {
     if (!dh) return;
     const d = dh;
+    dropStill();
     endWalk();
     selectRoom(null);
     rooms?.destroy();
@@ -679,7 +681,99 @@ export function createExplorer(root: HTMLElement) {
     if (tower) syncSlab(); // the dollhouse is drawing: now the stage cross-fades from the tower to it
     await fade(1, 200);
     await entering;
+    void offerStill(s as unknown as { render?: string; rendering?: string });
   }
+
+  /* ---------- rev 10 F7: "Render this view" — a path-traced still, desktop only, on press ---------- */
+  let stillBtn: HTMLButtonElement | null = null;
+  let stillBar: HTMLElement | null = null;
+  let still: import('./render-still').Still | null = null;
+  let stillJob = 0;
+  const stopStill = () => {
+    stillJob++;
+    if (!still && !stillBtn?.hasAttribute('data-busy')) return;
+    still?.stop();
+    still = null;
+    dh?.hold(false);
+    stillBtn?.removeAttribute('data-busy');
+    if (stillBtn) stillBtn.textContent = stillBtn.dataset.label ?? '';
+    if (stillBar) stillBar.hidden = true;
+  };
+  function dropStill() {
+    stopStill();
+    stillBtn?.remove();
+    stillBar?.remove();
+    stillBtn = stillBar = null;
+  }
+  async function offerStill(s: { render?: string; rendering?: string }) {
+    if (!dh || stillBtn || !s.render || prefersReducedMotion()) return;
+    const host = dh.walkHost();
+    // the GPU check runs on the live renderer; the path tracer itself loads only on press
+    const gl2 = host.renderer.getContext();
+    const capable =
+      matchMedia('(pointer: fine)').matches &&
+      ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8 &&
+      typeof WebGL2RenderingContext !== 'undefined' &&
+      gl2 instanceof WebGL2RenderingContext &&
+      Boolean(gl2.getExtension('EXT_color_buffer_float'));
+    if (!capable) return;
+    stillBtn = document.createElement('button');
+    stillBtn.type = 'button';
+    stillBtn.className = 'u3d-render';
+    stillBtn.dataset.label = s.render;
+    stillBtn.textContent = s.render;
+    stillBar = document.createElement('div');
+    stillBar.className = 'u3d-render-bar';
+    stillBar.setAttribute('aria-hidden', 'true');
+    stillBar.hidden = true;
+    stage.append(stillBtn, stillBar);
+    const status = document.createElement('span');
+    status.className = 'visually-hidden';
+    status.setAttribute('aria-live', 'polite');
+    stillBtn.after(status);
+    stillBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (still || !dh) return;
+      const job = ++stillJob;
+      const btn = stillBtn!;
+      btn.setAttribute('data-busy', '');
+      btn.textContent = (s.rendering ?? '').replace('{n}', '0');
+      dh.hold(true);
+      try {
+        const { renderStill } = await import('./render-still');
+        if (job !== stillJob || !dh) return;
+        const h2 = dh.walkHost();
+        let last = -1;
+        still = await renderStill({
+          renderer: h2.renderer,
+          scene: h2.scene,
+          camera: h2.camera,
+          uniforms: h2.uniforms,
+          onProgress: (f) => {
+            const n = Math.round(f * 100);
+            if (stillBar) {
+              stillBar.hidden = false;
+              stillBar.style.transform = `scaleX(${f})`;
+            }
+            if (n !== last) {
+              last = n;
+              btn.textContent = (s.rendering ?? '').replace('{n}', String(n));
+              if (n % 25 === 0) status.textContent = btn.textContent; // announce at 0/25/50/75/100%
+            }
+          },
+        });
+        if (job !== stillJob) still?.stop();
+      } catch (err) {
+        console.warn('[explorer] path-traced still unavailable', err);
+        stopStill();
+        dropStill(); // not on this device
+      }
+    });
+  }
+  // any camera movement returns to the live view at once
+  stage.addEventListener('pointerdown', (e) => (e.target as Element | null)?.closest('.u3d-render') || stopStill(), true);
+  stage.addEventListener('wheel', () => stopStill(), { capture: true, passive: true });
+  stage.addEventListener('keydown', () => stopStill(), true);
 
   /* ---------- rev 9 (B1–B6): walk-in mode, "Step inside" ---------- */
   let walk: import('./walk').Walk | null = null;
@@ -838,6 +932,7 @@ export function createExplorer(root: HTMLElement) {
   };
 
   function go(next: State, opts: { focus?: boolean; scroll?: boolean; animate?: boolean } = {}) {
+    stopStill(); // F7: any change of view (room list, rings, Esc) drops the still
     const changedLevel = next.level !== state.level;
     // rev 9: walking belongs to one unit's 3D view; another level, unit or the Plan view ends it
     if (next.level !== 'unit' || next.unit !== state.unit || next.pref === 'plan') next = { ...next, walk: next.walk && next.unit === state.unit ? next.walk : null };

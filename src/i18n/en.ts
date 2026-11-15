@@ -184,6 +184,9 @@ export const en = {
     planLabel: 'From the floor plan',
     altAi: "Artist's impression of the {room} in {code}",
     altPlan: 'Floor plan detail of the {room} in {code}',
+    // rev 10 F7/F8: the path-traced still
+    render: 'Render this view',
+    rendering: 'Rendering… {n}%',
   },
   /** Rev 9 walk-in mode (DESIGN §9.8, §11); served with the 3D strings (/i18n/unit3d.{lang}.json). */
   walk: {

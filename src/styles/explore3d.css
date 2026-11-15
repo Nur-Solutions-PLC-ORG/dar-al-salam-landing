@@ -579,3 +579,51 @@ html.is-walking .u3d-enter {
 .tower-load[hidden] {
   display: none;
 }
+
+/* rev 10 F7: "Render this view" (desktop) and its thin gold progress line */
+.u3d-render {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgb(251 247 242 / 0.5);
+  border-radius: var(--radius-pill);
+  background: rgb(15 24 40 / 0.7);
+  color: var(--ivory-50);
+  font: 600 13px/1 var(--font-body);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.u3d-render:focus-visible {
+  outline: 2px solid var(--gold-300);
+  outline-offset: 2px;
+}
+
+.u3d-render[data-busy] {
+  cursor: progress;
+}
+
+/* walking: clear of the look-right button */
+.explore[data-walk] .u3d-render {
+  bottom: 64px;
+}
+
+.u3d-render-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 3;
+  height: 3px;
+  background: var(--gold-500);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+.u3d-render-bar[hidden] {
+  display: none;
+}

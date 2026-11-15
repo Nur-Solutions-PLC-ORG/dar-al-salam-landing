@@ -176,6 +176,8 @@ export const am: Dict = {
     planLabel: 'ከወለል ፕላኑ',
     altAi: 'በ{code} ያለው {room} የአርቲስት ምናባዊ ሥዕል',
     altPlan: 'በ{code} ያለው {room} የወለል ፕላን ዝርዝር',
+    render: 'ይህን እይታ አጥራ',
+    rendering: 'በማጥራት ላይ… {n}%',
   },
   // rev 9 walk-in strings: DESIGN §11 drafts
   walk: {

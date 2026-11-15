@@ -124,6 +124,8 @@ export interface Dollhouse {
   select(id: string | null): void;
   highlight(id: string | null): void;
   pause(on: boolean): void;
+  /** F7: hand the canvas to the path-traced still (no rasterised frames while held); release redraws. */
+  hold(on: boolean): void;
   destroy(): void;
 }
 
@@ -669,11 +671,12 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const autoOrbit = () => !o.reduced && ready && !dragging && !paused && !selected && performance.now() > resumeAt;
 
   let driver: { frame(dt: number): boolean } | null = null;
+  let held = false; // F7: a path-traced still owns the canvas
   /** The shared canvas is here (rev 10: the 3D tower takes it back when it shows; then this scene doesn't draw). */
   const mine = () => canvas.parentElement === host;
   const tick = (now: number) => {
     frame = 0;
-    if (destroyed || !visible || !mine()) return;
+    if (destroyed || !visible || !mine() || held) return;
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
     lastT = now;
     rendererState();
@@ -887,6 +890,13 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     },
     highlight(id) {
       setHl(id, false);
+    },
+    hold(on) {
+      held = on;
+      if (!on) {
+        rendererState();
+        request();
+      }
     },
     pause(on) {
       paused = on;
