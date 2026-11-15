@@ -681,7 +681,7 @@ export function createExplorer(root: HTMLElement) {
     if (tower) syncSlab(); // the dollhouse is drawing: now the stage cross-fades from the tower to it
     await fade(1, 200);
     await entering;
-    void offerStill(s as unknown as { render?: string; rendering?: string });
+    void offerStill(s as unknown as { render?: string; rendering?: string; cant?: string });
   }
 
   /* ---------- rev 10 F7: "Render this view" — a path-traced still, desktop only, on press ---------- */
@@ -689,12 +689,16 @@ export function createExplorer(root: HTMLElement) {
   let stillBar: HTMLElement | null = null;
   let still: import('./render-still').Still | null = null;
   let stillJob = 0;
+  let stillFade: HTMLCanvasElement | null = null; // the frozen live frame the traced image cross-fades in under
   const stopStill = () => {
     stillJob++;
     if (!still && !stillBtn?.hasAttribute('data-busy')) return;
     still?.stop();
     still = null;
+    stillFade?.remove();
+    stillFade = null;
     dh?.hold(false);
+    dh?.pause(false);
     stillBtn?.removeAttribute('data-busy');
     if (stillBtn) stillBtn.textContent = stillBtn.dataset.label ?? '';
     if (stillBar) stillBar.hidden = true;
@@ -705,7 +709,7 @@ export function createExplorer(root: HTMLElement) {
     stillBar?.remove();
     stillBtn = stillBar = null;
   }
-  async function offerStill(s: { render?: string; rendering?: string }) {
+  async function offerStill(s: { render?: string; rendering?: string; cant?: string }) {
     if (!dh || stillBtn || !s.render || prefersReducedMotion()) return;
     const host = dh.walkHost();
     // the GPU check runs on the live renderer; the path tracer itself loads only on press
@@ -733,12 +737,15 @@ export function createExplorer(root: HTMLElement) {
     stillBtn.after(status);
     stillBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (still || !dh) return;
+      if (!dh) return;
+      // rev 10.15: a second press cancels
+      if (still || stillBtn?.hasAttribute('data-busy')) return stopStill();
       const job = ++stillJob;
       const btn = stillBtn!;
       btn.setAttribute('data-busy', '');
       btn.textContent = (s.rendering ?? '').replace('{n}', '0');
-      dh.hold(true);
+      // the live view stays on screen (the orbit pauses) while samples accumulate off-screen
+      dh.pause(true);
       try {
         const { renderStill } = await import('./render-still');
         if (job !== stillJob || !dh) return;
@@ -760,6 +767,32 @@ export function createExplorer(root: HTMLElement) {
               btn.textContent = (s.rendering ?? '').replace('{n}', String(n));
               if (n % 25 === 0) status.textContent = btn.textContent; // announce at 0/25/50/75/100%
             }
+          },
+          // clean (about 40 samples): freeze the live frame over the canvas, switch the canvas to the traced image,
+          // and fade the frozen frame out (0.4 s)
+          onClean: (show) => {
+            if (job !== stillJob || !dh) return;
+            const c = h2.renderer.domElement;
+            const f = document.createElement('canvas');
+            f.width = c.width;
+            f.height = c.height;
+            f.setAttribute('aria-hidden', 'true');
+            f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+            h2.renderer.render(h2.scene, h2.camera); // a fresh live frame to copy (the buffer isn't preserved)
+            f.getContext('2d')?.drawImage(c, 0, 0);
+            c.after(f);
+            stillFade = f;
+            dh.hold(true);
+            show();
+            f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: prefersReducedMotion() ? 0 : 400, fill: 'forwards' }).finished.then(() => {
+              if (stillFade === f) (f.remove(), (stillFade = null));
+            });
+          },
+          onTimeout: () => {
+            if (job !== stillJob) return;
+            still = null;
+            stopStill();
+            toast(s.cant ?? '');
           },
         });
         if (job !== stillJob) still?.stop();

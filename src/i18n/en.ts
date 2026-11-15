@@ -187,6 +187,7 @@ export const en = {
     // rev 10 F7/F8: the path-traced still
     render: 'Render this view',
     rendering: 'Rendering… {n}%',
+    cant: "This device can't render the view.", // rev 10.15 (render.cant)
   },
   /** Rev 9 walk-in mode (DESIGN §9.8, §11); served with the 3D strings (/i18n/unit3d.{lang}.json). */
   walk: {

@@ -35,6 +35,14 @@ const visible = (o: Object3D) => {
 function bake(g: BufferGeometry, uModel: number, uCut: number[]) {
   const out = g.clone();
   for (const name of ['aDelay', 'aSide']) out.deleteAttribute(name);
+  // the tracer merges colours as 4 components and, for 3-component sources, copies the wrong way round (all zeros:
+  // black furniture), so hand it RGBA with alpha 1
+  const col = out.getAttribute('color') as BufferAttribute | undefined;
+  if (col && col.itemSize === 3) {
+    const rgba = new Float32Array(col.count * 4);
+    for (let i = 0; i < col.count; i++) rgba.set([col.getX(i), col.getY(i), col.getZ(i), 1], i * 4);
+    out.setAttribute('color', new BufferAttribute(rgba, 4));
+  }
   const pos = out.getAttribute('position') as BufferAttribute;
   const side = g.getAttribute('aSide') as BufferAttribute | undefined;
   if (side) {
@@ -50,15 +58,28 @@ function bake(g: BufferGeometry, uModel: number, uCut: number[]) {
   return out;
 }
 
+/**
+ * Rev 10.15: the live view stays on screen while samples accumulate off-screen. At `cleanAt` samples `onClean(show)`
+ * is called: the caller freezes the live frame, calls `show()` (the traced image is drawn to the canvas from then on)
+ * and cross-fades. Refinement continues to the cap. Not clean within `deadline` ms (counted from the press, scene
+ * build included): it stops, frees everything and calls `onTimeout`.
+ */
 export async function renderStill(o: {
   renderer: WebGLRenderer;
   scene: Scene;
   camera: PerspectiveCamera;
   uniforms: { uModel: { value: number }; uCut: { value: number[] } };
   onProgress: (fraction: number) => void;
+  onClean: (show: () => void) => void;
+  onTimeout: () => void;
   maxSamples?: number;
+  cleanAt?: number;
+  deadline?: number;
 }): Promise<Still> {
+  const t0 = performance.now();
   const max = o.maxSamples ?? 300;
+  const cleanAt = o.cleanAt ?? 40;
+  const deadline = o.deadline ?? 10000;
   const proxy = new Scene();
   proxy.background = o.scene.background;
   // the live scene's PMREM environment is a cube-UV map the tracer can't convert under three r187; a soft warm sky
@@ -100,7 +121,9 @@ export async function renderStill(o: {
   const pt = new WebGLPathTracer(o.renderer);
   pt.renderDelay = 0;
   pt.minSamples = 1;
-  pt.fadeDuration = 300;
+  pt.fadeDuration = 0; // the caller cross-fades from the frozen live frame
+  pt.renderToCanvas = false; // accumulate off-screen until clean
+  pt.rasterizeScene = false;
   pt.bounces = 5;
   pt.filterGlossyFactor = 0.5;
   pt.tiles.set(2, 2);
@@ -110,22 +133,33 @@ export async function renderStill(o: {
 
   let frame = 0;
   let stopped = false;
+  let shown = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    if (frame) cancelAnimationFrame(frame);
+    pt.dispose();
+    sky.dispose();
+    own.forEach((g) => g.dispose());
+  };
   const step = () => {
     frame = 0;
     if (stopped) return;
     pt.renderSample();
     o.onProgress(Math.min(1, pt.samples / max));
+    if (!shown && pt.samples >= cleanAt) {
+      shown = true;
+      o.onClean(() => {
+        pt.renderToCanvas = true;
+        pt.renderSample(); // draws the accumulated image now
+      });
+    } else if (!shown && performance.now() - t0 > deadline) {
+      stop();
+      o.onTimeout();
+      return;
+    }
     if (pt.samples < max) frame = requestAnimationFrame(step);
   };
   frame = requestAnimationFrame(step);
-  return {
-    stop() {
-      if (stopped) return;
-      stopped = true;
-      if (frame) cancelAnimationFrame(frame);
-      pt.dispose();
-      sky.dispose();
-      own.forEach((g) => g.dispose());
-    },
-  };
+  return { stop };
 }

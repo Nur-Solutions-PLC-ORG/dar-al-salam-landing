@@ -178,6 +178,7 @@ export const am: Dict = {
     altPlan: 'በ{code} ያለው {room} የወለል ፕላን ዝርዝር',
     render: 'ይህን እይታ አጥራ',
     rendering: 'በማጥራት ላይ… {n}%',
+    cant: 'ይህ መሣሪያ እይታውን ማጥራት አይችልም።',
   },
   // rev 9 walk-in strings: DESIGN §11 drafts
   walk: {
