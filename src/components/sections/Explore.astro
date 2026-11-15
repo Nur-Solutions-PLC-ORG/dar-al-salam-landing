@@ -171,7 +171,7 @@ const roomList = (u: (typeof units)[number]) => u.rooms.map((r) => t.rooms[r]).j
                     type="button"
                     class="chip"
                     data-unit={u.code}
-                    data-pill={`${fmt(t.explore.bedShort, { n: u.bedrooms })} · ${formatArea(u.gross, lang)}`}
+                    data-pill={`${fmt(t.homes.bedroomsN, { n: u.bedrooms })} · ${formatArea(u.gross, lang)}`}
                     aria-pressed="false"
                   >
                     <span class="chip__code">
