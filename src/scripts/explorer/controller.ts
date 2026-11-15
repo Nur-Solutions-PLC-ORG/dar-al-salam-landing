@@ -642,6 +642,7 @@ export function createExplorer(root: HTMLElement) {
     if (job !== viewJob) return;
     await fade(0, 400);
     if (job !== viewJob) return;
+    tower?.freeze(); // review r9a low: the tower's last frame stays on the stage while the canvas moves to the dollhouse
     tier.suspend(true);
     dh = createDollhouse({
       renderer: tier.renderer,

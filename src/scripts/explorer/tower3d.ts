@@ -86,6 +86,8 @@ export interface TowerAdapter extends ModelAdapter {
   selectUnit(code: string | null): void;
   /** T5: units to be confirmed on the shown floor (hatched). */
   setTbc(codes: ReadonlySet<string>): void;
+  /** Leave a still of the current frame in place before the shared canvas moves to the dollhouse (no empty stage). */
+  freeze(): void;
   /** Triangles and draw calls of the last frame (QA). */
   stats(): { tris: number; calls: number };
 }
@@ -506,7 +508,8 @@ export async function createTower(
     };
     return m;
   };
-  solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), fadeOut(std('#8E8A82'), R * 0.3, R * 0.6), false).renderOrder = -1; // writes depth: the lowered storeys sink out of sight (T4)
+  const groundM = solid(new CircleGeometry(R, 64).rotateX(-Math.PI / 2), fadeOut(std('#8E8A82'), R * 0.3, R * 0.6), false);
+  groundM.renderOrder = -1; // writes depth: the lowered storeys sink out of sight (T4)
   // the two street faces' longest edges set the roads' directions
   const longest = (f: (e: (typeof edges)[number]) => boolean) => edges.filter(f).sort((p, q) => q.l - p.l)[0]!;
   const roadSides = [longest((e) => e.n[1] > 0.7), longest((e) => e.n[0] < -0.7)];
@@ -998,7 +1001,10 @@ export async function createTower(
   };
 
   /** Take the shared canvas back from the slab / dollhouse, with this scene's renderer state. */
+  let still: HTMLCanvasElement | null = null;
   const claim = () => {
+    still?.remove();
+    still = null;
     if (mine()) return;
     host.append(canvas);
     canvas.className = 'tower3d';
@@ -1257,6 +1263,20 @@ export async function createTower(
       run({ unit: code ? 1 : 0, duration: 0.5, ease: 'power2.inOut' });
       request();
     },
+    freeze() {
+      if (!mine() || destroyed) return;
+      // draw now and copy at once (the drawing buffer isn't preserved between frames)
+      place();
+      renderer.render(scene, camera);
+      still?.remove();
+      still = document.createElement('canvas');
+      still.width = canvas.width;
+      still.height = canvas.height;
+      still.className = 'tower3d';
+      still.setAttribute('aria-hidden', 'true');
+      still.getContext('2d')?.drawImage(canvas, 0, 0);
+      host.append(still);
+    },
     setTbc(codes) {
       tbcSet = codes;
       plate?.setTbc(codes);
@@ -1278,6 +1298,7 @@ export async function createTower(
       canvas.removeEventListener('webglcontextlost', onLost);
       layer.remove();
       uchip.remove();
+      still?.remove();
       plate?.dispose();
       host.removeAttribute('data-tower3d');
       scene.traverse((x) => (x as Mesh).geometry?.dispose());
