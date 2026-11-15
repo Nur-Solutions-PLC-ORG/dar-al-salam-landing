@@ -785,7 +785,7 @@ export function createExplorer(root: HTMLElement) {
             f.height = c.height;
             f.setAttribute('aria-hidden', 'true');
             f.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
-            h2.renderer.render(h2.scene, h2.camera); // a fresh live frame to copy (the buffer isn't preserved)
+            dh.renderFrame(); // a fresh live frame to copy (the buffer isn't preserved); review L2: with GTAO, as on screen
             f.getContext('2d')?.drawImage(c, 0, 0);
             c.after(f);
             stillFade = f;

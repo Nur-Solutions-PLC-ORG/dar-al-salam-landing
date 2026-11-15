@@ -126,6 +126,8 @@ export interface Dollhouse {
   pause(on: boolean): void;
   /** F7: hand the canvas to the path-traced still (no rasterised frames while held); release redraws. */
   hold(on: boolean): void;
+  /** F7 (review L2): draw one resting frame now, through the same path as the live view (GTAO when it is on). */
+  renderFrame(): void;
   destroy(): void;
 }
 
@@ -897,6 +899,11 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
         rendererState();
         request();
       }
+    },
+    renderFrame() {
+      rendererState();
+      if (ao) ao.render();
+      else renderer.render(scene, camera);
     },
     pause(on) {
       paused = on;
