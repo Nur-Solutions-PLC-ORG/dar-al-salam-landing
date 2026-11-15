@@ -62,11 +62,15 @@ export async function renderStill(o: {
   onProgress: (fraction: number) => void;
   onClean: (show: () => void) => void;
   onTimeout: () => void;
+  /** True once the caller has moved on (a cancel during the scene build): stop before compiling or tracing. */
+  cancelled?: () => boolean;
+  /** When the visitor pressed (performance.now()): the deadline counts from here, the chunk's download included. */
+  startedAt?: number;
   maxSamples?: number;
   cleanAt?: number;
   deadline?: number;
 }): Promise<Still> {
-  const t0 = performance.now();
+  const t0 = o.startedAt ?? performance.now();
   const max = o.maxSamples ?? 300;
   const cleanAt = o.cleanAt ?? 40;
   const deadline = o.deadline ?? 10000;
@@ -119,7 +123,7 @@ export async function renderStill(o: {
   pt.tiles.set(2, 2);
   // a synchronous BVH build on press (≈1 s for a unit, once): the async path needs a separate BVH worker file
   await new Promise((r) => setTimeout(r, 30)); // let the button's "Rendering… 0%" paint first
-  pt.setScene(proxy, o.camera);
+  if (!o.cancelled?.()) pt.setScene(proxy, o.camera);
 
   let frame = 0;
   let stopped = false;
@@ -130,9 +134,11 @@ export async function renderStill(o: {
   let sync: WebGLSync | null = null;
   let syncAt = 0;
   let firstDone = false;
+  let dog = 0;
   const stop = () => {
     if (stopped) return;
     stopped = true;
+    clearTimeout(dog);
     if (frame) cancelAnimationFrame(frame);
     if (sync) gl.deleteSync(sync);
     sync = null;
@@ -174,6 +180,32 @@ export async function renderStill(o: {
     }
     if (pt.samples < max) frame = requestAnimationFrame(step);
   };
+  if (o.cancelled?.()) {
+    stop(); // cancelled during the build: never start the shader compile
+    return { stop };
+  }
+  // review F7 M1 (2nd pass): (a) a watchdog independent of rAF, which a busy GPU process starves; it fires once the
+  // main thread is free, even mid-compile
+  let expire = () => {};
+  const expired = new Promise<void>((r) => (expire = r));
+  dog = window.setTimeout(() => (expire(), shown || giveUp()), Math.max(0, deadline - (performance.now() - t0)));
+  // (b) the tracer's shader compiled off the main thread before the first sample. The library compiles it async too,
+  // but with the canvas bound, while samples render into its float target: a different program variant (tone mapping,
+  // output colour space), so the first sample linked a second one synchronously. Compile that variant here with
+  // KHR_parallel_shader_compile (required by the gate); the watchdog ends the wait.
+  // (0.0.27 internals, pinned exactly in package.json; skipped if they move)
+  type Inner = { material?: { onBeforeRender?: () => void }; _fsQuad?: { _mesh?: Mesh } };
+  const inner = (pt as unknown as { _pathTracer?: Inner })._pathTracer;
+  const quad = inner?._fsQuad?._mesh;
+  if (quad) {
+    inner!.material?.onBeforeRender?.(); // settle the scene's defines first, as the first sample would
+    const prev = o.renderer.getRenderTarget();
+    o.renderer.setRenderTarget(pt.target);
+    const ready = o.renderer.compileAsync(quad, o.camera);
+    o.renderer.setRenderTarget(prev);
+    await Promise.race([ready, expired]);
+    if (stopped) return { stop };
+  }
   frame = requestAnimationFrame(step);
   return { stop };
 }

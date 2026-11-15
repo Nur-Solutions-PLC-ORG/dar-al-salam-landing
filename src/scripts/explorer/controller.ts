@@ -748,6 +748,7 @@ export function createExplorer(root: HTMLElement) {
       // rev 10.15: a second press cancels
       if (still || stillBtn?.hasAttribute('data-busy')) return stopStill();
       const job = ++stillJob;
+      const pressed = performance.now();
       const btn = stillBtn!;
       btn.setAttribute('data-busy', '');
       btn.textContent = (s.rendering ?? '').replace('{n}', '0');
@@ -758,11 +759,13 @@ export function createExplorer(root: HTMLElement) {
         if (job !== stillJob || !dh) return;
         const h2 = dh.walkHost();
         let last = -1;
-        still = await renderStill({
+        const run = await renderStill({
           renderer: h2.renderer,
           scene: h2.scene,
           camera: h2.camera,
           uniforms: h2.uniforms,
+          cancelled: () => job !== stillJob,
+          startedAt: pressed,
           onProgress: (f) => {
             const n = Math.round(f * 100);
             if (stillBar) {
@@ -802,7 +805,10 @@ export function createExplorer(root: HTMLElement) {
             toast(s.cant ?? '');
           },
         });
-        if (job !== stillJob) still?.stop();
+        // stopped meanwhile (a cancel, or the watchdog's give-up before renderStill returned): never keep a dead handle,
+        // or the next press would only "cancel"
+        if (job !== stillJob) run.stop();
+        else still = run;
       } catch (err) {
         console.warn('[explorer] path-traced still unavailable', err);
         stopStill();
