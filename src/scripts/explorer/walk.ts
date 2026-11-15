@@ -482,13 +482,17 @@ export function createWalk(
         x = ((pv.x + 1) / 2) * w;
         y = ((1 - pv.y) / 2) * hh;
       }
-      const onStage = c.z < -0.3 && x > 24 && x < w - 24 && y > 24 && y < hh - 60;
+      let size = 44;
+      if (c.z < -0.3) {
+        pv.copy(r.edge).project(camera);
+        size = Math.min(160, Math.max(44, Math.abs(((pv.x + 1) / 2) * w - x) * 2));
+      }
+      // the whole ring must fit inside the stage (a big one near an edge spilled out: review r9b sweep)
+      const onStage = c.z < -0.3 && x > size / 2 + 8 && x < w - size / 2 - 8 && y > 24 && y < hh - 60;
       r.b.classList.toggle('is-chip', !onStage);
       r.b.classList.remove('is-hidden');
       r.b.inert = false;
       if (onStage) {
-        pv.copy(r.edge).project(camera);
-        const size = Math.min(160, Math.max(44, Math.abs(((pv.x + 1) / 2) * w - x) * 2));
         r.b.style.setProperty('--size', `${size}px`);
         r.b.style.transform = `translate(${x}px, ${y}px)`;
         continue;
