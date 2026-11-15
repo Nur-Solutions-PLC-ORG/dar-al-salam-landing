@@ -1276,6 +1276,8 @@ export async function createTower(
       still.setAttribute('aria-hidden', 'true');
       still.getContext('2d')?.drawImage(canvas, 0, 0);
       host.append(still);
+      const mine2 = still;
+      setTimeout(() => still === mine2 && (still.remove(), (still = null)), 2000); // the dollhouse has covered it by then
     },
     setTbc(codes) {
       tbcSet = codes;
