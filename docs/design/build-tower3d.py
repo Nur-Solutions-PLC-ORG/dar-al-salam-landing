@@ -40,12 +40,12 @@ for code in PLACE:
     for o in d['openings']:
         if o['type'] in ('window', 'glazed-door'):
             glazing.append({'unit': code, 'id': o['id'], 'a': place(code, o['a']), 'b': place(code, o['b']), 'sill': o['sill'], 'head': o['head'], 'basis': o['basis']})
-G, T = 6.3, 3.0
+G, T = 3.3, 3.0   # rev 11.1: ground 3.3 m; the render's tall stone base is ground + floor 1 together (6.3 m)
 # rev 11 (client, BRIEF 2026-11-15): homes are on floors 3-16; ground has a reception; floors 1-2 are podium
 # storeys that are never described; no "planned" storey.
-levels = [{'id': 'ground', 'label': 'Ground floor: reception', 'y0': 0, 'h': G, 'status': 'podium', 'use': 'reception', 'selectable': False}]
+levels = [{'id': 'ground', 'label': 'Ground floor: reception', 'y0': 0, 'h': G, 'status': 'podium', 'use': 'reception', 'clad': True, 'selectable': False}]
 for n in (1, 2):
-    levels.append({'id': f'p{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'podium', 'selectable': False})
+    levels.append({'id': f'p{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'podium', 'clad': n == 1, 'selectable': False})
 for n in range(3, 17):
     levels.append({'id': f'f{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'plan', 'selectable': True})
 two_bed = [4, 6, 8, 10, 11]
@@ -54,9 +54,9 @@ data = {
     'units_note': 'metres; x right, z down the key plan; y up. Subtract `centre` to centre the tower on the origin.',
     'centre': centre, 'outline': outline,
     'heights': {'ground': G, 'typical': T, 'slab': 0.3, 'parapet': 1.2, 'plantRoom': 3.0,
-                'basis': 'Illustrative. No section or elevation drawing exists. Ground 6.3 m: on the render the ground storey is about 2.1 typical storeys tall at the corner (245 px against 117 px). Typical 3.0 m is an assumption.'},
+                'basis': 'Illustrative. No section or elevation drawing exists. On the render the stone-clad base is about 2.1 typical storeys tall at the corner (245 px against 117 px); with floors 1 and 2 now explicit, that base is read as ground (3.3 m) plus floor 1 (3.0 m) = 6.3 m. Typical 3.0 m is an assumption.'},
     'levels': levels,
-    'floorCountReading': 'Rev 11, from the client: ground (reception) + floors 1-2 (podium, not described, not selectable) + floors 3-16 (14 typical floors, 9 homes each = 126) + roof. That is ground + 16 storeys. The render draws ground + 13 storeys with balconies, so the 3D tower is taller than the picture. Floors 1-2 are drawn as plain lower storeys: the same wall and window rhythm, no balconies, no lit windows, no pins, no chips.',
+    'floorCountReading': 'Rev 11.1, from the client: ground (reception) + floors 1-2 (podium, not described, not selectable) + floors 3-16 (14 typical floors, 9 homes each = 126) + roof. That is ground + 16 storeys. The render draws a stone base (read as ground + floor 1) and 13 storeys with balconies, so the 3D tower is two storeys taller than the picture. Ground and floor 1 carry the stone cladding and glazed fronts; floor 2 is a plain lower storey: the same wall and window rhythm as above, no balconies, no lit windows, no pins, no chips.',
     'units': units,
     'twoBedFloors': two_bed,
     'lit': {'rule': 'On hover or selection of floor n (3-16), light the glazing of every unit on that floor. BL01 lights only on twoBedFloors; on other floors its bay stays unlit (to be confirmed). Podium storeys never light.'},
@@ -68,7 +68,7 @@ data = {
         'glass': {'colour': '#4F6E8C', 'opacity': 0.75, 'litColour': '#FFD9A0'},
         'windowBay': {'width': 1.8, 'sill': 0.9, 'head': 2.4, 'spacing': 3.6, 'note': 'one punched window per bay on walls with no traced opening'},
         'balconyFront': {'colour': '#7D7872', 'height': 1.1, 'railColour': '#2A2A2A', 'slab': 0.2},
-        'groundCladding': {'colour': '#8C857C', 'shopfrontGlass': '#3B4A5A', 'shopfrontHead': 4.8, 'canopy': {'depth': 2.5, 'height': 4.2, 'colour': '#FFFFFF'}},
+        'groundCladding': {'colour': '#8C857C', 'shopfrontGlass': '#3B4A5A', 'shopfrontHead': 2.9, 'upperGlassSill': 4.0, 'upperGlassHead': 5.9, 'canopy': {'depth': 2.5, 'height': 3.3, 'colour': '#FFFFFF'}, 'note': 'The cladding covers every level with clad=true (ground and floor 1): glazed front to 2.9 m on the ground storey, a second band of glazing from 4.0 to 5.9 m on floor 1, stone between and above. The canopy sits at the top of the ground storey.'},
         'roof': {'parapet': 1.2, 'plantRoom': {'inset': 6.0, 'h': 3.0}},
     },
     'azimuth': 'Camera azimuth is measured from south (+z, the bottom of the key plan) toward west (-x). The default -35 degrees stands south-west and sees the south and west faces. Every explorer scene (tower, floor slab, assembled floor, dollhouse) uses this one convention. "South" and "west" here are plan directions only: true north is not on the plans.',

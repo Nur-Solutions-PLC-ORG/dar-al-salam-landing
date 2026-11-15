@@ -103,12 +103,12 @@ For DESIGN §9.8 B5: the visitor stands in the room and looks around. One panora
 - Save as `brand-source/renders/pano/{id}.jpg` (D1 → `living.jpg`, D1p → `living-parquet.jpg`, and so on). Write down, per file, which wall of the plan the image's centre faces: design needs it to align the door markers (`yawOffset`).
 
 ## E. Tower (rev 9; 2 items, both optional)
-For DESIGN §9.7. The site now opens the explorer on our real render with selectable floors.
+For DESIGN §9.7 and the Rev 11 section. The site opens the explorer on the tower, with floors 3–16 selectable.
 
-- **E1. Tower still with countable floors.** Our render draws 13 typical storeys above the ground storey, while the site says 16 floors. If the tool can edit the image, try:
-  > Extend this building upward by three more identical residential storeys, repeating the existing balcony and window pattern exactly, keeping the same roof, the same camera angle and the same street scene. Replace the collage sky with a plain soft evening sky. Change nothing else.
+- **E1. Tower still with the right number of floors.** The building is ground + 16: a reception on the ground floor, floors 1 and 2, then homes on floors 3–16. Our render draws a stone-clad base (ground and floor 1) and 13 storeys with balconies, so it is two storeys short. If the tool can edit the image, try:
+  > Extend this building upward by two more identical residential storeys, repeating the existing balcony and window pattern exactly, keeping the same roof, the same stone-clad base, the same camera angle and the same street scene. Replace the collage sky with a plain soft evening sky. Change nothing else. No signs, no shop names, no text.
 
-  Reference: `brand-source/tower-render.jpg`. **Do not use the result without the client's sign-off**: it changes what the building looks like. If accepted, it ships with "Artist's impression". Save as `brand-source/renders/tower-16.jpg`.
+  Reference: `brand-source/tower-render.jpg`. Check the result by counting: 15 storeys above the stone base. **Do not use the result without the client's sign-off**: it changes what the building looks like. If accepted, it ships with "Artist's impression". Save as `brand-source/renders/tower-16.jpg`. Don't describe or label any floor's use in a prompt beyond "residential"; the site says only "Ground floor: reception".
 - **E2. Push-in clip (image to video).** From the same render (or E1 if accepted):
   > Slow, smooth camera push-in toward the middle floors of the building's corner, 3 seconds, no camera shake, no change to the building, the cars or the trees, no new objects, constant lighting.
 
