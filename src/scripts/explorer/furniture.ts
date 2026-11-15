@@ -39,8 +39,8 @@ const C = {
   navy: '#1A273F',
   chair: '#B79B74',
   ivory: '#EFE9DF',
-  stone: '#A89F91', // design (rev 10.15): ≥ 25 levels darker than the ivory cabinets under the room lamp
-  stoneEdge: '#8E8578',
+  stone: '#968D7F', // design (rev 10.16): ~18 levels darker than the ivory fronts under the room lamp, warm stone
+  stoneEdge: '#7D7568',
   white: '#F6F5F2',
   black: '#1B1C1F',
   line: '#8C7B68',
