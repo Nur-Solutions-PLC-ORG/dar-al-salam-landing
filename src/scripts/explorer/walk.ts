@@ -399,17 +399,29 @@ export function createWalk(
     const st = pose(loc).at;
     return Math.hypot(at.x - st.x, at.z - st.z) < 1.8 ? h.toWorld(r.door.m, 0.02) : at;
   };
-  /** Rev 10.4: arrive facing the nearest way on (not the door just used), pitched down until its ring shows. */
-  const arrivalView = (id: string, via?: string) => {
+  /**
+   * Rev 10.9: arrive facing the room's focus — its bed, sofa (else the dining table), the counter in a kitchen, the
+   * basin in a shower room, else its largest piece — pitched 0° to −8°; with no furniture, the pose's own view (the
+   * balcony glazing or the longest wall). In the hall and walkable spaces: `null`, the caller keeps the way of travel.
+   * The edge chips keep every exit on screen.
+   */
+  const FOCUS: Record<string, string[]> = { bedroom: ['bed'], masterBedroom: ['bed'], livingDining: ['sofa', 'dining'], kitchen: ['counter'], shower: ['basin', 'wc'] };
+  const arrivalView = (id: string): { yaw: number; pitch: number } | null => {
+    const r = rooms.get(id);
+    if (!r) return null;
     const p = pose(id);
-    const opts = ringsAt(id).map((r) => ({ id: r.door.id, at: ringAt(id, r) }));
-    const pick = opts.filter((r) => r.id !== via).sort((a, b) => a.at.distanceTo(p.at) - b.at.distanceTo(p.at))[0] ?? opts[0];
-    if (!pick) return { yaw: p.yaw, pitch: 0 };
-    const dx = pick.at.x - p.at.x;
-    const dz = pick.at.z - p.at.z;
-    const under = Math.atan2(EYE - 0.02, Math.hypot(dx, dz)); // the ring's angle below the horizon
-    const room = Math.atan(Math.tan((FOV * DEG) / 2) * (1 - 150 / (h.host.clientHeight || 600))); // ≥ 60 px above the bottom
-    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(20 * DEG, Math.max(0, under - room)) };
+    const inRoom = data.solids.filter((s) => s.kind !== 'column' && s.kind !== 'shaft' && insidePoly(centroidOf(s.poly), r.poly));
+    const tag = (s: (typeof inRoom)[number]) => (s.kind === 'furniture' ? (s.piece ?? '') : s.kind);
+    const size = (s: (typeof inRoom)[number]) => Math.abs(s.poly.reduce((a, [x0, z0], i) => a + x0 * s.poly[(i + 1) % s.poly.length]![1] - s.poly[(i + 1) % s.poly.length]![0] * z0, 0));
+    let focus: (typeof inRoom)[number] | undefined;
+    for (const want of FOCUS[r.name] ?? []) if ((focus = inRoom.filter((s) => tag(s) === want).sort((a, b) => size(b) - size(a))[0])) break;
+    focus ??= inRoom.filter((s) => s.kind !== 'rug').sort((a, b) => size(b) - size(a))[0];
+    if (!focus) return { yaw: p.yaw, pitch: 0 };
+    const at = h.toWorld(centroidOf(focus.poly), Math.min(focus.h, 1.2) / 2);
+    const dx = at.x - p.at.x;
+    const dz = at.z - p.at.z;
+    const down = Math.atan2(EYE - at.y, Math.hypot(dx, dz) || 1);
+    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(8 * DEG, Math.max(0, down)) };
   };
   const showRings = (loc: string | null) => {
     ringLayer.replaceChildren();
@@ -842,10 +854,10 @@ export function createWalk(
     const split = a / (a + b || 1);
     const yaw0 = view.yaw;
     const pitch0 = view.pitch;
-    const v = arrivalView(to, door.id);
     const short = (from: number, a: number) => from + Math.atan2(Math.sin(a - from), Math.cos(a - from)); // the short way round
     const yawGo = short(yaw0, yawTo(mid, p.at)); // through the door facing the way of travel…
-    const yaw1 = short(yawGo, v.yaw); // …then turn to the way on
+    const v = arrivalView(to) ?? { yaw: yawGo, pitch: 0 }; // (hall, walkable: keep facing the way of travel)
+    const yaw1 = short(yawGo, v.yaw); // …then turn to the room's focus
     const t = { p: 0 };
     moveLamp(to);
     await new Promise<void>((resolve) =>
@@ -873,7 +885,7 @@ export function createWalk(
 
   const arrive = async (id: string, glide: number, my = ++seq, via?: string) => {
     const p = pose(id);
-    const v = arrivalView(id, via);
+    const v = arrivalView(id) ?? { yaw: p.yaw, pitch: 0 };
     view.yaw = v.yaw;
     view.pitch = v.pitch;
     current = id;
