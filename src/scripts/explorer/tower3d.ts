@@ -426,9 +426,9 @@ export async function createTower(
   const cladTop = Math.max(...d.levels.filter((l) => (l as { clad?: boolean }).clad).map((l) => l.y0 + l.h), d.levels[0]!.h);
   const stripes = k(
     gradient(4, 64, (x) => {
-      x.fillStyle = '#A39C92'; // a lighter stone than the shopfront glass below it (design fix 5)
+      x.fillStyle = gc.colour; // design rev 11.3: the render's grey stone (#8C857C) is the base's main surface
       x.fillRect(0, 0, 4, 64);
-      x.fillStyle = 'rgba(255,255,255,0.22)';
+      x.fillStyle = 'rgba(255,255,255,0.12)'; // faint coursing joints
       for (let y = 0; y < 64; y += 16) x.fillRect(0, y, 4, 3);
     }),
   );
@@ -437,7 +437,8 @@ export async function createTower(
   const base = inset(outline, 0.6);
   below.push(solid(prism(base, 0, cladTop), std('#FFFFFF', { map: stripes })));
   const shop: BufferGeometry[] = [];
-  const mull: BufferGeometry[] = [];
+  const piers: BufferGeometry[] = [];
+  const PIER = 1.2; // design rev 11.3: solid stone piers between glazed bays, on the fins' grid
   let entrance: { a: P2; b: P2; l: number } | null = null;
   base.forEach((a, i) => {
     const b = base[(i + 1) % base.length]!;
@@ -445,16 +446,25 @@ export async function createTower(
     const l = len(a, b);
     if (!entrance || l > entrance.l) entrance = { a, b, l };
     const at = (s: number): P2 => [a[0] + ((b[0] - a[0]) / l) * s, a[1] + ((b[1] - a[1]) / l) * s];
-    // glazed front up to shopfrontHead on the ground storey (the reception), a second band on floor 1, white
-    // mullions on the fins' 3.6 m grid through both (design fix 5, rev 11.1)
-    shop.push(pane(at(0.15), at(l - 0.15), 0.15, gc.shopfrontHead, side * 0.03));
-    if (gc.upperGlassSill !== undefined && gc.upperGlassHead !== undefined) shop.push(pane(at(0.15), at(l - 0.15), gc.upperGlassSill, gc.upperGlassHead, side * 0.03));
-    const mTop = gc.upperGlassHead ?? gc.shopfrontHead;
-    for (let t = fs.fin.spacing; t < l - 0.3; t += fs.fin.spacing) mull.push(box(at(t), at(t + 0.25), 0, mTop, 0.3, side * 0.15));
+    // design rev 11.3: stone reads first. Piers 1.2 m wide stand proud on the fins' 3.6 m grid, with glazed bays set
+    // between them: the reception's glazing to shopfrontHead (2.9 m) and floor 1's band (4.0–5.9 m). Stone stays full
+    // width between the bands and above (5.9–6.3 m), so glass is under half the base's face. A part bay at an end
+    // narrower than a pier stays stone.
+    const grid: number[] = [];
+    for (let t = 0; t <= l + 1e-6; t += fs.fin.spacing) grid.push(Math.min(t, l));
+    if (l - grid.at(-1)! > PIER) grid.push(l);
+    grid.forEach((t) => piers.push(box(at(Math.max(0, t - PIER / 2)), at(Math.min(l, t + PIER / 2)), 0, cladTop, 0.3, side * 0.15)));
+    for (let i = 0; i + 1 < grid.length; i++) {
+      const g0 = grid[i]! + PIER / 2;
+      const g1 = grid[i + 1]! - PIER / 2;
+      if (g1 - g0 < PIER) continue;
+      shop.push(pane(at(g0), at(g1), 0.15, gc.shopfrontHead, side * 0.03));
+      if (gc.upperGlassSill !== undefined && gc.upperGlassHead !== undefined) shop.push(pane(at(g0), at(g1), gc.upperGlassSill, gc.upperGlassHead, side * 0.03));
+    }
   });
   if (shop.length) below.push(solid(mergeGeometries(shop)!, std(gc.shopfrontGlass, { roughness: 0.2, metalness: 0.3 }), false));
-  if (mull.length) below.push(solid(mergeGeometries(mull)!, std(fs.fin.colour)));
-  [...shop, ...mull].forEach((x) => x.dispose());
+  if (piers.length) below.push(solid(mergeGeometries(piers)!, std(gc.colour, { roughness: 0.85 })));
+  [...shop, ...piers].forEach((x) => x.dispose());
   if (entrance) {
     const { a, b, l } = entrance as { a: P2; b: P2; l: number };
     const u: P2 = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
