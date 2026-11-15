@@ -20,8 +20,8 @@ b14, b13 = bands(14), bands(13)
 data = {
     'image': 'brand-source/tower-render.jpg', 'imageSize': [2251, 2163], 'cropPx': list(CROP),
     'edges': {'left': L, 'corner': C, 'right': R},
-    'note': 'Polygons are in full-image px (subtract cropPx[0], cropPx[1] for the cropped stage image). The render draws 13 typical storeys; `floors` splits the same height into the explorer\'s 14, so bands are approximate (up to about half a storey off).',
-    'floors': [{'floor': 14 - k, 'poly': p} for k, p in enumerate(b14)],
+    'note': 'Polygons are in full-image px (subtract cropPx[0], cropPx[1] for the cropped stage image). The render draws 13 storeys with balconies above its podium; `floors` splits that height into the 14 selectable floors, 16 (top) to 3 (bottom), so bands are approximate (up to about half a storey off). Floors 1-2 and the ground floor are the podium (`ground.poly`), which is not selectable.',
+    'floors': [{'floor': 16 - k, 'poly': p} for k, p in enumerate(b14)],  # rev 11: homes are on floors 3-16
     'ground': {'poly': [[L[0], L[2]], [C[0], C[2]], [R[0], R[2]], [R[0], 1790], [C[0], 1995], [L[0], 1700]]},
     'drawn': {'storeys': 13, 'bands': b13},
 }
@@ -29,7 +29,7 @@ open(ROOT + 'docs/design/tower-floors.json', 'w').write(json.dumps(data, separat
 im = Image.open(ROOT + 'brand-source/tower-render.jpg').convert('RGBA'); ov = Image.new('RGBA', im.size, (0, 0, 0, 0)); d = ImageDraw.Draw(ov)
 for k, p in enumerate(b14):
     d.polygon([tuple(q) for q in p], fill=(181, 148, 88, 110) if k % 2 == 0 else (26, 39, 63, 70), outline=(230, 211, 168, 255))
-    d.text((R[0] + 12, (p[2][1] + p[3][1]) // 2 - 6), f'Floor {14 - k}', fill=(255, 255, 255, 255))
+    d.text((R[0] + 12, (p[2][1] + p[3][1]) // 2 - 6), f'Floor {16 - k}', fill=(255, 255, 255, 255))
 out = Image.alpha_composite(im, ov).convert('RGB').crop(CROP)
 out.resize((900, round(out.height * 900 / out.width))).save(ROOT + 'docs/design/tower-floors-check.jpg', quality=80)
 print(len(json.dumps(data, separators=(',', ':'))), 'bytes')

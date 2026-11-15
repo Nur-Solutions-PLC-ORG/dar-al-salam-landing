@@ -41,10 +41,13 @@ for code in PLACE:
         if o['type'] in ('window', 'glazed-door'):
             glazing.append({'unit': code, 'id': o['id'], 'a': place(code, o['a']), 'b': place(code, o['b']), 'sill': o['sill'], 'head': o['head'], 'basis': o['basis']})
 G, T = 6.3, 3.0
-levels = [{'id': 'ground', 'label': 'Ground floor', 'y0': 0, 'h': G, 'status': 'built', 'use': 'commercial', 'selectable': False}]
-for n in range(1, 15):
+# rev 11 (client, BRIEF 2026-11-15): homes are on floors 3-16; ground has a reception; floors 1-2 are podium
+# storeys that are never described; no "planned" storey.
+levels = [{'id': 'ground', 'label': 'Ground floor: reception', 'y0': 0, 'h': G, 'status': 'podium', 'use': 'reception', 'selectable': False}]
+for n in (1, 2):
+    levels.append({'id': f'p{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'podium', 'selectable': False})
+for n in range(3, 17):
     levels.append({'id': f'f{n}', 'floor': n, 'y0': G + (n - 1) * T, 'h': T, 'status': 'plan', 'selectable': True})
-levels.append({'id': 'planned', 'label': '16th floor planned', 'y0': G + 14 * T, 'h': T, 'status': 'planned', 'selectable': False})
 two_bed = [4, 6, 8, 10, 11]
 data = {
     'source': 'Built by docs/design/build-tower3d.py from keyplan-hotspots.json and units/bl0X.json. Nov 2026.',
@@ -53,10 +56,10 @@ data = {
     'heights': {'ground': G, 'typical': T, 'slab': 0.3, 'parapet': 1.2, 'plantRoom': 3.0,
                 'basis': 'Illustrative. No section or elevation drawing exists. Ground 6.3 m: on the render the ground storey is about 2.1 typical storeys tall at the corner (245 px against 117 px). Typical 3.0 m is an assumption.'},
     'levels': levels,
-    'floorCountReading': 'Ground + typical floors 1-14 (the plans) = 15 storeys, drawn solid. The client is "adding a 16th floor", so ONE more storey sits on top in the lighter "planned" style, with no units and no selection. The render draws ground + 13 typical storeys, so the 3D tower is one storey taller than the picture before the planned storey. Confirm with the client.',
+    'floorCountReading': 'Rev 11, from the client: ground (reception) + floors 1-2 (podium, not described, not selectable) + floors 3-16 (14 typical floors, 9 homes each = 126) + roof. That is ground + 16 storeys. The render draws ground + 13 storeys with balconies, so the 3D tower is taller than the picture. Floors 1-2 are drawn as plain lower storeys: the same wall and window rhythm, no balconies, no lit windows, no pins, no chips.',
     'units': units,
     'twoBedFloors': two_bed,
-    'lit': {'rule': 'On hover or selection of floor n, light the glazing of every unit on that floor. BL01 lights only on twoBedFloors; on other floors its bay stays unlit (to be confirmed).'},
+    'lit': {'rule': 'On hover or selection of floor n (3-16), light the glazing of every unit on that floor. BL01 lights only on twoBedFloors; on other floors its bay stays unlit (to be confirmed). Podium storeys never light.'},
     'balconies': balconies, 'glazing': glazing,
     'glazing_note': 'Only openings the unit plans draw or imply (basis says which). The plans dimension almost no windows, so the tower\'s other window bays are illustrative, from `facadeStyle`, and must not be read as measured.',
     'facadeStyle': {
