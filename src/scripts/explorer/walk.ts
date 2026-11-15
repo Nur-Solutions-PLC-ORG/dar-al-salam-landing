@@ -1,8 +1,9 @@
 /**
  * Walk-in mode, "Step inside" (DESIGN §9.8 rev 9). Loaded on the first "Step inside" / "Enter the home"; it drives
  * the dollhouse's camera (WalkHost) from fixed standpoints: one per room, at eye height 1.5 m.
- * - B1 entering (U8, 1.6 s power2.inOut): from the orbit view down to the standpoint, fov 30 → 72; during the last
- *   0.6 s the walls rise from the 2.4 m cut to the full 2.8 m, the camera-side cutaway lifts and the ceiling fades in.
+ * - B1 entering, rev 10 F6 "the dive" (1.8 s power2.inOut): a curved path from the orbit view that drops through the
+ *   cut of the chosen room and levels out at the standpoint (1.5 m), fov 30 → 72. In the last 0.5 s the view fades
+ *   through ivory (0 → 0.6 → 0) while the walls rise to the full 2.8 m and the ceiling appears, hiding the pop.
  *   The initial view faces the room's balcony opening, else the middle of its longest wall. Back: the reverse (U9,
  *   1.0 s). Reduced motion: 0.2 s cross-fades.
  * - B2 looking: drag or swipe turns the view (yaw 360°, pitch ±25°, 0.25°/px, inertia 0.9 per frame). On touch the
@@ -34,10 +35,12 @@ import {
   DoubleSide,
   ExtrudeGeometry,
   Group,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
   PerspectiveCamera,
+  QuadraticBezierCurve3,
   PlaneGeometry,
   PointLight,
   Quaternion,
@@ -166,7 +169,8 @@ export function createWalk(
   data.footprint.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z)));
   // B3: a Lambert ceiling, lit from below by the room's point light
   // a little self-light: the lamp sits 0.4 m below it, so it only grazes the far corners
-  const ceilMat = new MeshLambertMaterial({ color: '#FBF7F2', emissive: '#A39B90', side: DoubleSide, transparent: true, opacity: 0 });
+  // (no depth write: while it fades in, an invisible ceiling hid the whole room from the dive above it — F6)
+  const ceilMat = new MeshLambertMaterial({ color: '#FBF7F2', emissive: '#A39B90', side: DoubleSide, transparent: true, opacity: 0, depthWrite: false });
   const ceiling = new Mesh(new ShapeGeometry(s).rotateX(-Math.PI / 2), ceilMat);
   ceiling.position.y = h.fullH;
   ceiling.visible = false;
@@ -287,6 +291,7 @@ export function createWalk(
   };
 
   const view = { yaw: 0, pitch: 0 };
+  let flying = 0;
   let current: string | null = null;
   /** Review r8 H1: the walk's live tweens, so an exit can stop a fly-in or glide midway; `seq` marks the newest move. */
   const live = new Set<ReturnType<WalkHost['run']>>();
@@ -372,6 +377,10 @@ export function createWalk(
   // the controls, in the stage: look left / right at the bottom corners, the toolbar top-left (B6 adds to it)
   const ui = document.createElement('div');
   ui.className = 'walk-ui';
+  // F6: the ivory veil the dive fades through (decorative; never blocks input)
+  const veil = document.createElement('div');
+  veil.setAttribute('aria-hidden', 'true');
+  veil.style.cssText = 'position:absolute;inset:0;background:var(--ivory-50,#FBF7F2);opacity:0;pointer-events:none';
   ui.hidden = true;
   const button = (cls: string, label: string, onClick: () => void, html = '') => {
     const b = document.createElement('button');
@@ -608,6 +617,7 @@ export function createWalk(
   chip.textContent = o.strings.geometryLabel ?? '';
   chip.hidden = true;
   ui.append(toolbar, chip);
+  ui.prepend(veil);
   h.stage.append(ui);
 
   // gyro (phones, opt-in, never with reduced motion)
@@ -655,7 +665,7 @@ export function createWalk(
         velP *= 0.9;
       }
       if (current) {
-        apply();
+        if (!flying) apply(); // a fly-in or dive owns the camera's orientation while it runs (F6)
         projectRings();
         updateMini();
       }
@@ -732,22 +742,36 @@ export function createWalk(
   };
 
   /** Fly the camera from where it is now to a position + orientation + fov. */
-  const fly = (to: { at: Vector3; quat: Quaternion; fov: number }, duration: number) => {
+  /** Fly the camera to a pose; with `via`, along a quadratic curve through that control point (F6: the dive). */
+  const fly = (to: { at: Vector3; quat: Quaternion; fov: number }, duration: number, via?: Vector3) => {
     const from = { at: camera.position.clone(), quat: camera.quaternion.clone(), fov: camera.fov };
     const t = { p: 0 };
+    const curve = via ? new QuadraticBezierCurve3(from.at, via, to.at) : null;
+    flying++;
+    // the dive keeps its eyes on the room (a point 3 m ahead of the final view), so mid-dive frames show the room,
+    // not a close-up of the floor; it hands over to the final orientation as it levels out
+    const look = to.at.clone().add(new Vector3(0, 0, -3).applyQuaternion(to.quat));
+    const lq = new Quaternion();
+    const lm = new Matrix4();
     return new Promise<void>((resolve) => {
       run(t, {
         p: 1,
         duration,
         ease: 'power2.inOut',
         onUpdate: () => {
-          camera.position.lerpVectors(from.at, to.at, t.p);
+          if (curve) curve.getPoint(t.p, camera.position);
+          else camera.position.lerpVectors(from.at, to.at, t.p);
           camera.quaternion.slerpQuaternions(from.quat, to.quat, t.p);
+          if (curve && t.p < 1) {
+            lq.setFromRotationMatrix(lm.lookAt(camera.position, look, camera.up));
+            const into = Math.min(1, t.p / 0.25); // turn to the room early, and settle into the final view late
+            camera.quaternion.slerpQuaternions(from.quat, lq, into).slerp(to.quat, t.p ** 3);
+          }
           camera.fov = from.fov + (to.fov - from.fov) * t.p;
           camera.updateProjectionMatrix();
         },
-        onComplete: resolve,
-        onInterrupt: resolve,
+        onComplete: () => (flying--, resolve()),
+        onInterrupt: () => (flying--, resolve()),
       });
     });
   };
@@ -863,7 +887,7 @@ export function createWalk(
 
   /** U10: through a door's centre to the next standpoint; the yaw eases to the direction of travel. */
   const through = async (door: { m: P2; id: string }, to: string) => {
-    if (h.reduced) return arrive(to, 0, ++seq, door.id);
+    if (h.reduced) return arrive(to, 0, ++seq);
     const my = ++seq;
     showRings(null);
     dropPano(false); // the glide happens in the geometry
@@ -904,7 +928,7 @@ export function createWalk(
     o.onArrive(to);
   };
 
-  const arrive = async (id: string, glide: number, my = ++seq, via?: string) => {
+  const arrive = async (id: string, glide: number, my = ++seq, dive = false) => {
     const p = pose(id);
     const v = arrivalView(id) ?? { yaw: p.yaw, pitch: 0 };
     view.yaw = v.yaw;
@@ -921,6 +945,10 @@ export function createWalk(
       h.request();
       o.onArrive(id); // review r8 L9: announce as the view changes, not after the fade back in
       await fade(1);
+    } else if (dive) {
+      // F6: drop straight down through the room's cut (the control point is high above the standpoint), then level out
+      const via = new Vector3(p.at.x, Math.max(camera.position.y * 0.55, EYE + 3), p.at.z);
+      await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide, via);
     } else await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide);
     if (my !== seq) return; // stopped (Esc / Back) or overtaken: no arrival
     void showPano(id);
@@ -949,8 +977,13 @@ export function createWalk(
         await arrive(id, 0, my);
         return;
       }
-      enclose(true, 0.6, 1.0);
-      await arrive(id, 1.6, my);
+      // F6: walls rise and the ceiling appears in the last 0.5 s, under a fade through ivory; the sky beyond the glass
+      // switches on at the veil's peak (from the orbit it would wash the overview pale)
+      h.scene.background = null;
+      setTimeout(() => current && (h.scene.background = skyTex), 1550); // (an exit meanwhile clears `current`)
+      enclose(true, 0.5, 1.3);
+      veil.animate([{ opacity: 0 }, { opacity: 0.6, offset: 0.5 }, { opacity: 0 }], { duration: 500, delay: 1300, easing: 'ease-in-out' });
+      await arrive(id, 1.8, my, true);
     },
     goTo(id) {
       if (known(id) && canStand(id)) return arrive(id, 0);

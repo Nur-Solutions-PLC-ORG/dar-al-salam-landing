@@ -722,6 +722,12 @@ export function createExplorer(root: HTMLElement) {
         onPick: (id) => go({ ...state, walk: id }),
       });
     }
+    // the walk chunk may have loaded after an Esc or Back already ended the walk: only enter if it's still wanted
+    if (!state.walk || !dh || viewFor() !== '3d') {
+      setWalking(false);
+      return;
+    }
+    if (state.walk !== want) return syncWalk();
     if (!walk.room) {
       selectRoom(null);
       setWalking(true);
@@ -738,9 +744,11 @@ export function createExplorer(root: HTMLElement) {
     setWalking(false);
   }
   let insideLi: HTMLLIElement | null = null;
+  let walkOn = false; // the wanted layout (data-walk lands late when a Flip is loading)
   function setWalking(on: boolean) {
     if (!on) rooms?.setWalk(null);
-    if (on === root.hasAttribute('data-walk')) return;
+    if (on === walkOn) return;
+    walkOn = on;
     document.documentElement.classList.toggle('is-walking', on);
     void walkLayout(on);
     // breadcrumb: … › BL05 › Inside
@@ -764,6 +772,7 @@ export function createExplorer(root: HTMLElement) {
       return;
     }
     const { Flip } = await import('gsap/Flip');
+    if (on !== walkOn) return; // superseded while Flip loaded (an Esc during the dive's first moments)
     gsap.registerPlugin(Flip);
     const st = Flip.getState([$('[data-model-col]')!, panel]);
     root.toggleAttribute('data-walk', on);
