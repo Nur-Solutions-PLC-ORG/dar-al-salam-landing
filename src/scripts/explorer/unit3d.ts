@@ -22,6 +22,8 @@ import {
   Float32BufferAttribute,
   Group,
   HemisphereLight,
+  PMREMGenerator,
+  ACESFilmicToneMapping,
   Mesh,
   MeshBasicMaterial,
   MeshDepthMaterial,
@@ -45,6 +47,7 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildFurniture, metreUV, type FurnMat } from './furniture';
 import { gsap } from '../motion';
 import { onVisibility } from '../lazy';
@@ -60,7 +63,7 @@ const EL_MIN = 52 * DEG;
 const EL_MAX = 68 * DEG;
 const ORBIT = 5 * DEG; // per second
 const RESUME = 5000;
-const FILL = 3.4; // rev 8.1 A + 8.2 G: camera fill, tuned so camera-facing walls read #D9CFC0 or lighter
+const FILL = 0; // rev 10 F5: the camera fill is retired (environment light + ACES); kept as a zero-intensity hook for the walk
 /**
  * Floor and furniture-lid tint (design's exposure note, rev 8.5): the lights that keep the walls cream would push the
  * plan texture to white, so the texture's own materials are dimmed instead (r187 has no per-object light layers).
@@ -462,13 +465,20 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   hl.position.y = 0.02;
   root.add(hl);
 
-  /* light: warm, soft, fixed to the model → the shadow map bakes once */
-  scene.add(new HemisphereLight('#FFF4E6', '#1A273F', 3.2));
-  const sun = new DirectionalLight('#FFE3BD', 2.2);
+  /* light (rev 10 F5, by tier): a RoomEnvironment through PMREM, a warm sun with shadows baked at rest, a soft sky
+     fill; ACES filmic at exposure 1.0. Phones (coarse pointer or deviceMemory < 8): environment 0.6, 1024² shadows.
+     Desktop: environment 0.8, 2048² shadows with a wider PCF radius, and GTAO while the camera rests. */
+  const lowTier = matchMedia('(pointer: coarse)').matches || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 8;
+  const pmrem = new PMREMGenerator(renderer);
+  scene.environment = k(pmrem.fromScene(new RoomEnvironment(), 0.04).texture);
+  scene.environmentIntensity = lowTier ? 0.6 : 0.8;
+  pmrem.dispose();
+  scene.add(new HemisphereLight('#FFE6C8', '#3A4558', 0.9)); // warm sky: the walls read cream, not grey-white
+  const sun = new DirectionalLight('#FFE3BD', 2.4);
   sun.position.set(-6, 14, -4);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.radius = 4;
+  sun.shadow.mapSize.setScalar(lowTier ? 1024 : 2048);
+  sun.shadow.radius = lowTier ? 4 : 6;
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.02;
   Object.assign(sun.shadow.camera, { left: -R - 1, right: R + 1, top: R + 1, bottom: -R - 1, near: 1, far: 40 });
@@ -480,10 +490,24 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   fill.target.position.set(0, 0, -1);
   camera.add(fill, fill.target);
   scene.add(camera);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFShadowMap;
-  renderer.shadowMap.autoUpdate = false;
+  /** This scene's renderer state (the canvas is shared: the slab and the tower set theirs when they draw). */
+  const rendererState = () => {
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = PCFShadowMap; // (PCFSoftShadowMap is gone in r187: PCF with a wider radius on desktop)
+    renderer.shadowMap.autoUpdate = false;
+  };
+  rendererState();
   renderer.shadowMap.needsUpdate = true;
+  // desktop: GTAO at rest (a lazy chunk)
+  let ao: import('./ao').Ao | null = null;
+  if (!lowTier && !o.reduced)
+    void import('./ao').then(({ createAo }) => {
+      if (destroyed) return;
+      ao = createAo(renderer, scene, camera, host.clientWidth || 1, host.clientHeight || 1);
+      request();
+    });
 
   /* ---------- camera ---------- */
   const cam = { az: AZ, el: EL, x: 0, z: 0 };
@@ -497,6 +521,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     // rev 8.1 C: the bounding circle fills 100% of the shorter side (the same at every azimuth, so no pop)
     d = R / Math.sin(half);
     renderer.setSize(w, h, false);
+    ao?.setSize(w, h);
   };
   const place = () => {
     const c = Math.cos(cam.el);
@@ -605,6 +630,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     if (destroyed || !visible || !mine()) return;
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
     lastT = now;
+    rendererState();
     if (driver) {
       // walk mode owns the camera
       const more = driver.frame(dt) || tweening > 0;
@@ -626,7 +652,9 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     cutaway();
     place();
     if (tweening > 0 && !ready) renderer.shadowMap.needsUpdate = true; // shadows follow the lift
-    renderer.render(scene, camera);
+    // F5: GTAO only while the camera rests (orbit, drags and tweens draw without it)
+    if (ao && !again && !dragging) ao.render();
+    else renderer.render(scene, camera);
     projectSpots();
     if (again) request();
     else lastT = 0;
@@ -830,6 +858,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
       layer.remove();
       hl.geometry.dispose();
       keep.forEach((x) => x.dispose());
+      ao?.dispose();
+      scene.environment = null;
       renderer.shadowMap.autoUpdate = true;
     },
   };

@@ -203,6 +203,8 @@ export async function createSlab(
       again = true;
     }
     place();
+    renderer.toneMapping = NoToneMapping; // the shared canvas: the dollhouse draws with ACES
+    renderer.toneMappingExposure = 1;
     renderer.render(scene, camera);
     project();
     if (again) request();
