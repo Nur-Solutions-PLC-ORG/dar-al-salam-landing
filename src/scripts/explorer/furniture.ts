@@ -166,6 +166,8 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
   };
 
   for (const s of data.solids) {
+    // review r9b H1: columns and shafts are structure (unit3d / tower-floor draw them as plaster), never furniture
+    if (s.kind === 'column' || s.kind === 'shaft') continue;
     const kind = kindOf(s);
     const c = centre(s.poly);
     const push = (g: BufferGeometry, hex: string, m: FurnMat = 'matte') =>
