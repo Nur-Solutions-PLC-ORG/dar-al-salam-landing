@@ -166,6 +166,10 @@ export const en = {
     hintHover: 'Hover a floor',
     hintTap: 'Tap a floor',
     ground: 'Ground floor: commercial',
+    // rev 10 T7: the 3D tower
+    load: 'Load the 3D tower',
+    drag: 'Drag to turn · Choose a floor',
+    surroundings: 'The surroundings are illustrative.',
   },
   /** Rev 8 3D apartments (DESIGN §9.6, §11). Room names in sentence case; alt strings lower-case {room}. */
   unit3d: {

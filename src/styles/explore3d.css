@@ -565,3 +565,17 @@ html.is-walking .u3d-enter {
 .tower-uchip[hidden] {
   display: none;
 }
+
+/* rev 10 T6: tier 1 keeps the photo stage and offers the 3D tower */
+.tower-load {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.tower-load[hidden] {
+  display: none;
+}

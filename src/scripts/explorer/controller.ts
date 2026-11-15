@@ -40,7 +40,10 @@ type I18n = Record<
   | 'viewPlan'
   | 'viewLabel'
   | 'towerHover'
-  | 'towerTap',
+  | 'towerTap'
+  | 'towerLoad'
+  | 'towerDrag'
+  | 'towerNote',
   string
 >;
 
@@ -237,16 +240,38 @@ export function createExplorer(root: HTMLElement) {
     else apply();
   }
   /**
-   * Rev 10 (T1–T4): the real 3D tower over the photo stage at the tower level. Once its first frame is up it becomes
-   * the tower stage (`model`): hover/tap lights a floor, a pick pushes in and slides the floor out, then the slab takes
-   * over. Behind `?tower3d` until T6 makes it the default. Tier 2 only; any failure puts the photo stage back.
+   * Rev 10 (T1–T6): the real 3D tower is the explorer's first view on tier 2 (WebGL2, no Save-Data, not a slow
+   * connection, deviceMemory ≥ 4). The photo stage paints first and stays as the fallback; the tower cross-fades over
+   * it with its first frame and becomes the tower stage (`model`). Tier 1 keeps the photo with a "Load the 3D tower"
+   * button; tier 0 (no WebGL) and any failure keep the photo.
    */
-  const towerFlag = new URLSearchParams(location.search).has('tower3d');
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const towerTier = !webgl ? 0 : !prefersLightweight() && memory >= 4 ? 2 : 1;
+  let towerWanted = towerTier === 2;
   let tower: import('./tower3d').TowerAdapter | null = null;
   let towerJob: Promise<void> | null = null;
   let towerHide = 0;
+  let loadBtn: HTMLButtonElement | null = null;
+  let towerNote: HTMLElement | null = null;
   function syncTower() {
-    if (!towerFlag || !photo || !webgl || prefersLightweight() || stage.dataset.tier !== 'photo') return;
+    if (!photo || towerTier === 0 || stage.dataset.tier !== 'photo') return;
+    if (!towerWanted) {
+      // tier 1: offer it
+      if (!loadBtn) {
+        loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'btn btn--secondary tower-load';
+        loadBtn.textContent = t.towerLoad;
+        loadBtn.addEventListener('click', () => {
+          towerWanted = true;
+          loadBtn?.remove();
+          syncTower();
+        });
+        stage.append(loadBtn);
+      }
+      loadBtn.hidden = state.level !== 'idle';
+      return;
+    }
     towerJob ??= import('./tower3d')
       .then((m) =>
         m.createTower(photo, stage, {
@@ -257,16 +282,25 @@ export function createExplorer(root: HTMLElement) {
           onFail: () => {
             tower?.destroy();
             tower = null;
+            towerWanted = false; // no retry this session; the photo stage stays
+            towerNote?.remove();
+            setHint(fine ? t.towerHover : t.towerTap);
             model = createPhotoModel(photo, stage, { ...callbacks, onGround: ground });
             model.select(state.level === 'idle' ? null : state.floor);
           },
         }),
       )
-      .then((t) => {
-        tower = t;
+      .then((tw) => {
+        tower = tw;
         model.destroy(); // the photo stays underneath as the first paint and the fallback
-        model = t;
-        t.select(state.level === 'idle' ? null : state.floor);
+        model = tw;
+        tw.select(state.level === 'idle' ? null : state.floor);
+        // T7: the hint, and a muted note under the stage
+        setHint(t.towerDrag);
+        towerNote = document.createElement('p');
+        towerNote.className = 'explore__strip small muted';
+        towerNote.textContent = t.towerNote;
+        $('.explore__strip')?.after(towerNote);
         syncTower();
       })
       .catch((err: unknown) => console.warn('[explorer] 3D tower unavailable; keeping the photo stage', err));

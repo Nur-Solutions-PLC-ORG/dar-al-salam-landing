@@ -159,6 +159,9 @@ export const am: Dict = {
     hintHover: 'ወለል ላይ ያንዣብቡ',
     hintTap: 'ወለል ይንኩ',
     ground: 'መሬት ወለል፦ ንግድ',
+    load: '3D ታወሩን ጫን',
+    drag: 'ለማዞር ይጎትቱ · ወለል ይምረጡ',
+    surroundings: 'አካባቢው ለማሳያ ብቻ ነው።',
   },
   // rev 8 strings: drafts from DESIGN §11, for the client to check (kitchen and living/dining reuse `rooms`)
   unit3d: {
