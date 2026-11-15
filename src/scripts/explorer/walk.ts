@@ -495,7 +495,7 @@ export function createWalk(
     ringLayer.classList.toggle('is-narrow', w < 640);
     // the bottom chip row sits above the honesty chip and the look buttons, whichever is higher
     const lookTop = Math.min(...[...ui.querySelectorAll<HTMLElement>('.walk-look')].map((e) => e.offsetTop), hh - 16);
-    const base = Math.min(chip.hidden ? hh - 16 : chip.offsetTop, lookTop) - 52;
+    const base = Math.min(chip.hidden ? hh - 16 : chip.offsetTop, lookTop, hint.hidden ? hh : hint.offsetTop) - 52; // (and above the hint)
     for (const r of rings) {
       const c = cv.copy(r.at).applyMatrix4(camera.matrixWorldInverse); // camera space: −z is ahead
       let x = 0, y = 0;
@@ -935,7 +935,8 @@ export function createWalk(
     view.pitch = v.pitch;
     current = id;
     moveLamp(id);
-    showRings(id);
+    // review r9b L6: during the dive the rings would project onto the floor from high above (and cover the hint)
+    if (!dive || h.reduced) showRings(id);
     if (h.reduced || glide === 0) {
       await fade(0);
       if (my !== seq) return;
@@ -949,11 +950,23 @@ export function createWalk(
       // F6: drop straight down through the room's cut (the control point is high above the standpoint), then level out
       const via = new Vector3(p.at.x, Math.max(camera.position.y * 0.55, EYE + 3), p.at.z);
       await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide, via);
+      if (my === seq) {
+        showRings(id);
+        showHint(); // the first-entry hint starts on arrival, not during the dive
+      }
     } else await fly({ at: p.at, quat: quatFor(view.yaw, view.pitch), fov: FOV }, glide);
     if (my !== seq) return; // stopped (Esc / Back) or overtaken: no arrival
     void showPano(id);
     if (!h.reduced && glide) o.onArrive(id);
   };
+
+  /** The first-entry hint, once per walk, for 4 s. */
+  function showHint() {
+    if (hinted) return;
+    hinted = true;
+    hint.hidden = false;
+    setTimeout(() => (hint.hidden = true), 4000);
+  }
 
   return {
     get room() {
@@ -966,11 +979,7 @@ export function createWalk(
       h.setDriver(driver);
       listen(true);
       inside(true);
-      if (!hinted) {
-        hinted = true;
-        hint.hidden = false;
-        setTimeout(() => (hint.hidden = true), 4000);
-      }
+      if (h.reduced) showHint(); // (with motion, it starts when the dive lands)
       const my = ++seq;
       if (h.reduced) {
         enclose(true, 0, 0);
