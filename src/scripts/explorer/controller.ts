@@ -295,6 +295,7 @@ export function createExplorer(root: HTMLElement) {
         model.destroy(); // the photo stays underneath as the first paint and the fallback
         model = tw;
         tw.select(state.level === 'idle' ? null : state.floor);
+        syncSlab(); // review r9a M2: a slab shown before the tower arrived (a floor deep link) gives way to it
         // T7: the hint, and a muted note under the stage
         setHint(t.towerDrag);
         towerNote = document.createElement('p');

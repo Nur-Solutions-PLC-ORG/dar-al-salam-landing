@@ -818,7 +818,19 @@ export async function createTower(
     b2.dataset.floor = String(n);
     b2.innerHTML = '<span class="tower-pin__card"></span>';
     b2.firstElementChild!.textContent = cb.label(n); // "Floor 8 · 1 × 2-bed · 8 × 3-bed" (design T4 fix 4)
-    b2.addEventListener('click', () => cb.onPick(n));
+    // review r9a M2: on touch a pin previews first (its card), like the tower; a second tap picks
+    let type = 'mouse';
+    b2.addEventListener('pointerdown', (e) => (type = e.pointerType));
+    b2.addEventListener('click', () => {
+      if (type !== 'mouse' && touchPick !== n) {
+        touchPick = n;
+        hovered = null;
+        hoverFloor(n);
+        return;
+      }
+      touchPick = null;
+      cb.onPick(n);
+    });
     b2.addEventListener('pointerenter', (e) => e.pointerType === 'mouse' && hoverFloor(n));
     b2.addEventListener('pointerleave', (e) => e.pointerType === 'mouse' && hoverFloor(null));
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
