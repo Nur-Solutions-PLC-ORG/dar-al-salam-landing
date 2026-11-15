@@ -156,6 +156,7 @@ export async function buildFloor(d: Tower3d): Promise<AssembledFloor> {
       p.g.applyMatrix4(place);
       if (u.mirror) flip(p.g);
       p.g.deleteAttribute('normal');
+      p.g.deleteAttribute('uv'); // flat colours here (no textures in this view)
       p.g.computeVertexNormals();
       solids.push(p.g);
     }

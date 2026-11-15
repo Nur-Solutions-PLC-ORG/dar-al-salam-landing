@@ -26,7 +26,10 @@ import {
   MeshBasicMaterial,
   MeshDepthMaterial,
   MeshLambertMaterial,
+  MeshStandardMaterial,
   PCFShadowMap,
+  RepeatWrapping,
+  TextureLoader,
   PerspectiveCamera,
   PlaneGeometry,
   Raycaster,
@@ -42,7 +45,7 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { buildFurniture } from './furniture';
+import { buildFurniture, metreUV, type FurnMat } from './furniture';
 import { gsap } from '../motion';
 import { onVisibility } from '../lazy';
 import type { P2, Unit3d } from '../../data/units3d/types';
@@ -63,7 +66,6 @@ const FILL = 3.4; // rev 8.1 A + 8.2 G: camera fill, tuned so camera-facing wall
  * plan texture to white, so the texture's own materials are dimmed instead (r187 has no per-object light layers).
  * Tuned so a mid-grey plan texel (~199) renders within ±10 of itself.
  */
-const FLOOR_TINT = '#B4B4B4';
 
 export interface DollhouseOpts {
   renderer: WebGLRenderer;
@@ -141,6 +143,33 @@ function seg(a: P2, b: P2, y0: number, y1: number, t: number, plane = false) {
   g.rotateY(-Math.atan2(dz, dx));
   g.translate((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2);
   return g;
+}
+
+/* ---------- rev 10 F3: CC0 texture sets (public/textures), loaded once on first entering a unit's 3D view ---------- */
+type TexName = 'tile-col' | 'tile-nor' | 'tile-rough' | 'parquet-col' | 'parquet-nor' | 'parquet-rough' | 'plaster-nor' | 'plaster-rough' | 'linen-nor' | 'oak-grain' | 'oak-rough';
+const COLOUR: TexName[] = ['tile-col', 'parquet-col', 'oak-grain'];
+let texJob: Promise<Partial<Record<TexName, Texture>>> | null = null;
+/** Phones (coarse pointer or deviceMemory < 8) load the colour maps only, with constant roughness. */
+export function loadTextures(phone: boolean, maxAniso: number) {
+  return (texJob ??= (async () => {
+    const names: TexName[] = phone ? COLOUR : [...COLOUR, 'tile-nor', 'tile-rough', 'parquet-nor', 'parquet-rough', 'plaster-nor', 'plaster-rough', 'linen-nor', 'oak-rough'];
+    const loader = new TextureLoader();
+    const out: Partial<Record<TexName, Texture>> = {};
+    await Promise.all(
+      names.map((n) =>
+        loader
+          .loadAsync(`/textures/${n}.webp`)
+          .then((t) => {
+            t.wrapS = t.wrapT = RepeatWrapping;
+            t.anisotropy = Math.min(4, maxAniso);
+            if (n.endsWith('-col') || n === 'oak-grain') t.colorSpace = SRGBColorSpace;
+            out[n] = t;
+          })
+          .catch(() => undefined), // a missing map leaves the flat colour
+      ),
+    );
+    return out;
+  })());
 }
 
 /** Tag every vertex with the lift delay and the cutaway side. */
@@ -239,10 +268,10 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   };
 
   const mat = {
-    wall: inject(new MeshLambertMaterial({ color: '#F3ECE2' })),
-    oak: inject(new MeshLambertMaterial({ color: '#B5A08A' })), // rev 8.2 H: greige oak
-    counter: inject(new MeshLambertMaterial({ color: '#E4DACB' })),
-    top: inject(new MeshLambertMaterial({ color: '#B9AE9E' })),
+    wall: inject(new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.92 })), // F3: plaster normal + roughness
+    oak: inject(new MeshStandardMaterial({ color: '#B5A08A', roughness: 0.6 })), // rev 8.2 H: greige oak
+    counter: inject(new MeshStandardMaterial({ color: '#E4DACB', roughness: 0.6 })),
+    top: inject(new MeshStandardMaterial({ color: '#B9AE9E', roughness: 0.35 })),
     glass: inject(new MeshBasicMaterial({ color: '#CFE0EA', transparent: true, opacity: 0.28, depthWrite: false, side: DoubleSide })),
     dark: inject(new MeshBasicMaterial({ color: '#1A273F' })),
   };
@@ -317,6 +346,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     if (!gs.length) continue;
     const merged = k(mergeGeometries(gs)!);
     gs.forEach((g) => g.dispose());
+    if (key === 'wall') metreUV(merged); // plaster at 2 m, the same on every wall
     const mesh = new Mesh(merged, mat[key]);
     if (key !== 'glass' && key !== 'dark') {
       mesh.castShadow = true;
@@ -327,23 +357,15 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   }
 
   /* floor (the plan texture), plinth, soft ground shadow */
-  const tex = k(new Texture(o.image));
-  tex.colorSpace = SRGBColorSpace;
-  tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-  tex.needsUpdate = true;
-  const { minX, minZ, maxX, maxZ } = data.texture.plane;
-  /** Planar plan UVs from x/z, so anything at any height samples the plan where it stands. */
-  const planUV = (g: BufferGeometry) => {
-    const pos = g.getAttribute('position');
-    const uv = new Float32Array(pos.count * 2);
-    for (let i = 0; i < pos.count; i++) {
-      uv[i * 2] = (pos.getX(i) - minX) / (maxX - minX);
-      uv[i * 2 + 1] = 1 - (pos.getZ(i) - minZ) / (maxZ - minZ);
-    }
-    g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
-    return g;
+
+  // F3: one material per class (the colour is the vertex colour; wood and fabric get their maps when they load)
+  const furnMat: Partial<Record<FurnMat, MeshStandardMaterial>> = {
+    matte: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
+    wood: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55 }),
+    fabric: new MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }),
+    gloss: new MeshStandardMaterial({ vertexColors: true, roughness: 0.2 }),
+    metal: new MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.8 }),
   };
-  const floorGeo = k(planUV(flat(data.footprint)));
 
   /* rev 10 F1: modelled furniture (full tier): one vertex-coloured mesh, plus the shower screens' glass. Pieces rise
      after the walls (+0.45 s, 0.5 s), nearest the middle first. */
@@ -352,20 +374,77 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     const order = new Map<string, number>();
     for (const p of parts) if (!order.has(p.c.join())) order.set(p.c.join(), order.size);
     parts.forEach((p) => tag(p.g, 0.45 + order.get(p.c.join())! * 0.012, -1));
-    const solid = parts.filter((p) => p.m !== 'glass').map((p) => p.g);
     const glass = parts.filter((p) => p.m === 'glass').map((p) => p.g);
-    if (solid.length) {
-      const mesh = new Mesh(k(mergeGeometries(solid)!), inject(new MeshLambertMaterial({ vertexColors: true }), true, 0.5));
+    const fdepth = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
+    for (const cls of ['matte', 'wood', 'fabric', 'gloss', 'metal'] as FurnMat[]) {
+      const gs = parts.filter((p) => p.m === cls).map((p) => p.g);
+      if (!gs.length) continue;
+      const mesh = new Mesh(k(mergeGeometries(gs)!), inject(furnMat[cls]!, true, 0.5));
+      gs.forEach((g) => g.dispose());
       mesh.castShadow = mesh.receiveShadow = true;
-      mesh.customDepthMaterial = inject(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }), false, 0.5);
+      mesh.customDepthMaterial = fdepth;
       root.add(mesh);
     }
     if (glass.length) root.add(new Mesh(k(mergeGeometries(glass)!), inject(new MeshBasicMaterial({ color: '#DDE8EE', transparent: true, opacity: 0.25, depthWrite: false, side: DoubleSide }), true, 0.5)));
-    [...solid, ...glass].forEach((g) => g.dispose());
+    glass.forEach((g) => g.dispose());
   }
-  const floor = new Mesh(floorGeo, k(new MeshLambertMaterial({ map: tex, color: FLOOR_TINT })));
+  /* F3: real floors. The plan image is retired here (it stays for the minimap, the room card and the 2D plan). A base
+     of large-format tile under the whole unit (living rooms, kitchens, halls, balconies), and per room on top: wet
+     rooms in a cool-grey tile at 0.3 m, bedrooms labelled tile in the tile tinted warm oak-tan (not parquet: the label
+     wins), and parquet only where the plan says PARQUET. UVs in metres. */
+  const FIN = {
+    tile: { colour: '#E6E0D6', tex: 'tile', size: 2.4 },
+    wet: { colour: '#C9CFD3', tex: 'tile', size: 1.2 },
+    tan: { colour: '#E2CBA6', tex: 'tile', size: 2.4 },
+    parquet: { colour: '#FFFFFF', tex: 'parquet', size: 2.4 },
+  } as const;
+  const finishOf = (r: Unit3d['rooms'][number]): keyof typeof FIN =>
+    r.finish === 'parquet' ? 'parquet' : r.name === 'shower' ? 'wet' : r.name === 'bedroom' || r.name === 'masterBedroom' ? 'tan' : 'tile';
+  const floorMats = Object.fromEntries(
+    (Object.keys(FIN) as (keyof typeof FIN)[]).map((f) => [f, k(new MeshStandardMaterial({ color: FIN[f].colour, roughness: 0.6 }))]),
+  ) as Record<keyof typeof FIN, MeshStandardMaterial>;
+  const metres = (g: BufferGeometry, size: number) => {
+    const pos = g.getAttribute('position');
+    const uv = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) (uv[i * 2] = pos.getX(i) / size), (uv[i * 2 + 1] = pos.getZ(i) / size);
+    g.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+    return g;
+  };
+  const floor = new Mesh(k(metres(flat(data.footprint), FIN.tile.size)), floorMats.tile);
   floor.receiveShadow = true;
   root.add(floor);
+  for (const f of ['wet', 'tan', 'parquet'] as const) {
+    const gs = data.rooms.filter((r) => finishOf(r) === f).map((r) => metres(flat(r.poly), FIN[f].size).translate(0, 0.003, 0));
+    if (!gs.length) continue;
+    const m = new Mesh(k(mergeGeometries(gs)!), floorMats[f]);
+    gs.forEach((g) => g.dispose());
+    m.receiveShadow = true;
+    root.add(m);
+  }
+  // the maps arrive once; flat colours meanwhile (and on phones, colour maps only with constant roughness)
+  const phone = matchMedia('(pointer: coarse)').matches || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 8;
+  void loadTextures(phone, renderer.capabilities.getMaxAnisotropy()).then((t) => {
+    if (destroyed) return;
+    for (const f of Object.keys(FIN) as (keyof typeof FIN)[]) {
+      const m = floorMats[f];
+      m.map = t[`${FIN[f].tex}-col`] ?? null;
+      m.normalMap = t[`${FIN[f].tex}-nor`] ?? null;
+      m.roughnessMap = t[`${FIN[f].tex}-rough`] ?? null;
+      m.needsUpdate = true;
+    }
+    const wall = mat.wall as MeshStandardMaterial;
+    wall.normalMap = t['plaster-nor'] ?? null;
+    wall.roughnessMap = t['plaster-rough'] ?? null;
+    wall.needsUpdate = true;
+    // plaster at 2 m, linen at 0.5 m, oak at 1 m: the UVs are metres, so a texture's repeat sets its scale
+    for (const [name, rep2] of [['plaster-nor', 0.5], ['plaster-rough', 0.5], ['linen-nor', 2], ['oak-grain', 1], ['oak-rough', 1]] as const) t[name]?.repeat.set(rep2, rep2);
+    furnMat.wood!.map = t['oak-grain'] ?? null;
+    furnMat.wood!.roughnessMap = t['oak-rough'] ?? null;
+    furnMat.fabric!.normalMap = t['linen-nor'] ?? null;
+    for (const m of Object.values(furnMat)) m.needsUpdate = true;
+    renderer.shadowMap.needsUpdate = true;
+    request();
+  });
   const plinth = new Mesh(k(prism(data.footprint, 0.35)), k(new MeshLambertMaterial({ color: '#FBF7F2' })));
   plinth.position.y = -0.351;
   plinth.receiveShadow = true;

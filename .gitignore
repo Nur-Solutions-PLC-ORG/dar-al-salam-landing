@@ -9,3 +9,5 @@ dist/
 Abdi ppt.pdf
 .lighthouse/
 __pycache__/
+# Downloaded CC0 originals (re-download via brand-source/3d-src/README.md)
+brand-source/3d-src/*/

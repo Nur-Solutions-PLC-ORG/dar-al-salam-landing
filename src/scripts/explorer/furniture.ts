@@ -11,7 +11,8 @@ import { BoxGeometry, BufferGeometry, Color, CylinderGeometry, ExtrudeGeometry, 
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { P2, Unit3d } from '../../data/units3d/types';
 
-export type FurnMat = 'matte' | 'gloss' | 'metal' | 'glass';
+/** Material classes (F3): wood takes the oak grain, fabric the linen weave; the colour is always the vertex colour. */
+export type FurnMat = 'matte' | 'wood' | 'fabric' | 'gloss' | 'metal' | 'glass';
 export interface FurnPiece {
   g: BufferGeometry;
   m: FurnMat;
@@ -46,6 +47,9 @@ const C = {
   rug: '#D9D2C6',
 };
 
+const WOOD = new Set([C.oak, C.darkOak, C.greige, C.chair, C.oakTop]);
+const FABRIC = new Set([C.sofa, C.cushion, C.upholstery, C.linen, C.mattress, C.pillow, C.navy, C.rug, C.rugEdge]);
+
 type Kind = 'bed' | 'nightstand' | 'sofa' | 'dining' | 'chair' | 'tvUnit' | 'sideTable' | 'wardrobe' | 'counter' | 'rug' | 'shower' | 'basin' | 'wc' | 'hob' | 'sink' | 'block';
 
 /** The furniture kind: `piece` when the data has it, else the id prefix (f-bed, f-sofa, …, -ns- nightstands). */
@@ -58,10 +62,31 @@ const kindOf = (s: Unit3d['solids'][number]): Kind => {
   return 'block';
 };
 
+/**
+ * UVs in metres on the face's own plane (top faces x/z, sides along their run and height), so a texture's repeat is
+ * set once per material and reads the same on every piece and wall.
+ */
+export const metreUV = (geo: BufferGeometry) => {
+  if (!geo.getAttribute('normal')) geo.computeVertexNormals(); // keep rounded boxes' smooth normals
+  const pos = geo.getAttribute('position');
+  const nor = geo.getAttribute('normal');
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const ax = Math.abs(nor.getX(i));
+    const ay = Math.abs(nor.getY(i));
+    const az = Math.abs(nor.getZ(i));
+    const [u, v] = ay >= ax && ay >= az ? [pos.getX(i), pos.getZ(i)] : ax >= az ? [pos.getZ(i), pos.getY(i)] : [pos.getX(i), pos.getY(i)];
+    uv[i * 2] = u;
+    uv[i * 2 + 1] = v;
+  }
+  geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  return geo;
+};
+
 const paint = (g: BufferGeometry, hex: string) => {
   const geo = g.index ? g.toNonIndexed() : g;
   if (geo !== g) g.dispose();
-  geo.deleteAttribute('uv');
+  metreUV(geo);
   const c = new Color(hex);
   const n = geo.getAttribute('position').count;
   const a = new Float32Array(n * 3);
@@ -143,7 +168,8 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
   for (const s of data.solids) {
     const kind = kindOf(s);
     const c = centre(s.poly);
-    const push = (g: BufferGeometry, hex: string, m: FurnMat = 'matte') => out.push({ g: paint(g, hex), m, c });
+    const push = (g: BufferGeometry, hex: string, m: FurnMat = 'matte') =>
+      out.push({ g: paint(g, hex), m: m === 'matte' ? (WOOD.has(hex) ? 'wood' : FABRIC.has(hex) ? 'fabric' : m) : m, c });
     const H = Math.min(s.h, 2.4);
     // non-rectangular footprints (L counters, odd blocks): an honest extrusion
     const extrude = (h: number, hex: string, y0 = 0, m: FurnMat = 'matte') => {
