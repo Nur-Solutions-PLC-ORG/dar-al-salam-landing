@@ -902,20 +902,22 @@ export async function createTower(
   stage.append(uchip);
   let hovUnit: string | null = null;
   let touchUnit: string | null = null;
-  const GOLD = new Color('#B59458');
+  const GOLD = new Color('#F0C46A');
   function hoverUnit(code: string | null) {
     if (code === hovUnit) return;
     hovUnit = code;
-    for (const u of plate?.units ?? []) {
-      u.floorMat.emissive.copy(u.code === code ? GOLD : BLACK);
-      u.floorMat.emissiveIntensity = u.code === code ? 0.45 : 0;
-    }
+    // the hovered unit turns gold (a colour tint: emissive washes out to white under ACES on these light walls)
+    for (const u of plate?.units ?? [])
+      u.mats.forEach((m) => {
+        const base = ((m.userData.base as Color | undefined) ??= m.color.clone());
+        m.color.copy(base);
+        if (u.code === code) m.color.multiply(GOLD);
+      });
     uchip.hidden = !code;
     if (code) uchip.textContent = cb.unitLabel(code);
     placeChip();
     request();
   }
-  const BLACK = new Color(0);
   const placeChip = () => {
     const u = plate?.units.find((x) => x.code === hovUnit);
     if (!u || !plate) return;
