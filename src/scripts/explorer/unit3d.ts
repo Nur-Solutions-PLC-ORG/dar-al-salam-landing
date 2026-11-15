@@ -109,8 +109,9 @@ export interface WalkHost {
 export interface Dollhouse {
   /** Rev 9 B1: hooks for the walk-in chunk. */
   walkHost(): WalkHost;
-  /** U1: flat top-down → 56°/−35° with walls rising; or the static angle (reduced motion). */
-  enter(): Promise<void>;
+  /** U1: flat top-down → 56°/−35° with walls rising; or the static angle (reduced motion, or `skipLift`: rev 10 T5,
+   *  arriving from the 3D tower's assembled floor, where the walls are already up). */
+  enter(opts?: { skipLift?: boolean }): Promise<void>;
   /** U2: walls drop flat. */
   leave(): Promise<void>;
   select(id: string | null): void;
@@ -724,7 +725,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
 
   return {
     walkHost,
-    enter() {
+    enter(opts) {
       return new Promise<void>((resolve) => {
         const done = () => {
           ready = true;
@@ -734,7 +735,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
           request();
           resolve();
         };
-        if (o.reduced) {
+        if (o.reduced || opts?.skipLift) {
           U.uRise.value = 99;
           done();
           return;

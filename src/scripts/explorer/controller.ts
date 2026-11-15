@@ -672,7 +672,7 @@ export function createExplorer(root: HTMLElement) {
       // rev 9 B1: walking needs WebGL (here already) and isn't offered on Save-Data or a slow connection
       onStepInside: prefersLightweight() ? undefined : (id) => go({ ...state, walk: id }),
     });
-    const entering = dh.enter();
+    const entering = dh.enter({ skipLift: Boolean(tower) }); // rev 10 T5: from the assembled floor the walls are already up
     await fade(1, 200);
     await entering;
   }
