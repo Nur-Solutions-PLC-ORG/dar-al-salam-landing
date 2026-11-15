@@ -56,12 +56,12 @@ export const am: Dict = {
     types: 'መኝታ ያላቸው ቤቶች',
     area: 'm² ጠቅላላ',
     areaLabel: 'ጠቅላላ ስፋት',
-    note: 'የምድር ቤት የመኪና ማቆሚያና ቢሮዎች · የንግድ መሬት ወለል',
+    note: 'መኖሪያ ቤቶች ከ3ኛ እስከ 16ኛ ወለል · በመሬት ወለል እንግዳ መቀበያ · በምድር ቤት መኪና ማቆሚያ', // rev 11 (DESIGN draft)
   },
   story: {
     eyebrow: 'ሕንጻው',
     title: '*ዳር አል ሰላም* ማለት የሰላም ቤት ማለት ነው። ይህን ስሜት እንዲሰጥ አድርገን ነድፈነዋል።',
-    p1: 'ጋርመንት ታወር በአዲስ አበባ ጋርመንት እምብርት ላይ ይገኛል፦ በሁለት ብሎኮች የተገነባ ባለ 16 ወለል ሕንጻ ሲሆን፣ የንግድ መሬት ወለልና ቢሮዎች ያሉት የምድር ቤት የመኪና ማቆሚያ አለው።',
+    p1: 'ጋርመንት ታወር በአዲስ አበባ ጋርመንት እምብርት ላይ ይገኛል፦ በሁለት ብሎኮች የተገነባ ባለ 16 ወለል ሕንጻ ሲሆን፣ በመሬት ወለሉ እንግዳ መቀበያ፣ ከ3ኛ ወለል ጀምሮ መኖሪያ ቤቶች፣ በምድር ቤቱ ደግሞ መኪና ማቆሚያ አለው።',
     p2: 'አብዛኞቹ ቤቶች ባለ ሦስት መኝታ ናቸው፤ ባለ ሁለት መኝታ ቤቶች በ{floors} ወለሎች ላይ ይገኛሉ። ፕላኖቹ በረንዳዎችን ያሳያሉ። እያንዳንዱ ብሎክ ሁለት ወይም ከዚያ በላይ ሊፍቶች ያሉት የሊፍት ሎቢና ደረጃዎች አሉት።',
     imageAlt: 'የጋርመንት ታወር ምስል፦ ሕንጻው በሙሉ ከመንገዱ ጥግ ሲታይ',
     keyplanAlt: 'በሁለት ብሎኮች ዘጠኝ አፓርትመንቶችን የሚያሳይ የመደበኛ ወለል ፕላን',
@@ -76,14 +76,13 @@ export const am: Dict = {
     mix3: '{n} × ባለ 3 መኝታ',
     mixTbc: '{n} ገና ያልተረጋገጠ',
     twoBedOn: 'ባለ 2 መኝታ ቤቶች በ{floors} ወለሎች ላይ',
-    topFloorPlanned: '16ኛ ወለል ታቅዷል',
     tbc: 'ገና አልተረጋገጠም',
     tbcAria: '{code}፣ በ{n}ኛ ወለል ገና አልተረጋገጠም',
     tbcBody: 'በ{n}ኛ ወለል በዚህ ቦታ ያለው ቤት ገና አልተረጋገጠም። ባለ 2 መኝታ ቤቶች በ{floors} ወለሎች ላይ ናቸው።',
     askAbout: 'ስለዚህ ቤት ይጠይቁ',
     seeOn: '{code}ን በ{n}ኛ ወለል ይመልከቱ',
-    legend: 'መሬት ወለል፦ ንግድ · የምድር ቤት፦ የመኪና ማቆሚያና ቢሮዎች',
-    strip: 'የ1–14 ወለሎች ፕላኖች ቀርበዋል · 16ኛ ወለል ታቅዷል · መሬት ወለል ንግድ · የምድር ቤት የመኪና ማቆሚያ',
+    legend: 'መሬት ወለል፦ እንግዳ መቀበያ · ምድር ቤት፦ መኪና ማቆሚያ',
+    strip: 'መኖሪያ ቤቶች ከ3ኛ እስከ 16ኛ ወለል · መሬት ወለል፦ እንግዳ መቀበያ · ምድር ቤት፦ መኪና ማቆሚያ',
     breadcrumb: 'ያሉበት ቦታ',
     prevFloor: 'የታችኛው ወለል',
     nextFloor: 'የላይኛው ወለል',
@@ -152,17 +151,16 @@ export const am: Dict = {
     store: 'ዕቃ ማስቀመጫ',
     storeOrBedroom: 'ዕቃ ማስቀመጫ ወይም መኝታ ክፍል',
   },
-  // rev 9 strings: DESIGN §11 drafts; `ground` reuses the legend's wording (መሬት ወለል፦ ንግድ) so the ground floor
+  // rev 9 strings: DESIGN §11 drafts; `ground` reuses the legend's wording (መሬት ወለል፦ እንግዳ መቀበያ) so the ground floor
   // isn't named two ways
   tower: {
     alt: 'የጋርመንት ታወር ምስል፣ ከመንገዱ ጥግ እንደሚታይ።',
     hintHover: 'ወለል ላይ ያንዣብቡ',
     hintTap: 'ወለል ይንኩ',
-    ground: 'መሬት ወለል፦ ንግድ',
+    ground: 'መሬት ወለል፦ እንግዳ መቀበያ',
     load: '3D ታወሩን ጫን',
     drag: 'ለማዞር ይጎትቱ · ወለል ይምረጡ',
     surroundings: 'አካባቢው ለማሳያ ብቻ ነው።',
-    planned: '16ኛ ወለል ታቅዷል',
   },
   // rev 8 strings: drafts from DESIGN §11, for the client to check (kitchen and living/dining reuse `rooms`)
   unit3d: {

@@ -56,12 +56,12 @@ export const en = {
     types: 'Bedroom homes',
     area: 'm² gross',
     areaLabel: 'Gross area',
-    note: 'Basement parking and offices · Commercial ground floor',
+    note: 'Homes on floors 3–16 · Ground-floor reception · Basement parking', // rev 11
   },
   story: {
     eyebrow: 'The tower',
     title: '*Dar Al Salam* means House of Peace. We designed it to feel that way.',
-    p1: 'Garment Tower stands in the heart of Garment, Addis Ababa: a high-rise of 16 floors in two blocks, with a commercial ground floor and basement parking with offices.',
+    p1: 'Garment Tower stands in the heart of Garment, Addis Ababa: a high-rise of 16 floors in two blocks, with a reception on the ground floor, homes from the third floor up, and basement parking.',
     /** {floors} = the 2-bedroom floors, formatted with `floorList()`. */
     p2: 'Most homes are three-bedroom; two-bedroom homes are on floors {floors}. The plans show balconies. Each block has a lift lobby with two or more lifts, and stairs.',
     imageAlt: 'Render of Garment Tower, the whole building from the street corner',
@@ -79,7 +79,6 @@ export const en = {
     mixTbc: '{n} to be confirmed',
     /** Floor-list summary; {floors} via floorList(). */
     twoBedOn: '2-bedroom homes on floors {floors}',
-    topFloorPlanned: '16th floor planned',
     /** A home position not confirmed yet on this floor (BL01 off the 2-bedroom floors). */
     tbc: 'To be confirmed',
     /** Accessible name of a to-be-confirmed hotspot/chip. */
@@ -88,8 +87,8 @@ export const en = {
     tbcBody: 'The home in this position on floor {n} is not confirmed yet. 2-bedroom homes are on floors {floors}.',
     askAbout: 'Ask about this home',
     seeOn: 'See {code} on floor {n}',
-    legend: 'Ground floor: commercial · Basement: parking & offices',
-    strip: 'Plans shown for floors 1–14 · 16th floor planned · Ground floor commercial · Basement parking',
+    legend: 'Ground floor: reception · Basement: parking',
+    strip: 'Homes on floors 3–16 · Ground floor: reception · Basement: parking',
     breadcrumb: 'You are here',
     prevFloor: 'Floor below',
     nextFloor: 'Floor above',
@@ -165,12 +164,11 @@ export const en = {
     alt: 'Rendering of Garment Tower from the street corner.',
     hintHover: 'Hover a floor',
     hintTap: 'Tap a floor',
-    ground: 'Ground floor: commercial',
+    ground: 'Ground floor: reception',
     // rev 10 T7: the 3D tower
     load: 'Load the 3D tower',
     drag: 'Drag to turn · Choose a floor',
     surroundings: 'The surroundings are illustrative.',
-    planned: '16th floor planned',
   },
   /** Rev 8 3D apartments (DESIGN §9.6, §11). Room names in sentence case; alt strings lower-case {room}. */
   unit3d: {
