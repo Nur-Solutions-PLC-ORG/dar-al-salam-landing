@@ -347,6 +347,21 @@ export async function createTower(
   const below: Object3D[] = [];
   const m4 = new Matrix4();
   const floorGeo = {} as Record<keyof typeof parts, BufferGeometry>;
+  // design (rev 10.8): the floors above dissolve as they leave — a per-instance dither, so no transparency sorting
+  const fades: InstancedBufferAttribute[] = [];
+  const dissolve = (m: MeshStandardMaterial, key: string) => {
+    const prev = m.onBeforeCompile;
+    m.onBeforeCompile = (sh, r) => {
+      prev.call(m, sh, r);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aFade;\nvarying float vFade;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = aFade;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vFade;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vFade < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > vFade) discard;');
+    };
+    m.customProgramCacheKey = () => `tower-floor-${key}`; // each part keeps its own program (the patches differ)
+  };
   for (const key of Object.keys(parts) as (keyof typeof parts)[]) {
     const flat = parts[key].map((x) => (x.index ? x.toNonIndexed() : x)); // boxes are indexed, extrusions are not
     const g = k(mergeGeometries(flat)!);
@@ -354,6 +369,10 @@ export async function createTower(
     floorGeo[key] = g;
     const im = new InstancedMesh(g, mats[key], typical.length);
     ims.push(im);
+    const fa = new InstancedBufferAttribute(new Float32Array(typical.length).fill(1), 1);
+    g.setAttribute('aFade', fa);
+    fades.push(fa);
+    dissolve(mats[key], key);
     typical.forEach((l, i) => im.setMatrixAt(i, m4.makeTranslation(0, l.y0, 0)));
     if (key === 'traced' || key === 'illus') {
       const a = new InstancedBufferAttribute(new Float32Array(typical.length), 1);
@@ -381,6 +400,7 @@ export async function createTower(
   if (planned) {
     for (const key of Object.keys(parts) as (keyof typeof parts)[]) {
       const m = k(mats[key].clone());
+      m.userData.base = 0.35 * (key === 'traced' || key === 'illus' ? 0.6 : 1);
       m.transparent = true;
       m.opacity = 0.35 * (key === 'traced' || key === 'illus' ? 0.6 : 1);
       m.depthWrite = false;
@@ -392,13 +412,13 @@ export async function createTower(
     for (const y of [planned.y0 + SL, planned.y0 + planned.h]) outline.forEach((a, i) => pts.push(a[0], y, a[1], ...[outline[(i + 1) % outline.length]![0], y, outline[(i + 1) % outline.length]![1]]));
     const lg = k(new BufferGeometry());
     lg.setAttribute('position', new Float32BufferAttribute(pts, 3));
-    const line = new LineSegments(lg, k(new LineDashedMaterial({ color: '#B59458', dashSize: 0.9, gapSize: 0.6 })));
+    const line = new LineSegments(lg, k(new LineDashedMaterial({ color: '#B59458', dashSize: 0.9, gapSize: 0.6, transparent: true })));
     line.computeLineDistances();
     scene.add(line);
     above.push(line);
     roofY = planned.y0 + planned.h;
   }
-  const white = std(WALL_C);
+  const white = std(WALL_C, { transparent: true }); // the roof fades out with the floors above (T4)
   above.push(solid(prism(outline, roofY, SL), white), solid(mergeGeometries(edges.map((e) => box(e.a, e.b, roofY + SL, roofY + SL + H.parapet, 0.2, -side * 0.1)))!, white));
   const xs = outline.map((p) => p[0]);
   const zs = outline.map((p) => p[1]);
@@ -452,6 +472,9 @@ export async function createTower(
   /* ---------- T2: city context (generic) ---------- */
   const cx2 = d.context;
   const R = cx2.ground.radius;
+  /** Blocks and trees that fade out in the final floor view (design rev 10.8: nothing floats over the floor). */
+  const ctxMats: MeshStandardMaterial[] = [];
+  const ctxFade = (m: MeshStandardMaterial) => ((m.userData.base = m.opacity), ctxMats.push(m), m);
   /** Design T4 fix 5: the context fades into the section's navy with distance from the tower (a clear canvas). */
   const fadeOut = <M extends MeshStandardMaterial>(m: M, r0: number, r1: number) => {
     m.transparent = true;
@@ -505,7 +528,7 @@ export async function createTower(
     if (boxes.some((q) => Math.hypot(q.p[0] - p[0], q.p[1] - p[1]) < (q.w + w) / 2 + 4)) continue;
     boxes.push({ p, w, dd, h: bl.minH + rand() * (bl.maxH - bl.minH) });
   }
-  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), fadeOut(std('#CFC9BE', { opacity: 0.8 }), R * 0.55, R * 0.95), boxes.length); // quieter than the tower (fix 6)
+  const blocks = new InstancedMesh(k(new BoxGeometry(1, 1, 1).translate(0, 0.5, 0)), ctxFade(fadeOut(std('#CFC9BE', { opacity: 0.8 }), R * 0.55, R * 0.95)), boxes.length); // quieter than the tower (fix 6)
   const dummy = new Object3D();
   boxes.forEach((b, i) => {
     dummy.position.set(b.p[0], 0, b.p[1]);
@@ -519,8 +542,8 @@ export async function createTower(
 
   // palms along the two street faces' pavements; trees scattered beyond the roads
   const plant = (n: number, trunkG: BufferGeometry, crownG: BufferGeometry, trunkC: string, crownC: string, spots: { p: P2; s: number }[]) => {
-    const t = new InstancedMesh(k(trunkG), fadeOut(std(trunkC), R * 0.45, R * 0.8), n);
-    const cr = new InstancedMesh(k(crownG), fadeOut(std(crownC, { flatShading: true, side: DoubleSide }), R * 0.45, R * 0.8), n);
+    const t = new InstancedMesh(k(trunkG), ctxFade(fadeOut(std(trunkC), R * 0.45, R * 0.8)), n);
+    const cr = new InstancedMesh(k(crownG), ctxFade(fadeOut(std(crownC, { flatShading: true, side: DoubleSide }), R * 0.45, R * 0.8)), n);
     spots.slice(0, n).forEach(({ p, s }, i) => {
       dummy.position.set(p[0], 0, p[1]);
       dummy.rotation.set(0, rand() * 6.28, 0);
@@ -561,6 +584,7 @@ export async function createTower(
     treeSpots.push({ p, s: 0.8 + rand() * 0.5 });
   }
   plant(cx2.trees, new CylinderGeometry(0.18, 0.26, 2.6, 6).translate(0, 1.3, 0), new IcosahedronGeometry(2.3, 0).scale(1, 0.85, 1).translate(0, 3.9, 0), '#7A6A55', '#4F6B3A', treeSpots);
+  const ctxMeshes = scene.children.filter((x) => ctxMats.includes((x as Mesh).material as MeshStandardMaterial));
 
   /* ---------- T3: sky, light, environment ---------- */
   // design fix 1: no sky disc; the canvas stays clear over the section's navy and a soft CSS glow sits behind the tower
@@ -680,15 +704,29 @@ export async function createTower(
     const c = ci();
     // above: 1.6 m with the slide, then on up out of the frame as the camera rises to 52° (it would hide the floor)
     const up = 1.6 * k2 + 60 * Math.max(0, (k2 - 0.35) / 0.65) ** 2;
+    const keep3 = c < 0 ? 1 : 1 - Math.min(1, Math.max(0, (k2 - 0.35) / 0.45)); // the floors above dissolve as they leave
     for (const im of ims) {
       typical.forEach((l, i) => {
         const dy = c < 0 ? 0 : i > c ? up : i < c ? -1.6 * k2 : 0;
         const s = i === c ? 14 * k2 : 0;
-        im.setMatrixAt(i, m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
+        // gone entirely once dissolved (no stray shadow from above the frame)
+        if (i > c && c >= 0 && keep3 < 0.02) im.setMatrixAt(i, m4.makeScale(0, 0, 0));
+        else im.setMatrixAt(i, m4.makeTranslation(out[0] * s, l.y0 + dy, out[1] * s));
       });
       im.instanceMatrix.needsUpdate = true;
     }
-    for (const o2 of above) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : up);
+    for (const fa of fades) {
+      typical.forEach((_, i) => (fa.array[i] = c >= 0 && i > c ? keep3 : 1));
+      fa.needsUpdate = true;
+    }
+    for (const o2 of above) {
+      o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : up);
+      o2.visible = keep3 > 0.02;
+      const m = (o2 as Mesh).material as MeshStandardMaterial;
+      m.opacity = ((m.userData.base as number | undefined) ?? 1) * keep3;
+    }
+    for (const m of ctxMats) m.opacity = (m.userData.base as number) * (1 - k2);
+    for (const x of ctxMeshes) x.visible = k2 < 0.98; // gone, they cast no shadow either
     for (const o2 of below) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
     if (finMesh) finMesh.visible = k2 < 0.02; // the fins run through every storey; they step aside while it's apart
     lid.visible = c >= 0 && k2 > 0.01;
