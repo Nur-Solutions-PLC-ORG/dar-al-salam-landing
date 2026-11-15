@@ -428,24 +428,61 @@ export function createWalk(
     if (!focus) return { yaw: p.yaw, pitch: 0 };
     let aim = centroidOf(focus.poly);
     if (tag(focus) === 'counter') {
-      // kitchens: look along the longest run (toward its far end), not square onto the wall (design F1 kitchen fix)
-      const run = inRoom.filter((x) => tag(x) === 'counter').sort((a, b) => size(b) - size(a))[0]!;
-      const q = run.poly;
-      const e = q.map((a2, i) => [a2, q[(i + 1) % q.length]!] as const).sort((x, y) => Math.hypot(y[1][0] - y[0][0], y[1][1] - y[0][1]) - Math.hypot(x[1][0] - x[0][0], x[1][1] - x[0][1]))[0]!;
-      const c = centroidOf(q);
-      const half: P2 = [(e[1][0] - e[0][0]) / 2, (e[1][1] - e[0][1]) / 2];
-      const ends: P2[] = [[c[0] + half[0] * 0.8, c[1] + half[1] * 0.8], [c[0] - half[0] * 0.8, c[1] - half[1] * 0.8]];
+      // kitchens: look along a counter run toward its far end, not square onto the wall. Of all the runs' ends, the
+      // farthest from the standpoint (review r9b L8: the longest run's far end can be the L-corner, 1 m away)
       const st = [p.at.x, p.at.z];
       const far = (q2: P2) => Math.hypot(h.toWorld(q2, 0).x - st[0]!, h.toWorld(q2, 0).z - st[1]!);
-      aim = far(ends[0]!) > far(ends[1]!) ? ends[0]! : ends[1]!;
+      const ends = inRoom
+        .filter((x) => tag(x) === 'counter')
+        .flatMap((run) => {
+          const q = run.poly;
+          const e = q.map((a2, i) => [a2, q[(i + 1) % q.length]!] as const).sort((x, y) => Math.hypot(y[1][0] - y[0][0], y[1][1] - y[0][1]) - Math.hypot(x[1][0] - x[0][0], x[1][1] - x[0][1]))[0]!;
+          const c = centroidOf(q);
+          const half: P2 = [(e[1][0] - e[0][0]) / 2, (e[1][1] - e[0][1]) / 2];
+          return [[c[0] + half[0] * 0.8, c[1] + half[1] * 0.8], [c[0] - half[0] * 0.8, c[1] - half[1] * 0.8]] as P2[];
+        });
+      aim = ends.reduce((best, q2) => (far(q2) > far(best) ? q2 : best));
     }
-    const at = h.toWorld(aim, Math.min(focus.h, 1.2) / 2);
+    let at = h.toWorld(aim, Math.min(focus.h, 1.2) / 2);
+    // rev 10.13 (review r9b L8): an aim point nearer than 1.5 m (a counter corner, the foot of a bed) gives way to the
+    // longest view across the room — its polygon's farthest vertex — at a gentle pitch (0° to −5°)
+    const close = Math.hypot(at.x - p.at.x, at.z - p.at.z) < 1.5;
+    if (close) {
+      const far = r.poly.reduce((best, q) => (h.toWorld(q, 0).distanceTo(p.at) > h.toWorld(best, 0).distanceTo(p.at) ? q : best));
+      at = h.toWorld(far, EYE - 0.4);
+    }
     const dx = at.x - p.at.x;
     const dz = at.z - p.at.z;
     const down = Math.atan2(EYE - at.y, Math.hypot(dx, dz) || 1);
-    // close to the focus (< 1.5 m, e.g. over the foot of a bed): face it but keep the room in view (≥ −5°)
-    const lim = Math.hypot(dx, dz) < 1.5 ? 5 : 8;
-    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(lim * DEG, Math.max(0, down)) };
+    const lim = close ? 5 : 8;
+    let yaw = Math.atan2(-dx, -dz);
+    // design (rev 10.11): a standpoint within 0.8 m of a wall turns up to 20° away from it, so the wall doesn't fill a
+    // third of the frame
+    const st: P2 = [p.at.x - h.toWorld([0, 0], 0).x, p.at.z - h.toWorld([0, 0], 0).z];
+    let near: { d: number; q: P2 } | null = null;
+    // walls, plus every edge of the columns and the shaft (review r9b L7: a column filled the BL05 living view)
+    const surfaces = [
+      ...data.walls,
+      ...data.solids
+        .filter((x) => x.kind === 'column' || x.kind === 'shaft')
+        .flatMap((x) => x.poly.map((a2, i) => ({ a: a2, b: x.poly[(i + 1) % x.poly.length]!, t: 0 }))),
+    ];
+    for (const w of surfaces) {
+      const wx = w.b[0] - w.a[0];
+      const wz = w.b[1] - w.a[1];
+      const t = Math.max(0, Math.min(1, ((st[0] - w.a[0]) * wx + (st[1] - w.a[1]) * wz) / (wx * wx + wz * wz || 1)));
+      const q: P2 = [w.a[0] + wx * t, w.a[1] + wz * t];
+      const dd = Math.hypot(st[0] - q[0], st[1] - q[1]) - w.t / 2;
+      if (!near || dd < near.d) near = { d: dd, q };
+    }
+    if (near && near.d < 0.8) {
+      // camera right is (cos yaw, −sin yaw) in plan x/z; a larger yaw turns left
+      const rx = Math.cos(yaw);
+      const rz = -Math.sin(yaw);
+      const onRight = (near.q[0] - st[0]) * rx + (near.q[1] - st[1]) * rz > 0;
+      yaw += (onRight ? 1 : -1) * 20 * DEG * (1 - Math.max(0, near.d) / 0.8);
+    }
+    return { yaw, pitch: -Math.min(lim * DEG, Math.max(0, down)) };
   };
   const showRings = (loc: string | null) => {
     ringLayer.replaceChildren();
