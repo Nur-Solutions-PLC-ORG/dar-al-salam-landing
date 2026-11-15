@@ -450,7 +450,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   };
   const place = () => {
     const c = Math.cos(cam.el);
-    camera.position.set(cam.x + Math.cos(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z - Math.sin(cam.az) * c * d);
+    camera.position.set(cam.x + Math.sin(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z + Math.cos(cam.az) * c * d);
     camera.lookAt(cam.x, 0.6, cam.z);
   };
 
@@ -533,8 +533,9 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   // U3: perimeter sides facing the camera go down to 1.0 m (and back up when they turn away)
   const cutTarget = [WALL_H, WALL_H, WALL_H, WALL_H];
   const cutaway = () => {
-    const tx = Math.cos(cam.az);
-    const tz = -Math.sin(cam.az);
+    // rev 10.3: azimuth from +z (the plan's bottom, "south") toward −x, the same in every explorer scene
+    const tx = Math.sin(cam.az);
+    const tz = Math.cos(cam.az);
     NORMALS.forEach((n, i) => {
       const want = n.x * tx + n.y * tz > 0.25 ? CUT_H : WALL_H;
       if (want === cutTarget[i]) return;
@@ -713,7 +714,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     },
     orbitPose(target) {
       const c = Math.cos(cam.el);
-      target.position.set(cam.x + Math.cos(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z - Math.sin(cam.az) * c * d);
+      target.position.set(cam.x + Math.sin(cam.az) * c * d, 0.6 + Math.sin(cam.el) * d, cam.z + Math.cos(cam.az) * c * d);
       target.lookAt(cam.x, 0.6, cam.z);
     },
   });

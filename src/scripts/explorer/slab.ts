@@ -134,7 +134,8 @@ export async function createSlab(
   };
   const place = () => {
     const ce = Math.cos(EL);
-    camera.position.set(cam.x + Math.cos(cam.az) * ce * d, Math.sin(EL) * d, cam.z - Math.sin(cam.az) * ce * d);
+    // rev 10.3: azimuth from +z (the plan's bottom, "south") toward −x, as the 3D tower: no jump between stages
+    camera.position.set(cam.x + Math.sin(cam.az) * ce * d, Math.sin(EL) * d, cam.z + Math.cos(cam.az) * ce * d);
     camera.lookAt(cam.x, 0, cam.z);
   };
 
