@@ -258,11 +258,12 @@ export function createExplorer(root: HTMLElement) {
   let towerWanted = towerTier === 2;
   let tower: import('./tower3d').TowerAdapter | null = null;
   let towerJob: Promise<void> | null = null;
+  let towerFailed = false; // review r9a M3: after a failure the photo stage stays (no load button)
   let towerHide = 0;
   let loadBtn: HTMLButtonElement | null = null;
   let towerNote: HTMLElement | null = null;
   function syncTower() {
-    if (!photo || towerTier === 0 || stage.dataset.tier !== 'photo') return;
+    if (!photo || towerTier === 0 || towerFailed || stage.dataset.tier !== 'photo') return;
     if (!towerWanted) {
       // tier 1: offer it
       if (!loadBtn) {
@@ -285,12 +286,15 @@ export function createExplorer(root: HTMLElement) {
         m.createTower(photo, stage, {
           ...callbacks,
           label: (n) => f(t.floorTooltip, { n, mix: mixOf(n) }),
+          plannedLabel: t.towerPlanned,
           unitLabel: (code) => `${code} · ${isTbc(code) ? t.tbc : (unitInfo.get(code as Code) ?? '')}`,
           onUnit: (code) => pickUnit(code as Code, false),
           onFail: () => {
             tower?.destroy();
             tower = null;
             towerWanted = false; // no retry this session; the photo stage stays
+            towerFailed = true;
+            loadBtn?.remove();
             towerNote?.remove();
             setHint(fine ? t.towerHover : t.towerTap);
             model = createPhotoModel(photo, stage, { ...callbacks, onGround: ground });
