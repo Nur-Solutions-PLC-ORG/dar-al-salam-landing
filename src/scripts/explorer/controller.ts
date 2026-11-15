@@ -187,12 +187,20 @@ export function createExplorer(root: HTMLElement) {
     });
     return img;
   };
+  /** The 3D tower's renderer, once it is up (tier 2); otherwise the slab makes its own. */
+  const sharedRenderer = async () => {
+    if (!towerWanted) return undefined;
+    syncTower();
+    await towerJob;
+    return tower?.renderer;
+  };
   /** Tier 2; resolves false when it can't run (the photo stage stays). */
   const loadScene = () =>
-    (scenePromise ??= (Promise.all([import('./slab'), keyplanImage()])
-      .then(([{ createSlab }, texture]) =>
+    (scenePromise ??= (Promise.all([import('./slab'), keyplanImage(), sharedRenderer()])
+      .then(([{ createSlab }, texture, renderer]) =>
         createSlab(host, stage, {
           texture,
+          renderer, // rev 10: one WebGL context — the slab and the dollhouse borrow the 3D tower's renderer
           onUnit: (code) => pickUnit(code as Code, false),
           onInteract: () => hint.setAttribute('data-done', ''),
         }),

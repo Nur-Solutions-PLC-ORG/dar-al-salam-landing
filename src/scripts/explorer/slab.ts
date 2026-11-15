@@ -5,10 +5,13 @@
  * (decorative: the key plan and chips in the panel are the accessible controls).
  *
  * It also owns the WebGL renderer that the unit dollhouse borrows (one context; `suspend` while the dollhouse draws).
+ * Rev 10: with the 3D tower as the stage, the slab borrows the tower's renderer instead (still one context): the one
+ * canvas moves into this host whenever the slab or the dollhouse shows, and back to the tower when it shows.
  * Render on demand; nothing runs off-screen or in a hidden tab.
  */
 import {
   CanvasTexture,
+  NoToneMapping,
   DirectionalLight,
   ExtrudeGeometry,
   Float32BufferAttribute,
@@ -54,16 +57,31 @@ export interface SlabAdapter {
 export async function createSlab(
   host: HTMLElement,
   stage: HTMLElement,
-  o: { texture: HTMLImageElement; onUnit: (code: string) => void; onInteract: () => void },
+  o: { texture: HTMLImageElement; onUnit: (code: string) => void; onInteract: () => void; renderer?: WebGLRenderer },
 ): Promise<SlabAdapter> {
-  const renderer = new WebGLRenderer({ antialias: window.devicePixelRatio < 2, alpha: true, powerPreference: 'low-power' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-  renderer.setClearColor(0x000000, 0);
+  const borrowed = Boolean(o.renderer);
+  const renderer = o.renderer ?? new WebGLRenderer({ antialias: window.devicePixelRatio < 2, alpha: true, powerPreference: 'low-power' });
   const canvas = renderer.domElement;
-  canvas.setAttribute('aria-hidden', 'true');
-  canvas.tabIndex = -1;
-  canvas.style.touchAction = 'pan-y';
-  host.appendChild(canvas);
+  const mine = () => canvas.parentElement === host;
+  /** Take the shared canvas (and the renderer state this stage and the dollhouse expect). */
+  const claim = () => {
+    if (mine()) return;
+    host.appendChild(canvas);
+    canvas.className = '';
+    renderer.toneMapping = NoToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setClearColor(0x000000, 0);
+    fit();
+  };
+  if (!borrowed) {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setClearColor(0x000000, 0);
+    canvas.setAttribute('aria-hidden', 'true');
+    canvas.tabIndex = -1;
+    canvas.style.touchAction = 'pan-y';
+    host.appendChild(canvas);
+  }
 
   const outline = hotspots.floorOutline.map(([x = 0, y = 0]) => [x, y] as const);
   const xs = outline.map((p) => p[0]);
@@ -177,7 +195,7 @@ export async function createSlab(
   let vel = 0;
   const tick = () => {
     frame = 0;
-    if (destroyed || !visible || suspended) return;
+    if (destroyed || !visible || suspended || !mine()) return;
     let again = tweening > 0;
     if (!dragging && Math.abs(vel) > 1e-4) {
       cam.az = Math.max(AZ - ORBIT, Math.min(AZ + ORBIT, cam.az + vel));
@@ -209,7 +227,7 @@ export async function createSlab(
   // drag ±40° with inertia; vertical swipes keep scrolling the page (touch-action: pan-y)
   let lastX = 0;
   const onDown = (e: PointerEvent) => {
-    if (suspended) return;
+    if (suspended || !mine()) return;
     o.onInteract();
     dragging = true;
     lastX = e.clientX;
@@ -241,7 +259,7 @@ export async function createSlab(
   canvas.addEventListener('webglcontextlost', onLost);
 
   const ro = new ResizeObserver(() => {
-    if (suspended) return; // the dollhouse sizes the shared canvas meanwhile
+    if (suspended || !mine()) return; // the dollhouse (or the tower) sizes the shared canvas meanwhile
     fit();
     request();
   });
@@ -251,10 +269,10 @@ export async function createSlab(
     if (visible) request();
   });
 
-  fit();
+  if (mine()) fit();
   place();
   plate.position.y = -0.4;
-  renderer.render(scene, camera);
+  if (mine()) renderer.render(scene, camera);
   await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
   return {
@@ -262,6 +280,7 @@ export async function createSlab(
     show(on) {
       layer.classList.toggle('is-on', on);
       if (on) {
+        claim();
         plate.position.y = -0.4; // it rises 0.4 m as it fades in
         cam.x = cam.z = 0;
         run(plate.position, { y: 0, duration: 0.6, ease: 'power3.out' });
@@ -282,6 +301,7 @@ export async function createSlab(
       });
     },
     suspend(on) {
+      if (on) claim(); // the dollhouse is about to draw here (un-suspending must not take the canvas from the tower)
       suspended = on;
       dragging = false;
       layer.hidden = on;
@@ -308,8 +328,10 @@ export async function createSlab(
       canvas.removeEventListener('webglcontextlost', onLost);
       layer.remove();
       keep.forEach((x) => x.dispose());
-      renderer.dispose();
-      canvas.remove();
+      if (!borrowed) {
+        renderer.dispose();
+        canvas.remove();
+      }
     },
   };
 }

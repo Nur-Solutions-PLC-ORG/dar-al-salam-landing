@@ -548,9 +548,11 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const autoOrbit = () => !o.reduced && ready && !dragging && !paused && !selected && performance.now() > resumeAt;
 
   let driver: { frame(dt: number): boolean } | null = null;
+  /** The shared canvas is here (rev 10: the 3D tower takes it back when it shows; then this scene doesn't draw). */
+  const mine = () => canvas.parentElement === host;
   const tick = (now: number) => {
     frame = 0;
-    if (destroyed || !visible) return;
+    if (destroyed || !visible || !mine()) return;
     const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0;
     lastT = now;
     if (driver) {
@@ -609,7 +611,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const ndc = new Vector2();
   let downX = 0, downY = 0, lastX = 0, lastY = 0, moved = 0;
   const onDown = (e: PointerEvent) => {
-    if (driver) return; // walk mode has its own look controls
+    if (driver || !mine()) return; // walk mode has its own look controls; the tower may hold the canvas
     o.onInteract();
     dragging = true;
     downX = lastX = e.clientX;
@@ -660,6 +662,7 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   canvas.style.cursor = 'grab';
 
   const ro = new ResizeObserver(() => {
+    if (!mine()) return;
     fit();
     request();
   });

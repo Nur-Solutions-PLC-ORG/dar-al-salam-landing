@@ -77,6 +77,8 @@ const SWAY = 5 * DEG;
 
 /** The 3D tower is a tower stage like the photo (ModelAdapter), plus showing/hiding and QA stats. */
 export interface TowerAdapter extends ModelAdapter {
+  /** The one WebGL renderer: the slab and the dollhouse borrow it (its canvas moves to their host while they show). */
+  readonly renderer: WebGLRenderer;
   /** Show (resume rendering) or hide (stop). */
   show(on: boolean): void;
   /** T5: the chosen unit on the assembled floor (the others sink and fade), or none. */
@@ -162,6 +164,7 @@ export async function createTower(
   renderer.shadowMap.type = PCFShadowMap;
   renderer.shadowMap.autoUpdate = false; // nothing moves at rest: baked once
   const canvas = renderer.domElement;
+  const mine = () => canvas.parentElement === host;
   canvas.className = 'tower3d';
   canvas.setAttribute('aria-hidden', 'true');
   canvas.tabIndex = -1;
@@ -944,6 +947,20 @@ export async function createTower(
     uchip.style.transform = `translate(${A.x}px, ${A.y}px) translate(-50%, -100%)`;
   };
 
+  /** Take the shared canvas back from the slab / dollhouse, with this scene's renderer state. */
+  const claim = () => {
+    if (mine()) return;
+    host.append(canvas);
+    canvas.className = 'tower3d';
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, hi ? 2 : 1.5));
+    renderer.setClearColor(0x000000, 0);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = PCFShadowMap;
+    renderer.shadowMap.autoUpdate = false;
+  };
+
   /* ---------- render loop ---------- */
   let frame = 0;
   let visible = true;
@@ -956,7 +973,7 @@ export async function createTower(
   let idleSince = last;
   const tick = (now: number) => {
     frame = 0;
-    if (destroyed || !visible || !shown) return;
+    if (destroyed || !visible || !shown || !mine()) return;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     let again = tweening > 0 || litStep(dt);
@@ -1004,6 +1021,7 @@ export async function createTower(
   let lastX = 0;
   let touchPick: number | null = null;
   const onDown = (e: PointerEvent) => {
+    if (!mine()) return; // the slab or the dollhouse holds the shared canvas
     cb.onInteract();
     dragging = true;
     downX = lastX = e.clientX;
@@ -1012,6 +1030,7 @@ export async function createTower(
     if (e.pointerType === 'mouse') canvas.setPointerCapture(e.pointerId);
   };
   const onMove = (e: PointerEvent) => {
+    if (!mine()) return;
     if (!dragging) {
       if (e.pointerType === 'mouse') {
         if (selected === null) hoverFloor(floorAt(e));
@@ -1027,6 +1046,7 @@ export async function createTower(
     request();
   };
   const onUp = (e: PointerEvent) => {
+    if (!mine()) return;
     const moved = Math.hypot(e.clientX - downX, e.clientY - downY) > 6;
     dragging = false;
     idleSince = performance.now();
@@ -1059,7 +1079,7 @@ export async function createTower(
       hoverFloor(n);
     }
   };
-  const onLeave = (e: PointerEvent) => e.pointerType === 'mouse' && !dragging && (selected === null ? hoverFloor(null) : hoverUnit(null));
+  const onLeave = (e: PointerEvent) => mine() && e.pointerType === 'mouse' && !dragging && (selected === null ? hoverFloor(null) : hoverUnit(null));
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
@@ -1073,6 +1093,7 @@ export async function createTower(
   };
   canvas.addEventListener('webglcontextlost', onLost);
   const ro = new ResizeObserver(() => {
+    if (!mine()) return;
     fit();
     renderer.shadowMap.needsUpdate = true;
     request();
@@ -1095,12 +1116,14 @@ export async function createTower(
   request();
 
   return {
+    renderer,
     show(on) {
       shown = on;
-      canvas.hidden = !on;
       layer.hidden = !on;
       if (on) {
+        claim();
         fit();
+        renderer.shadowMap.needsUpdate = true;
         request();
       } else if (frame) {
         cancelAnimationFrame(frame);
