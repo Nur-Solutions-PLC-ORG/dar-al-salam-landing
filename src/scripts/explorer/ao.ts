@@ -24,9 +24,12 @@ export function createAo(renderer: WebGLRenderer, scene: Scene, camera: Camera, 
   composer.addPass(new RenderPass(scene, camera));
   const gtao = new GTAOPass(scene, camera, w, h);
   // design (F5 tuning): twice as strong, so corners and the bases of furniture show a soft shadow at rest
-  gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.5, thickness: 0.25, distanceFallOff: 0.3, scale: 1.6, samples: 32 });
+  gtao.updateGtaoMaterial({ radius: 0.5, distanceExponent: 1.5, thickness: 0.25, distanceFallOff: 1, scale: 1.6, samples: 32 });
   // review r9b L5: the dotted halo on tall edges was a foreground edge 'occluding' the wall behind it. A thin assumed
-  // thickness (0.25 m) stops that; more samples, a distance falloff and a softer depth weight clean up the rest
+  // thickness (0.25 m) stops that; more samples, a distance falloff and a softer depth weight clean up the rest.
+  // Review F7 L3: the grainy dark fringe on the wall beside the sideboard and TV came from the 0.3 falloff (near
+  // geometry occluding hard and unevenly); three's default 1 halves its darkening. A wider or more even denoise
+  // didn't help.
   gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 1.5, normalPhi: 3, radius: 8, rings: 3, samples: 16 });
   gtao.blendIntensity = 1;
   composer.addPass(gtao);
