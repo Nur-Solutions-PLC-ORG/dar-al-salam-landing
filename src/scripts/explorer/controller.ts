@@ -217,7 +217,8 @@ export function createExplorer(root: HTMLElement) {
   let prevLevel: Level = 'idle';
   let leftTowerAt = 0; // when the visitor left the tower view (the push-in + lift take ~1.25 s)
   function syncSlab() {
-    const want = state.level !== 'idle';
+    // with the 3D tower as the stage, the floor shows inside it (T5); the slab canvas only hosts the unit dollhouse
+    const want = tower ? state.level === 'unit' && viewFor() === '3d' : state.level !== 'idle';
     if (want && !gl && webgl && !prefersLightweight()) void loadScene();
     clearTimeout(slabTimer);
     if (gl) {
@@ -230,8 +231,8 @@ export function createExplorer(root: HTMLElement) {
       stage.toggleAttribute('data-slab', on);
       gl?.show(on);
     };
-    // the 3D tower's push-in and slide-out take ~1.9 s (T4); the photo's push-in and lift ~1.25 s
-    const wait = on && !prefersReducedMotion() ? (tower ? 1900 : 1250) - (performance.now() - leftTowerAt) : 0;
+    // the photo's push-in and lift take ~1.25 s; the 3D tower hands over to the dollhouse at once (T5)
+    const wait = on && !prefersReducedMotion() && !tower ? 1250 - (performance.now() - leftTowerAt) : 0;
     if (wait > 0) slabTimer = window.setTimeout(apply, wait);
     else apply();
   }
@@ -251,6 +252,8 @@ export function createExplorer(root: HTMLElement) {
         m.createTower(photo, stage, {
           ...callbacks,
           label: (n) => f(t.floorTooltip, { n, mix: mixOf(n) }),
+          unitLabel: (code) => `${code} · ${isTbc(code) ? t.tbc : (unitInfo.get(code as Code) ?? '')}`,
+          onUnit: (code) => pickUnit(code as Code, false),
           onFail: () => {
             tower?.destroy();
             tower = null;
@@ -267,9 +270,12 @@ export function createExplorer(root: HTMLElement) {
         syncTower();
       })
       .catch((err: unknown) => console.warn('[explorer] 3D tower unavailable; keeping the photo stage', err));
-    // it keeps drawing through the push-in and slide-out, and rests once the slab has covered it
+    // T5: the assembled floor marks the chosen unit and hatches the ones to be confirmed
+    tower?.setTbc(new Set(CODES.filter((c) => isTbc(c))));
+    tower?.selectUnit(state.level === 'unit' ? state.unit : null);
+    // it keeps drawing through the push-in and slide-out, and rests once the dollhouse has covered it
     clearTimeout(towerHide);
-    if (state.level === 'idle') tower?.show(true);
+    if (state.level === 'idle' || !stage.hasAttribute('data-slab')) tower?.show(true);
     else if (tower) towerHide = window.setTimeout(() => stage.hasAttribute('data-slab') && tower?.show(false), 2600);
   }
 
@@ -446,7 +452,8 @@ export function createExplorer(root: HTMLElement) {
   const viewFor = (): View => {
     if (!can3d()) return 'plan';
     if (state.pref) return state.pref;
-    return gl && !prefersReducedMotion() && !prefersLightweight() ? '3d' : 'plan';
+    // tier 2 is up once the slab or the 3D tower runs (with the tower, the slab loads for the dollhouse on demand)
+    return (gl || tower) && !prefersReducedMotion() && !prefersLightweight() ? '3d' : 'plan';
   };
 
   // the "3D | Plan" radiogroup, built per card on first use (it shows only when 3D can run)

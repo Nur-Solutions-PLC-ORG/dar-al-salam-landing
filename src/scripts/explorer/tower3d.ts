@@ -79,6 +79,10 @@ const SWAY = 5 * DEG;
 export interface TowerAdapter extends ModelAdapter {
   /** Show (resume rendering) or hide (stop). */
   show(on: boolean): void;
+  /** T5: the chosen unit on the assembled floor (the others sink and fade), or none. */
+  selectUnit(code: string | null): void;
+  /** T5: units to be confirmed on the shown floor (hatched). */
+  setTbc(codes: ReadonlySet<string>): void;
   /** Triangles and draw calls of the last frame (QA). */
   stats(): { tris: number; calls: number };
 }
@@ -144,7 +148,7 @@ const gradient = (w: number, h: number, paint: (c: CanvasRenderingContext2D) => 
 export async function createTower(
   host: HTMLElement,
   stage: HTMLElement,
-  cb: ModelCallbacks & { onFail: () => void; label: (floor: number) => string },
+  cb: ModelCallbacks & { onFail: () => void; label: (floor: number) => string; unitLabel: (code: string) => string; onUnit: (code: string) => void },
 ): Promise<TowerAdapter> {
   const d: Tower3d = (await import('../../data/tower3d.json')).default;
   const hi = matchMedia('(pointer: fine)').matches && innerWidth >= 1024;
@@ -610,7 +614,11 @@ export async function createTower(
   const corners = [0, towerTop].flatMap((y) => outline.map(([x, z]) => new Vector3(x, y, z)));
   const view = { az: AZ, sway: 0 };
   // T4: push (camera in toward the chosen floor) and slide (that floor out, the rest apart), both 0 → 1
-  const part = { push: 0, slide: 0, floor: 0 };
+  const part = { push: 0, slide: 0, floor: 0, cut: 0, unit: 0 }; // T5: cut = the assembled floor in, unit = one chosen
+  let plate: import('./tower-floor').AssembledFloor | null = null;
+  let plateJob: Promise<void> | null = null;
+  let chosenUnit: string | null = null;
+  let tbcSet: ReadonlySet<string> = new Set();
   const rest = { dist: 120, ty: towerTop / 2 };
   const out: P2 = [Math.sin(AZ), Math.cos(AZ)]; // the camera's ground direction at rest; a chosen floor slides along it
   const midY = (n: number) => {
@@ -623,8 +631,9 @@ export async function createTower(
     const p = part.push;
     // aim from the tower's middle to the chosen floor's middle, which slides 14 m out toward the camera
     const s = 14 * part.slide;
-    const ax = out[0] * s * p;
-    const az2 = out[1] * s * p;
+    const uc = plate?.units.find((u) => u.code === chosenUnit)?.centre;
+    const ax = out[0] * s * p + (uc ? uc.x * part.unit : 0);
+    const az2 = out[1] * s * p + (uc ? uc.z * part.unit : 0);
     const ay = ty + (midY(part.floor) - ty) * p;
     // push: in toward the floor at the street-corner angle; slide: on to the slid-out floor, rising to 52°
     const sl = part.slide;
@@ -715,9 +724,19 @@ export async function createTower(
       });
       im.instanceMatrix.needsUpdate = true;
     }
-    for (const fa of fades) {
-      typical.forEach((_, i) => (fa.array[i] = c >= 0 && i > c ? keep3 : 1));
+    fades.forEach((fa, k3) => {
+      // T5 cutaway: the chosen floor keeps its slab (k3 = 0); its façade, balconies and glass dissolve as the plate comes in
+      typical.forEach((_, i) => (fa.array[i] = c >= 0 && i > c ? keep3 : c >= 0 && i === c && k3 > 0 ? 1 - part.cut : 1));
       fa.needsUpdate = true;
+    });
+    if (plate) {
+      plate.group.visible = c >= 0 && part.cut > 0.01;
+      plate.group.position.set(out[0] * 14 * k2, (typical[c]?.y0 ?? 0) + SL, out[1] * 14 * k2);
+      for (const u of plate.units) {
+        const other = chosenUnit !== null && u.code !== chosenUnit;
+        u.group.position.y = other ? -0.4 * part.unit : 0;
+        for (const m of u.mats) m.opacity = part.cut * (other ? 1 - 0.75 * part.unit : 1);
+      }
     }
     for (const o2 of above) {
       o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) + (c < 0 ? 0 : up);
@@ -729,7 +748,7 @@ export async function createTower(
     for (const x of ctxMeshes) x.visible = k2 < 0.98; // gone, they cast no shadow either
     for (const o2 of below) o2.position.y = ((o2.userData.y0 as number | undefined) ?? (o2.userData.y0 = o2.position.y)) - (c < 0 ? 0 : 1.6 * k2);
     if (finMesh) finMesh.visible = k2 < 0.02; // the fins run through every storey; they step aside while it's apart
-    lid.visible = c >= 0 && k2 > 0.01;
+    lid.visible = c >= 0 && k2 > 0.01 && part.cut < 0.5;
     if (lid.visible) lid.position.set(out[0] * 14 * k2, typical[c]!.y0, out[1] * 14 * k2);
     edge.position.set(c >= 0 && litFloor === part.floor ? out[0] * 14 * k2 : 0, (typical.find((l) => l.floor === litFloor)?.y0 ?? 0) + (c < 0 || litFloor === part.floor ? 0 : 1.6 * k2 * Math.sign(typical.findIndex((l) => l.floor === litFloor) - c)), c >= 0 && litFloor === part.floor ? out[1] * 14 * k2 : 0);
   };
@@ -850,6 +869,60 @@ export async function createTower(
     if (n) cb.onHover(n, anchor(n) ?? undefined);
   };
 
+  /* ---------- T5: the assembled floor (its own chunk, with the nine unit JSONs) ---------- */
+  const loadPlate = () =>
+    (plateJob ??= import('./tower-floor')
+      .then((m) => m.buildFloor(d))
+      .then((f) => {
+        if (destroyed) return f.dispose();
+        plate = f;
+        f.group.visible = false;
+        f.setTbc(tbcSet);
+        scene.add(f.group);
+        f.group.updateMatrixWorld(true);
+        arrange();
+        renderer.shadowMap.needsUpdate = true;
+        request();
+      })
+      .catch((err: unknown) => console.warn('[explorer] assembled floor unavailable; the plain floor stays', err)));
+  const unitAt = (e: PointerEvent) => {
+    if (!plate || part.cut < 0.99) return null;
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    plate.group.updateMatrixWorld(true);
+    const h3 = ray.intersectObjects(plate.units.map((u) => u.floor))[0];
+    return h3 ? (plate.units.find((u) => u.floor === h3.object)?.code ?? null) : null;
+  };
+  // the unit chip: "BL05 · 3 bedroom · 169.23 m²" over the hovered unit (to be confirmed: "BL01 · To be confirmed")
+  const uchip = document.createElement('p');
+  uchip.className = 'tower-uchip';
+  uchip.setAttribute('aria-hidden', 'true');
+  uchip.hidden = true;
+  stage.append(uchip);
+  let hovUnit: string | null = null;
+  let touchUnit: string | null = null;
+  const GOLD = new Color('#B59458');
+  function hoverUnit(code: string | null) {
+    if (code === hovUnit) return;
+    hovUnit = code;
+    for (const u of plate?.units ?? []) {
+      u.floorMat.emissive.copy(u.code === code ? GOLD : BLACK);
+      u.floorMat.emissiveIntensity = u.code === code ? 0.45 : 0;
+    }
+    uchip.hidden = !code;
+    if (code) uchip.textContent = cb.unitLabel(code);
+    placeChip();
+    request();
+  }
+  const BLACK = new Color(0);
+  const placeChip = () => {
+    const u = plate?.units.find((x) => x.code === hovUnit);
+    if (!u || !plate) return;
+    const A = toStage(v3.copy(u.centre).add(plate.group.position).setY(plate.group.position.y + 1.2).clone());
+    uchip.style.transform = `translate(${A.x}px, ${A.y}px) translate(-50%, -100%)`;
+  };
+
   /* ---------- render loop ---------- */
   let frame = 0;
   let visible = true;
@@ -884,6 +957,7 @@ export async function createTower(
     place();
     renderer.render(scene, camera);
     projectPins();
+    if (hovUnit) placeChip();
     if (again) request();
   };
   const request = () => {
@@ -911,7 +985,10 @@ export async function createTower(
   };
   const onMove = (e: PointerEvent) => {
     if (!dragging) {
-      if (e.pointerType === 'mouse') hoverFloor(floorAt(e));
+      if (e.pointerType === 'mouse') {
+        if (selected === null) hoverFloor(floorAt(e));
+        else hoverUnit(unitAt(e));
+      }
       return;
     }
     if (selected !== null) return; // apart: no orbit
@@ -928,7 +1005,20 @@ export async function createTower(
     canvas.style.cursor = 'grab';
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     request();
-    if (moved || e.type === 'pointercancel' || selected !== null) return;
+    if (moved || e.type === 'pointercancel') return;
+    if (selected !== null) {
+      // T5: on the assembled floor a click picks a unit; on touch the first tap shows its chip
+      const u = unitAt(e);
+      if (!u) return;
+      if (e.pointerType === 'mouse' || touchUnit === u) {
+        touchUnit = null;
+        cb.onUnit(u);
+      } else {
+        touchUnit = u;
+        hoverUnit(u);
+      }
+      return;
+    }
     // a click picks; on touch the first tap previews and a second tap on the same floor picks
     const n = floorAt(e);
     if (n === null) return;
@@ -941,7 +1031,7 @@ export async function createTower(
       hoverFloor(n);
     }
   };
-  const onLeave = (e: PointerEvent) => e.pointerType === 'mouse' && !dragging && hoverFloor(null);
+  const onLeave = (e: PointerEvent) => e.pointerType === 'mouse' && !dragging && (selected === null ? hoverFloor(null) : hoverUnit(null));
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
@@ -1011,6 +1101,7 @@ export async function createTower(
         if (reduced || was !== null) {
           // reduced motion cross-fades straight to the floor; changing floors keeps the tower apart
           part.push = part.slide = 1;
+          void loadPlate().then(() => selected === n && ((part.cut = 1), arrange(), request()));
           arrange();
           request();
           return;
@@ -1018,16 +1109,43 @@ export async function createTower(
         gsap.to(view, { az: AZ, sway: 0, duration: 1.2, ease: 'power3.inOut' });
         run({ push: 1, duration: 1.2, ease: 'power3.inOut' });
         run({ slide: 1, duration: 0.9, delay: 0.9, ease: 'power3.out' });
+        // T5: the assembled floor fades in once the floor is out (and its units have loaded)
+        void Promise.all([loadPlate(), new Promise((r) => setTimeout(r, 1800))]).then(() => {
+          if (selected === n && plate) run({ cut: 1, duration: 0.6, ease: 'power2.out' });
+        });
       } else {
         setLit(null);
+        chosenUnit = null;
+        hoverUnit(null);
+        part.unit = 0;
         if (reduced) {
-          part.push = part.slide = 0;
+          part.push = part.slide = part.cut = 0;
           arrange();
           request();
           return;
         }
-        run({ push: 0, slide: 0, duration: 1.2, ease: 'power3.inOut' });
+        run({ cut: 0, duration: 0.3 });
+        run({ push: 0, slide: 0, duration: 1.2, delay: 0.2, ease: 'power3.inOut' });
       }
+      request();
+    },
+    selectUnit(code) {
+      if (code === chosenUnit) return;
+      chosenUnit = code;
+      hoverUnit(null);
+      if (reduced) {
+        part.unit = code ? 1 : 0;
+        arrange();
+        request();
+        return;
+      }
+      if (code) part.unit = 0;
+      run({ unit: code ? 1 : 0, duration: 0.5, ease: 'power2.inOut' });
+      request();
+    },
+    setTbc(codes) {
+      tbcSet = codes;
+      plate?.setTbc(codes);
       request();
     },
     anchor: (n) => (selected === null ? anchor(n) : null),
@@ -1045,6 +1163,8 @@ export async function createTower(
       canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('webglcontextlost', onLost);
       layer.remove();
+      uchip.remove();
+      plate?.dispose();
       host.removeAttribute('data-tower3d');
       scene.traverse((x) => (x as Mesh).geometry?.dispose());
       keep.forEach((x) => x.dispose());

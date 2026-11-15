@@ -545,3 +545,23 @@ html.is-walking .u3d-enter {
 .tstage[data-tower3d] .tstage__frame {
   visibility: hidden;
 }
+
+/* rev 10 T5: the unit chip over the assembled floor ("BL05 · 3 bedroom · 169.23 m²") */
+.tower-uchip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(251 247 242 / 0.96);
+  color: var(--navy-900);
+  font: 600 13px/1.2 var(--font-body);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tower-uchip[hidden] {
+  display: none;
+}
