@@ -6,7 +6,7 @@ attribution is required, but sources are recorded.
 
 | Folder | Source | Licence | Used as |
 |---|---|---|---|
-| polyhaven-floor_tiles_02 | https://polyhaven.com/a/floor_tiles_02 | CC0 1.0 | Large-format ceramic tile (also tinted for wet rooms and tile bedrooms) |
+| polyhaven-floor_tiles_08 | https://polyhaven.com/a/floor_tiles_08 | CC0 1.0 | Square ceramic tile with grout (also tinted for wet rooms and tile bedrooms) |
 | polyhaven-laminate_floor_02 | https://polyhaven.com/a/laminate_floor_02 | CC0 1.0 | Light oak planks (the parquet finish), only where the plan labels PARQUET |
 | polyhaven-painted_plaster_wall | https://polyhaven.com/a/painted_plaster_wall | CC0 1.0 | Wall plaster (normal and roughness only; colour from the token) |
 | polyhaven-rough_linen | https://polyhaven.com/a/rough_linen | CC0 1.0 | Fabric (normal only) |

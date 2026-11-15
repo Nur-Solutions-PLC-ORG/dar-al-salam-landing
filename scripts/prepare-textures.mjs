@@ -12,9 +12,9 @@ const SRC = 'brand-source/3d-src';
 const OUT = 'public/textures';
 // [output name, source file, size px, WebP quality]
 const maps = [
-  ['tile-col', 'polyhaven-floor_tiles_02/floor_tiles_02_diff_1k.jpg', 512, 72],
-  ['tile-nor', 'polyhaven-floor_tiles_02/floor_tiles_02_nor_gl_1k.jpg', 512, 90],
-  ['tile-rough', 'polyhaven-floor_tiles_02/floor_tiles_02_rough_1k.jpg', 256, 70],
+  ['tile-col', 'polyhaven-floor_tiles_08/floor_tiles_08_diff_1k.jpg', 512, 72],
+  ['tile-nor', 'polyhaven-floor_tiles_08/floor_tiles_08_nor_gl_1k.jpg', 512, 90],
+  ['tile-rough', 'polyhaven-floor_tiles_08/floor_tiles_08_rough_1k.jpg', 256, 70],
   ['parquet-col', 'polyhaven-laminate_floor_02/laminate_floor_02_diff_1k.jpg', 512, 72],
   ['parquet-nor', 'polyhaven-laminate_floor_02/laminate_floor_02_nor_gl_1k.jpg', 512, 90],
   ['parquet-rough', 'polyhaven-laminate_floor_02/laminate_floor_02_rough_1k.jpg', 256, 70],
@@ -30,7 +30,14 @@ let total = 0;
 let colour = 0;
 for (const [name, src, px, q] of maps) {
   const out = r(`${OUT}/${name}.webp`);
-  await writeFile(out, await sharp(r(`${SRC}/${src}`).pathname).resize(px, px).webp({ quality: q, effort: 6 }).toBuffer());
+  let img = sharp(r(`${SRC}/${src}`).pathname).resize(px, px);
+  if (name === 'tile-col') {
+    // a light, low-saturation base (mean ~0.88, grout kept darker), so each floor's tint sets its colour
+    const { channels } = await sharp(r(`${SRC}/${src}`).pathname).greyscale().stats();
+    const k = 0.55;
+    img = img.modulate({ saturation: 0.35 }).linear(k, 225 - k * channels[0].mean);
+  }
+  await writeFile(out, await img.webp({ quality: q, effort: 6 }).toBuffer());
   const { size } = await stat(out);
   total += size;
   if (name.endsWith('-col')) colour += size;

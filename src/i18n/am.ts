@@ -192,7 +192,7 @@ export const am: Dict = {
     offKitchen: 'ከማእድ ቤቱ ጎን ያለው ክፍል',
     terrace: 'ሰገነቱ',
     useMotion: 'የስልኩን እንቅስቃሴ ተጠቀም',
-    geometryLabel: 'ከወለል ፕላኑ የተሠራ ቀለል ያለ 3D ሞዴል',
+    geometryLabel: 'የቤት ዕቃዎቹ ለማሳያ ብቻ ናቸው።',
     panoAlt: 'የ{room} የአርቲስት ምናባዊ ሥዕል፣ ከውስጥ እንደሚታይ',
     stopped: 'የ3D እይታው ቆሟል',
   },

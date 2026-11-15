@@ -273,7 +273,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
 
   const glassTier = !matchMedia('(pointer: coarse)').matches && ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8;
   const mat = {
-    wall: inject(new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.92 })), // F3: plaster normal + roughness
+    // F3: plaster normal + roughness. Polygon offset: furniture traced flush with a wall wins the depth tie (no stripes)
+    wall: inject(new MeshStandardMaterial({ color: '#F3ECE2', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })),
     oak: inject(new MeshStandardMaterial({ color: '#B5A08A', roughness: 0.6 })), // rev 8.2 H: greige oak
     counter: inject(new MeshStandardMaterial({ color: '#E4DACB', roughness: 0.6 })),
     top: inject(new MeshStandardMaterial({ color: '#B9AE9E', roughness: 0.35 })),
@@ -412,9 +413,10 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
      rooms in a cool-grey tile at 0.3 m, bedrooms labelled tile in the tile tinted warm oak-tan (not parquet: the label
      wins), and parquet only where the plan says PARQUET. UVs in metres. */
   const FIN = {
-    tile: { colour: '#E6E0D6', tex: 'tile', size: 2.4 },
-    wet: { colour: '#C9CFD3', tex: 'tile', size: 1.2 },
-    tan: { colour: '#E2CBA6', tex: 'tile', size: 2.4 },
+    // the tile map has 5 × 5 tiles: 3 m → 0.6 m tiles, 1.5 m → 0.3 m in wet rooms
+    tile: { colour: '#E6E0D6', tex: 'tile', size: 3 },
+    wet: { colour: '#C9CFD3', tex: 'tile', size: 1.5 },
+    tan: { colour: '#E2C9A2', tex: 'tile', size: 3 },
     parquet: { colour: '#FFFFFF', tex: 'parquet', size: 2.4 },
   } as const;
   const finishOf = (r: Unit3d['rooms'][number]): keyof typeof FIN =>
@@ -495,8 +497,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(lowTier ? 1024 : 2048);
   sun.shadow.radius = lowTier ? 4 : 6;
-  sun.shadow.bias = -0.0005;
-  sun.shadow.normalBias = 0.02;
+  sun.shadow.bias = -0.0008;
+  sun.shadow.normalBias = 0.05; // F5 tuning: no striped acne on vertical oak faces at 2048²
   Object.assign(sun.shadow.camera, { left: -R - 1, right: R + 1, top: R + 1, bottom: -R - 1, near: 1, far: 40 });
   scene.add(sun, sun.target);
   // rev 8.1 A: a camera fill (no shadows) keeps camera-facing wall faces cream; it turns with the camera, offset
@@ -509,16 +511,35 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   /** This scene's renderer state (the canvas is shared: the slab and the tower set theirs when they draw). */
   const rendererState = () => {
     renderer.toneMapping = ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 0.85; // design (F5 tuning): lit walls ~ (238,230,218), no clipped whites
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFShadowMap; // (PCFSoftShadowMap is gone in r187: PCF with a wider radius on desktop)
     renderer.shadowMap.autoUpdate = false;
   };
   rendererState();
   renderer.shadowMap.needsUpdate = true;
+  // phones (no GTAO): a soft dark blob under each piece of furniture grounds it (design F5 tuning)
+  if (lowTier) {
+    const blobs = data.solids
+      .filter((s) => !['column', 'shaft', 'rug', 'hob', 'sink'].includes(s.kind))
+      .map((s) => {
+        const xs = s.poly.map((p) => p[0]);
+        const zs = s.poly.map((p) => p[1]);
+        const w = (Math.max(...xs) - Math.min(...xs)) * 1.25;
+        const dd = (Math.max(...zs) - Math.min(...zs)) * 1.25;
+        const g = new PlaneGeometry(w, dd).rotateX(-Math.PI / 2).toNonIndexed();
+        g.translate((Math.max(...xs) + Math.min(...xs)) / 2, 0.006, (Math.max(...zs) + Math.min(...zs)) / 2);
+        return tag(g, 0.45, -1);
+      });
+    if (blobs.length) {
+      const bm = new Mesh(k(mergeGeometries(blobs)!), inject(new MeshBasicMaterial({ map: k(shadowTexture()), transparent: true, opacity: 0.25, depthWrite: false }), true, 0.5));
+      blobs.forEach((g) => g.dispose());
+      root.add(bm);
+    }
+  }
   // desktop: GTAO at rest (a lazy chunk)
   let ao: import('./ao').Ao | null = null;
-  if (!lowTier && !o.reduced)
+  if (!lowTier) // (also with reduced motion: AO only draws at rest, it never animates)
     void import('./ao').then(({ createAo }) => {
       if (destroyed) return;
       ao = createAo(renderer, scene, camera, host.clientWidth || 1, host.clientHeight || 1);
@@ -650,7 +671,9 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
     if (driver) {
       // walk mode owns the camera
       const more = driver.frame(dt) || tweening > 0;
-      renderer.render(scene, camera);
+      // inside too: GTAO once the view rests (contact shadows under the bed, darker corners)
+      if (ao && !more) ao.render();
+      else renderer.render(scene, camera);
       if (more) request();
       else lastT = 0;
       return;

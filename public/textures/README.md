@@ -7,7 +7,7 @@ All sources are **CC0 1.0** (public domain), from Poly Haven (https://polyhaven.
 
 | Files | Source |
 |---|---|
-| tile-col, tile-nor, tile-rough | https://polyhaven.com/a/floor_tiles_02 |
+| tile-col, tile-nor, tile-rough | https://polyhaven.com/a/floor_tiles_08 |
 | parquet-col, parquet-nor, parquet-rough | https://polyhaven.com/a/laminate_floor_02 |
 | plaster-nor, plaster-rough | https://polyhaven.com/a/painted_plaster_wall |
 | linen-nor | https://polyhaven.com/a/rough_linen |

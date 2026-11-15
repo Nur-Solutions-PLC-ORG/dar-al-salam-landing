@@ -201,7 +201,7 @@ export const en = {
     offKitchen: 'room off the kitchen',
     terrace: 'terrace',
     useMotion: 'Use motion',
-    geometryLabel: 'Simplified 3D model from the floor plan',
+    geometryLabel: 'Furniture is illustrative.', // F8 (rev 10): modelled furniture and real materials
     panoAlt: "Artist's impression of the {room}, seen from inside",
     stopped: '3D view stopped',
   },

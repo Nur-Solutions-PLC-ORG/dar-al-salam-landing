@@ -28,7 +28,7 @@ const C = {
   linen: '#E9E2D6',
   sofa: '#C9BDA9', // base, back and arms (design F1 fix 3)
   cushion: '#D8CDBC',
-  pillow: '#F4F0E8',
+  pillow: '#F1ECE4',
   oakTop: '#A88762', // the darker top edge of side and coffee tables
   groove: '#9A8875', // wardrobe door grooves, 15% darker than the greige oak
   mirror: '#C9D6DE',
@@ -229,13 +229,13 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
     switch (kind) {
       case 'bed': {
         box(-W, W, 0, 0.3, 0.06, d, C.oak); // frame
-        box(-W + 0.03, W - 0.03, 0.3, 0.52, 0.1, d - 0.03, C.mattress, 'matte', 0.05); // mattress
-        box(-W - 0.01, W + 0.01, 0.42, 0.58, d / 3, d + 0.01, C.linen, 'matte', 0.05); // duvet, lower two thirds
+        box(-W + 0.03, W - 0.03, 0.3, 0.48, 0.1, d - 0.03, C.mattress, 'matte', 0.04); // mattress, 0.18 m above the frame
+        box(-W - 0.01, W + 0.01, 0.4, 0.54, d / 3, d + 0.01, C.linen, 'matte', 0.05); // duvet, lower two thirds
         box(-W - 0.05, W + 0.05, 0, Math.min(1, H + 0.6), 0, 0.08, C.upholstery, 'matte', full ? 0.03 : 0); // headboard
         if (full) {
           const pw = Math.min(0.7, w / 2 - 0.1);
-          for (const sx of [-1, 1]) box(sx * (w / 4) - pw / 2, sx * (w / 4) + pw / 2, 0.52, 0.66, 0.14, 0.5, C.pillow, 'matte', 0.06); // pillows
-          box(-W - 0.02, W + 0.02, 0.58, 0.61, d - 0.5, d - 0.12, C.navy); // throw across the foot
+          for (const sx of [-1, 1]) box(sx * (w / 4) - pw / 2, sx * (w / 4) + pw / 2, 0.48, 0.62, 0.14, 0.5, C.pillow, 'matte', 0.06); // pillows
+          box(-W - 0.02, W + 0.02, 0.54, 0.57, d - 0.5, d - 0.12, C.navy); // throw across the foot
         }
         break;
       }
@@ -298,12 +298,13 @@ export function buildFurniture(data: Unit3d, tier: 'full' | 'low'): FurnPiece[] 
         box(-Math.min(0.6, W), Math.min(0.6, W), 0.95, 1.65, 0, 0.04, C.black, 'gloss');
         break;
       case 'wardrobe':
-        box(-W, W, 0, Math.min(2.2, Math.max(H, 2.2)), 0, d, C.greige);
+        // 2 cm inside its footprint: traced walls run slightly off-axis, and a flush side z-fought (striped) from inside
+        box(-W + 0.02, W - 0.02, 0, Math.min(2.2, Math.max(H, 2.2)), 0.02, d, C.greige);
         doors(0.5, 0, 2.2, true);
         break;
       case 'counter': {
         const top = s.h;
-        box(-W, W, 0.1, top - 0.04, 0, d - 0.02, C.ivory); // base cabinets
+        box(-W + 0.005, W - 0.005, 0.1, top - 0.04, 0.005, d - 0.02, C.ivory); // base cabinets (5 mm off the walls)
         box(-W, W, 0, 0.1, 0.05, d - 0.07, C.darkOak); // plinth
         box(-W - 0.02, W + 0.02, top - 0.04, top, 0, d + 0.02, C.stone, 'gloss'); // worktop, 2 cm overhang
         doors(0.6, 0.1, top - 0.04, false);

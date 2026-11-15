@@ -421,7 +421,9 @@ export function createWalk(
     const dx = at.x - p.at.x;
     const dz = at.z - p.at.z;
     const down = Math.atan2(EYE - at.y, Math.hypot(dx, dz) || 1);
-    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(8 * DEG, Math.max(0, down)) };
+    // close to the focus (< 1.5 m, e.g. over the foot of a bed): face it but keep the room in view (≥ −5°)
+    const lim = Math.hypot(dx, dz) < 1.5 ? 5 : 8;
+    return { yaw: Math.atan2(-dx, -dz), pitch: -Math.min(lim * DEG, Math.max(0, down)) };
   };
   const showRings = (loc: string | null) => {
     ringLayer.replaceChildren();
@@ -469,7 +471,9 @@ export function createWalk(
     const hh = h.host.clientHeight;
     const chips: { r: (typeof rings)[number]; edge: 'l' | 'r' | 'b'; k: number }[] = [];
     ringLayer.classList.toggle('is-narrow', w < 640);
-    const base = (chip.hidden ? hh - 16 : chip.offsetTop) - 52; // the bottom chip row sits above the honesty chip
+    // the bottom chip row sits above the honesty chip and the look buttons, whichever is higher
+    const lookTop = Math.min(...[...ui.querySelectorAll<HTMLElement>('.walk-look')].map((e) => e.offsetTop), hh - 16);
+    const base = Math.min(chip.hidden ? hh - 16 : chip.offsetTop, lookTop) - 52;
     for (const r of rings) {
       const c = cv.copy(r.at).applyMatrix4(camera.matrixWorldInverse); // camera space: −z is ahead
       let x = 0, y = 0;
