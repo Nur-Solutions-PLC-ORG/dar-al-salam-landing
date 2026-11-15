@@ -39,8 +39,8 @@ const C = {
   navy: '#1A273F',
   chair: '#B79B74',
   ivory: '#EFE9DF',
-  stone: '#CFC8BC',
-  stoneEdge: '#B4AC9F',
+  stone: '#BDB5A8', // design (rev 10.11): darker than the ivory cabinets and the walls, so the run reads
+  stoneEdge: '#A39B8E',
   white: '#F6F5F2',
   black: '#1B1C1F',
   line: '#8C7B68',

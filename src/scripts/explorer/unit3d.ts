@@ -274,7 +274,8 @@ ${cut ? 'if (aSide > -0.5) transformed.y = min(transformed.y, uCut[int(aSide + 0
   const glassTier = !matchMedia('(pointer: coarse)').matches && ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) >= 8;
   const mat = {
     // F3: plaster normal + roughness. Polygon offset: furniture traced flush with a wall wins the depth tie (no stripes)
-    wall: inject(new MeshStandardMaterial({ color: '#F0E7DA', roughness: 0.92, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })),
+    wall: inject(new MeshStandardMaterial({ color: '#EFE1CD', roughness: 0.92, // warmer: the neutral light cools it to ~ (232,224,212)
+       polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })),
     oak: inject(new MeshStandardMaterial({ color: '#B5A08A', roughness: 0.6 })), // rev 8.2 H: greige oak
     counter: inject(new MeshStandardMaterial({ color: '#E4DACB', roughness: 0.6 })),
     top: inject(new MeshStandardMaterial({ color: '#B9AE9E', roughness: 0.35 })),
